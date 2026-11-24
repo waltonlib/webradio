@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>台灣車用電台</title>
+<meta name="apple-mobile-web-app-title" content="walton電台">
+<title>walton電台</title>
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 <style>
   * {
@@ -187,7 +188,7 @@
   .v-slider-wrap {
     position: relative;
     width: 100%;
-    height: 130px;
+    height: 120px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -204,7 +205,7 @@
   input[type=range].v-slider {
     -webkit-appearance: none;
     appearance: none;
-    width: 118px;
+    width: 110px;
     height: 22px;
     background: transparent;
     transform: rotate(-90deg);
@@ -241,17 +242,17 @@
 
   .save-row {
     display: grid;
-    grid-template-columns: repeat(3, 1fr) auto;
-    gap: 6px;
+    grid-template-columns: repeat(3, 1fr) auto auto;
+    gap: 5px;
     margin-top: 2px;
   }
   .save-target-btn {
     background: #455661;
     border: 1px solid #677E8C;
     color: #FAF8F5;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 600;
-    padding: 8px 4px;
+    padding: 8px 3px;
     border-radius: 10px;
     cursor: pointer;
   }
@@ -260,9 +261,131 @@
     background: #3A3D42;
     border: 1px solid #555961;
     color: #9EA3A8;
-    font-size: 13px;
-    padding: 8px 10px;
+    font-size: 12px;
+    padding: 8px 8px;
     border-radius: 10px;
+    cursor: pointer;
+  }
+  .manage-ch-btn {
+    background: #5A524C;
+    border: 1px solid #8C7A6B;
+    color: #EFE5DC;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 8px 8px;
+    border-radius: 10px;
+    cursor: pointer;
+  }
+
+  /* 電台新增與編輯彈窗 */
+  .modal-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.72);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+  .modal-backdrop.show { display: flex; }
+  .modal-card {
+    background: #2B2E33;
+    border: 1px solid #52575F;
+    border-radius: 20px;
+    width: 100%;
+    max-width: 420px;
+    max-height: 82dvh;
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    gap: 12px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  }
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 18px;
+    font-weight: 700;
+    color: #E2DFD7;
+  }
+  .close-modal-btn {
+    background: #42464D;
+    border: none;
+    color: #E2DFD7;
+    font-size: 16px;
+    padding: 6px 12px;
+    border-radius: 10px;
+    cursor: pointer;
+  }
+  .add-form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: #232528;
+    padding: 10px;
+    border-radius: 14px;
+    border: 1px solid #3E4248;
+  }
+  .add-form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .add-form input {
+    width: 100%;
+    background: #32353A;
+    border: 1px solid #4A4F57;
+    border-radius: 10px;
+    padding: 9px 10px;
+    color: #FAF8F5;
+    font-size: 14px;
+    -webkit-user-select: text;
+    user-select: text;
+  }
+  .add-submit-btn {
+    background: #6B7E74;
+    border: 1px solid #9EB3A8;
+    color: #FAF8F5;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 10px;
+    border-radius: 10px;
+    cursor: pointer;
+  }
+  .ch-manage-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    overflow-y: auto;
+    padding-right: 2px;
+  }
+  .ch-manage-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #32353A;
+    padding: 8px 10px;
+    border-radius: 12px;
+    border: 1px solid #45494F;
+    gap: 8px;
+  }
+  .ch-manage-info {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .ch-manage-name { font-size: 14px; font-weight: 700; color: #E2DFD7; }
+  .ch-manage-url { font-size: 11px; color: #9EA3A8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .del-ch-btn {
+    background: #7A4B4B;
+    border: 1px solid #A66E6E;
+    color: #FAF8F5;
+    font-size: 12px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    flex-shrink: 0;
     cursor: pointer;
   }
 
@@ -270,23 +393,23 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     flex: 1;
-    gap: 10px;
+    gap: 8px;
     touch-action: none;
   }
   button.ch-btn {
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 700;
     border: 1.5px solid #484C52;
-    border-radius: 18px;
+    border-radius: 16px;
     background: #32353A;
     color: #E2DFD7;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 6px;
+    padding: 4px 6px;
     text-align: center;
-    line-height: 1.25;
+    line-height: 1.2;
     cursor: pointer;
     touch-action: none;
     transition: transform 0.15s ease, background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
@@ -320,7 +443,7 @@
     border: 2.5px dashed #A8BEB3;
   }
 
-  .sub-tag { font-size: 12px; font-weight: 400; color: #9EA3A8; margin-top: 3px; pointer-events: none; }
+  .sub-tag { font-size: 11px; font-weight: 400; color: #9EA3A8; margin-top: 2px; pointer-events: none; }
   button.ch-btn span { pointer-events: none; }
   button.ch-btn.selected .sub-tag { color: #EFE5DC; }
   button.ch-btn.playing .sub-tag { color: #DCE6EC; }
@@ -329,7 +452,7 @@
 <body>
   <div class="header">
     <div class="status-box">
-      <span class="status-label" id="statusSub">長按電台 1 秒可滑動調整順序</span>
+      <span class="status-label" id="statusSub">walton電台 • 長按 1 秒可調整順序</span>
       <span class="status-title" id="statusMain">點擊任一電台開始播放</span>
     </div>
     <button class="stop-btn" id="masterStopBtn" onclick="toggleMasterPlay()">▶ 播放</button>
@@ -342,7 +465,7 @@
     <button class="eq-btn" data-eq="bass" onclick="setEQ('bass', true)">重低音</button>
     <button class="eq-btn" data-eq="classical" onclick="setEQ('classical', true)">古典</button>
     <button class="eq-btn" data-eq="custom" onclick="selectCustomEQ()">自訂</button>
-    <button class="eq-tune-toggle" id="tuneToggleBtn" onclick="toggleEQPanel()" title="展開EQ推桿">🎛️</button>
+    <button class="eq-tune-toggle" id="tuneToggleBtn" onclick="toggleEQPanel()" title="展開EQ推桿與電台管理">🎛️</button>
   </div>
 
   <!-- 各台獨立前級增益 + 10段垂直推桿 EQ 面板 -->
@@ -368,27 +491,57 @@
       <button class="save-target-btn" onclick="overwritePreset('bass')">覆蓋「重低音」</button>
       <button class="save-target-btn" onclick="overwritePreset('classical')">覆蓋「古典」</button>
       <button class="reset-eq-btn" onclick="resetDefaultPresets()">還原EQ</button>
+      <button class="manage-ch-btn" onclick="openChannelManager()">📻 電台</button>
     </div>
   </div>
 
   <div class="btn-grid" id="btnContainer"></div>
 
+  <!-- 電台清單管理彈窗（可動態新增/刪除電台網址） -->
+  <div class="modal-backdrop" id="channelModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <span>📻 walton電台清單管理</span>
+        <button class="close-modal-btn" onclick="closeChannelManager()">完成</button>
+      </div>
+      <div class="add-form">
+        <div class="add-form-row">
+          <input type="text" id="newChName" placeholder="電台名稱 (例: ICRT)">
+          <input type="text" id="newChSub" placeholder="頻率標籤 (例: FM 100.7)">
+        </div>
+        <input type="url" id="newChUrl" placeholder="貼上 HTTPS 串流網址 (.m3u8 / .mp3 / .m4a)">
+        <button class="add-submit-btn" onclick="addNewChannel()">＋ 新增電台至面板</button>
+      </div>
+      <div class="ch-manage-list" id="chManageList"></div>
+    </div>
+  </div>
+
   <audio id="playerEQ" preload="none" playsinline crossorigin="anonymous"></audio>
   <audio id="playerDirect" preload="none" playsinline></audio>
 
 <script>
+  // 精選自 radio_taiwan.html 的 HTTPS 有效串流電台（已略過純 HTTP 與失效節點）
   const defaultChannels = [
-    { id: 'ch1', name: '中廣音樂網', sub: 'iRadio', url: 'https://sonnykuo.appspot.com/bcc/?id=中廣音樂網' },
-    { id: 'ch2', name: '中廣新聞網', sub: 'News', url: 'https://sonnykuo.appspot.com/bcc/?id=中廣新聞網' },
-    { id: 'ch3', name: '古典 97.7', sub: 'FM 97.7', url: 'https://onair.family977.com.tw:8977/live.mp3' },
-    { id: 'ch4', name: 'Bravo 91.3', sub: 'FM 91.3', url: 'https://onair.family977.com.tw:8977/live.mp3' },
-    { id: 'ch5', name: '飛碟聯播網', sub: 'FM 92.1', url: 'https://stream.rcs.revma.com/em90w4aeewzuv.m4a' },
-    { id: 'ch6', name: '全國廣播', sub: 'FM 106.1', url: 'https://stream.rcs.revma.com/044q61ha7a0uv' },
-    { id: 'ch7', name: '佳音聯播', sub: 'FM 90.9', url: 'https://stream.ginnet.cloud/live0119lo-p4rb/_definst_/fm909/playlist.m3u8' },
-    { id: 'ch8', name: 'News98', sub: 'FM 98.1', url: 'https://stream.rcs.revma.com/pntx1639ntzuv.m4a' }
+    { id: 'ch1',  name: '中廣音樂網', sub: 'iRadio',   url: 'https://sonnykuo.appspot.com/bcc/?id=中廣音樂網' },
+    { id: 'ch2',  name: '中廣新聞網', sub: 'News',     url: 'https://sonnykuo.appspot.com/bcc/?id=中廣新聞網' },
+    { id: 'ch3',  name: '中廣流行網', sub: 'I Like',   url: 'https://sonnykuo.appspot.com/bcc/?id=中廣流行網' },
+    { id: 'ch4',  name: '古典 97.7',  sub: 'FM 97.7',  url: 'https://onair.family977.com.tw:8977/live.mp3' },
+    { id: 'ch5',  name: 'Bravo 91.3', sub: 'FM 91.3',  url: 'https://onair.family977.com.tw:8977/live.mp3' },
+    { id: 'ch6',  name: '飛碟聯播網', sub: 'FM 92.1',  url: 'https://stream.rcs.revma.com/em90w4aeewzuv.m4a' },
+    { id: 'ch7',  name: 'News98',     sub: 'FM 98.1',  url: 'https://stream.rcs.revma.com/pntx1639ntzuv.m4a' },
+    { id: 'ch8',  name: '全國廣播',   sub: 'FM 106.1', url: 'https://stream.rcs.revma.com/044q61ha7a0uv' },
+    { id: 'ch9',  name: '佳音聯播',   sub: 'FM 90.9',  url: 'https://stream.ginnet.cloud/live0119lo-p4rb/_definst_/fm909/playlist.m3u8' },
+    { id: 'ch10', name: '台北愛樂',   sub: 'FM 99.7',  url: 'https://stream.rcs.revma.com/sw7168857a0uv' },
+    { id: 'ch11', name: 'IC 之音',    sub: 'FM 97.5',  url: 'https://stream.rcs.revma.com/78898857a0uv' },
+    { id: 'ch12', name: '警察廣播',   sub: '全國治安', url: 'https://stream.pbs.gov.tw/live/TPS/playlist.m3u8' }
   ];
 
-  function loadOrderedChannels() {
+  // 載入電台清單（支援使用者自訂新增/刪除與拖曳排序）
+  function loadChannelsData() {
+    const savedCustomList = JSON.parse(localStorage.getItem('waltonCustomChannelsList'));
+    if (Array.isArray(savedCustomList) && savedCustomList.length > 0) {
+      return savedCustomList;
+    }
     const savedOrder = JSON.parse(localStorage.getItem('customChannelOrderIds'));
     if (!Array.isArray(savedOrder)) return [...defaultChannels];
     const ordered = [];
@@ -402,7 +555,12 @@
     return ordered;
   }
 
-  let channels = loadOrderedChannels();
+  let channels = loadChannelsData();
+
+  function saveChannelsData() {
+    localStorage.setItem('waltonCustomChannelsList', JSON.stringify(channels));
+    localStorage.setItem('customChannelOrderIds', JSON.stringify(channels.map(c => c.id)));
+  }
 
   const eqBands = [
     { label: '31.25', freq: 31.25, type: 'lowshelf' },
@@ -435,7 +593,7 @@
   const playerDirect = document.getElementById('playerDirect');
   let activePlayer = playerDirect;
   let isDirectMode = true;
-  let isMutedPrebuffered = false; // 標記目前是否處於靜音預先緩衝就緒狀態
+  let isMutedPrebuffered = false;
   let isAutoDirectFallback = false;
   let hlsInstance = null;
   let switchToken = 0;
@@ -559,7 +717,7 @@
             channels[toIdx] = temp;
 
             currentIndex = Math.max(0, channels.findIndex(c => c.id === currentChannelId));
-            localStorage.setItem('customChannelOrderIds', JSON.stringify(channels.map(c => c.id)));
+            saveChannelsData();
             renderChannelButtons();
             statusSub.innerText = '✅ 已完成交換並儲存順序';
           } else {
@@ -572,7 +730,6 @@
           dropTargetChannelId = null;
           const targetIdx = channels.findIndex(c => c.id === ch.id);
           if (targetIdx !== -1) {
-            // 如果目前處於靜音預緩衝狀態且點擊的正是目前預緩衝的這一台，直接零延遲解除靜音並升級 EQ
             if (isMutedPrebuffered && targetIdx === currentIndex) {
               unlockPrebufferedStream();
             } else {
@@ -597,6 +754,76 @@
       btn.addEventListener('contextmenu', (e) => e.preventDefault());
       container.appendChild(btn);
     });
+  }
+
+  // 電台管理彈窗控制
+  function openChannelManager() {
+    renderChannelManageList();
+    document.getElementById('channelModal').classList.add('show');
+  }
+
+  function closeChannelManager() {
+    document.getElementById('channelModal').classList.remove('show');
+    renderChannelButtons();
+  }
+
+  function renderChannelManageList() {
+    const listEl = document.getElementById('chManageList');
+    listEl.innerHTML = '';
+    channels.forEach((ch, idx) => {
+      const item = document.createElement('div');
+      item.className = 'ch-manage-item';
+      item.innerHTML = `
+        <div class="ch-manage-info">
+          <span class="ch-manage-name">${ch.name} (${ch.sub})</span>
+          <span class="ch-manage-url">${ch.url}</span>
+        </div>
+        <button class="del-ch-btn" onclick="deleteChannel(${idx})">刪除</button>
+      `;
+      listEl.appendChild(item);
+    });
+  }
+
+  function addNewChannel() {
+    const name = document.getElementById('newChName').value.trim();
+    const sub = document.getElementById('newChSub').value.trim() || '網路電台';
+    const url = document.getElementById('newChUrl').value.trim();
+
+    if (!name || !url) {
+      alert('請輸入電台名稱與 HTTPS 串流網址');
+      return;
+    }
+    if (!url.startsWith('https://')) {
+      alert('為確保 iOS Safari 與 GitHub Pages 正常播放，串流網址必須以 https:// 開頭');
+      return;
+    }
+
+    const newId = 'ch_' + Date.now();
+    channels.push({ id: newId, name, sub, url });
+    saveChannelsData();
+
+    document.getElementById('newChName').value = '';
+    document.getElementById('newChSub').value = '';
+    document.getElementById('newChUrl').value = '';
+    renderChannelManageList();
+    renderChannelButtons();
+  }
+
+  function deleteChannel(idx) {
+    if (channels.length <= 1) {
+      alert('至少需保留一個電台');
+      return;
+    }
+    const removed = channels.splice(idx, 1)[0];
+    saveChannelsData();
+    if (removed.id === currentChannelId) {
+      currentIndex = 0;
+      currentChannelId = channels[0].id;
+    } else {
+      currentIndex = Math.max(0, channels.findIndex(c => c.id === currentChannelId));
+    }
+    renderChannelManageList();
+    renderChannelButtons();
   }
 
   function getChannelPreampDb(idx) {
@@ -687,31 +914,20 @@
     filterNodes.forEach((f, i) => { f.gain.value = gains[i]; });
   }
 
-  // 點擊畫面任意處或按下按鍵時，零延遲解除靜音並平滑升級至 10 段 EQ 引擎
   function unlockPrebufferedStream() {
     if (!isMutedPrebuffered) return;
     isMutedPrebuffered = false;
 
     const ch = channels[currentIndex];
-    // 1. 立即解除靜音並執行 0.3 秒淡入，達成零延遲出聲
     playerDirect.muted = false;
     fadeInTargetAudio(true);
     updateUIState(currentIndex, 'playing', '');
     setupMediaSession(ch);
 
-    // 2. 利用這次使用者手勢解鎖 AudioContext，背景無縫升級為 10 段 EQ 通道
     initAudioEQ();
     const myToken = ++switchToken;
     const tempHls = hlsInstance;
 
-    // 建立臨時探測確保 EQ 通道可正常跨網域播放，若支援則無縫接手
-    const probeEQ = () => {
-      if (myToken !== switchToken) return;
-      isAutoDirectFallback = false;
-      updateStatusEQText();
-    };
-
-    // 若該電台本身已確定可播，直接平滑切換至 playerEQ 以套用 10 段 EQ 與前級增益
     setTimeout(() => {
       if (myToken !== switchToken || playerDirect.paused) return;
       const oldDirect = playerDirect;
@@ -735,7 +951,6 @@
           setupMediaSession(ch);
         },
         () => {
-          // 若該電台不支援 CORS，維持 playerDirect 直通播放不中斷
           isAutoDirectFallback = false;
           isDirectMode = true;
           updateStatusEQText();
@@ -944,7 +1159,7 @@
       return;
     }
     if (currentPlayState === 'idle') {
-      statusSub.innerText = '長按電台 1 秒可滑動調整順序';
+      statusSub.innerText = 'walton電台 • 長按 1 秒可調整順序';
       return;
     }
     if (currentPlayState === 'selected') {
@@ -1056,7 +1271,6 @@
 
     updateUIState(idx, 'selected', '已選台，串流連線緩衝中...');
 
-    // 1. 無手勢自動開啟 (!isUserClick)：先嘗試有聲直通；若被瀏覽器阻擋，立即改以「靜音預先緩衝」跑起來
     if (!isUserClick) {
       stopAllPlayersImmediately();
       attachAndPlay(
@@ -1075,7 +1289,6 @@
           setupMediaSession(ch);
         },
         () => {
-          // 有聲自動播放被瀏覽器擋下 -> 啟動「靜音預先緩衝 (startMuted = true)」
           if (myToken !== switchToken) return;
           if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
           attachAndPlay(
@@ -1088,7 +1301,6 @@
               isDirectMode = true;
               isAutoDirectFallback = true;
               isMutedPrebuffered = true;
-              // 保持 selected 暖棕色提示等待輕點，但底層音訊流已完全緩衝連線完畢
               updateUIState(idx, 'selected', '🟢 已緩衝就緒 • 點擊畫面任意處零延遲出聲');
             },
             () => {
@@ -1100,7 +1312,6 @@
       return;
     }
 
-    // 2. 手動點擊模式：直接啟用 10 段 EQ 引擎
     isAutoDirectFallback = false;
     isMutedPrebuffered = false;
     initAudioEQ();
@@ -1198,7 +1409,7 @@
     if ('mediaSession' in navigator) {
       navigator.mediaSession.metadata = new MediaMetadata({
         title: ch.name,
-        artist: ch.sub + ' • 台灣廣播',
+        artist: ch.sub + ' • walton電台',
         album: 'CAR MULTIMEDIA'
       });
 
@@ -1217,8 +1428,8 @@
     }
   }
 
-  // 全域觸控與鍵盤監聽：只要在靜音預緩衝狀態下點擊螢幕任何角落或按鍵盤任意鍵，立即零延遲解鎖出聲
   document.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('#channelModal')) return;
     if (isMutedPrebuffered && !e.target.closest('.ch-btn')) {
       unlockPrebufferedStream();
     } else if (isAutoDirectFallback && currentPlayState === 'playing' && !e.target.closest('button') && !e.target.closest('input')) {
@@ -1226,14 +1437,15 @@
     }
   }, { passive: true });
 
-  document.addEventListener('keydown', () => {
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT') return;
     if (isMutedPrebuffered) {
       unlockPrebufferedStream();
     }
   });
 
   document.addEventListener('touchmove', (e) => {
-    if (!e.target.closest('input[type=range]')) {
+    if (!e.target.closest('input[type=range]') && !e.target.closest('.ch-manage-list')) {
       e.preventDefault();
     }
   }, { passive: false });
