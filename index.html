@@ -16,25 +16,25 @@
     display: flex;
     flex-direction: column;
     height: 100dvh;
-    padding: env(safe-area-inset-top, 16px) 14px env(safe-area-inset-bottom, 16px) 14px;
-    gap: 12px;
+    padding: env(safe-area-inset-top, 14px) 14px env(safe-area-inset-bottom, 14px) 14px;
+    gap: 10px;
   }
   .header {
     background: #2D3034;
     border: 1px solid #45494F;
     border-radius: 18px;
-    padding: 14px 16px;
+    padding: 12px 16px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   }
-  .status-box { display: flex; flex-direction: column; gap: 4px; overflow: hidden; }
-  .status-label { font-size: 13px; color: #9EA3A8; letter-spacing: 0.5px; }
+  .status-box { display: flex; flex-direction: column; gap: 3px; overflow: hidden; }
+  .status-label { font-size: 12px; color: #9EA3A8; letter-spacing: 0.5px; }
   .status-title {
-    font-size: 20px;
+    font-size: 19px;
     font-weight: 700;
-    color: #9BB7C7; /* 莫蘭迪淺霧藍 */
+    color: #9BB7C7;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -44,47 +44,71 @@
     color: #E2DFD7;
     border: 1px solid #636870;
     border-radius: 14px;
-    padding: 12px 18px;
-    font-size: 18px;
+    padding: 10px 16px;
+    font-size: 17px;
     font-weight: 700;
     flex-shrink: 0;
-    transition: background 0.2s;
   }
   .stop-btn.active {
-    background: #A66E6E; /* 莫蘭迪乾燥玫瑰粉 */
+    background: #A66E6E;
     border-color: #C79292;
     color: #FAF8F5;
+  }
+  /* EQ 音效切換列 */
+  .eq-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    background: #2A2D31;
+    padding: 6px;
+    border-radius: 14px;
+    border: 1px solid #3E4248;
+  }
+  .eq-btn {
+    background: transparent;
+    border: 1px solid transparent;
+    color: #9EA3A8;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 8px 4px;
+    border-radius: 10px;
+    transition: all 0.2s;
+  }
+  .eq-btn.active {
+    background: #6B7E74; /* 莫蘭迪鼠尾草綠 */
+    color: #FAF8F5;
+    border-color: #9EB3A8;
   }
   .btn-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     flex: 1;
-    gap: 12px;
+    gap: 10px;
   }
   button.ch-btn {
-    font-size: 21px;
+    font-size: 20px;
     font-weight: 700;
     border: 1.5px solid #484C52;
-    border-radius: 20px;
-    background: #32353A; /* 莫蘭迪岩灰 */
+    border-radius: 18px;
+    background: #32353A;
     color: #E2DFD7;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 8px;
+    padding: 6px;
     text-align: center;
-    line-height: 1.3;
+    line-height: 1.25;
     transition: transform 0.1s, background 0.2s, border-color 0.2s;
   }
   button.ch-btn:active { transform: scale(0.96); }
   button.ch-btn.playing {
-    background: #5B7A8C; /* 莫蘭迪霧霾藍 */
+    background: #5B7A8C;
     border-color: #B4C8D4;
     color: #FAF8F5;
     box-shadow: 0 4px 16px rgba(91, 122, 140, 0.35);
   }
-  .sub-tag { font-size: 13px; font-weight: 400; color: #9EA3A8; margin-top: 4px; }
+  .sub-tag { font-size: 12px; font-weight: 400; color: #9EA3A8; margin-top: 3px; }
   button.ch-btn.playing .sub-tag { color: #DCE6EC; }
 </style>
 </head>
@@ -97,8 +121,16 @@
     <button class="stop-btn" id="masterStopBtn" onclick="toggleMasterPlay()">▶ 播放</button>
   </div>
 
+  <!-- EQ 音效預設模式列 -->
+  <div class="eq-bar" id="eqBar">
+    <button class="eq-btn" data-eq="flat" onclick="setEQ('flat')">原音</button>
+    <button class="eq-btn" data-eq="voice" onclick="setEQ('voice')">人聲清晰</button>
+    <button class="eq-btn" data-eq="bass" onclick="setEQ('bass')">重低音</button>
+    <button class="eq-btn" data-eq="classical" onclick="setEQ('classical')">古典劇院</button>
+  </div>
+
   <div class="btn-grid" id="btnContainer"></div>
-  <audio id="player" preload="none" playsinline></audio>
+  <audio id="player" preload="none" playsinline crossorigin="anonymous"></audio>
 
 <script>
   const channels = [
@@ -112,6 +144,14 @@
     { id: 'ch8', name: 'News98', sub: 'FM 98.1', url: 'https://stream.rcs.revma.com/pntx1639ntzuv.m4a' }
   ];
 
+  // EQ 頻段增益設定 [低音 100Hz, 中頻 1200Hz, 高音 6000Hz] (單位 dB)
+  const eqPresets = {
+    flat:      { label: '原音',     gains: [0, 0, 0] },
+    voice:     { label: '人聲清晰', gains: [-4, 5, 3] },
+    bass:      { label: '重低音',   gains: [7, -1, 3] },
+    classical: { label: '古典劇院', gains: [3, 0, 5] }
+  };
+
   const player = document.getElementById('player');
   const statusMain = document.getElementById('statusMain');
   const statusSub = document.getElementById('statusSub');
@@ -119,18 +159,97 @@
   const container = document.getElementById('btnContainer');
 
   let currentIndex = 0;
+  let currentEQ = localStorage.getItem('lastRadioEQ') || 'flat';
+  let useCorsBypass = false;
 
+  // Web Audio API 節點變數
+  let audioCtx = null;
+  let bassFilter = null;
+  let midFilter = null;
+  let trebleFilter = null;
+
+  // 初始化 Web Audio EQ（需在使用者點擊觸發時建立）
+  function initAudioEQ() {
+    if (audioCtx) {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      return;
+    }
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new AudioContext();
+    const source = audioCtx.createMediaElementSource(player);
+
+    bassFilter = audioCtx.createBiquadFilter();
+    bassFilter.type = 'lowshelf';
+    bassFilter.frequency.value = 100;
+
+    midFilter = audioCtx.createBiquadFilter();
+    midFilter.type = 'peaking';
+    midFilter.frequency.value = 1200;
+    midFilter.Q.value = 1.0;
+
+    trebleFilter = audioCtx.createBiquadFilter();
+    trebleFilter.type = 'highshelf';
+    trebleFilter.frequency.value = 6000;
+
+    source.connect(bassFilter);
+    bassFilter.connect(midFilter);
+    midFilter.connect(trebleFilter);
+    trebleFilter.connect(audioCtx.destination);
+
+    applyEQGains(currentEQ);
+  }
+
+  function applyEQGains(presetKey) {
+    const preset = eqPresets[presetKey] || eqPresets.flat;
+    if (bassFilter && midFilter && trebleFilter) {
+      bassFilter.gain.value = preset.gains[0];
+      midFilter.gain.value = preset.gains[1];
+      trebleFilter.gain.value = preset.gains[2];
+    }
+  }
+
+  function setEQ(presetKey) {
+    currentEQ = presetKey;
+    localStorage.setItem('lastRadioEQ', presetKey);
+
+    document.querySelectorAll('.eq-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.eq === presetKey);
+    });
+
+    if (audioCtx) {
+      applyEQGains(presetKey);
+    }
+  }
+
+  // 產生電台按鈕
   channels.forEach((ch, idx) => {
     const btn = document.createElement('button');
     btn.className = 'ch-btn';
     btn.id = ch.id;
     btn.innerHTML = `<span>${ch.name}</span><span class="sub-tag">${ch.sub}</span>`;
-    btn.onclick = () => playByIndex(idx);
+    btn.onclick = () => {
+      useCorsBypass = false;
+      playByIndex(idx);
+    };
     container.appendChild(btn);
   });
 
+  // 智慧 CORS 容錯：若電台伺服器拒絕跨網域 EQ 處理，自動切換為直通模式確保有聲音
   player.addEventListener('error', () => {
-    updateUI(currentIndex, false, '⚠️ 此電台串流暫時無法連線');
+    if (!useCorsBypass && player.hasAttribute('crossorigin')) {
+      useCorsBypass = true;
+      player.removeAttribute('crossorigin');
+      const ch = channels[currentIndex];
+      player.src = ch.url;
+      player.load();
+      player.play().then(() => {
+        updateUI(currentIndex, true, `播放中 (直通原音) • ${ch.sub}`);
+      }).catch(() => {
+        updateUI(currentIndex, false, '⚠️ 此電台串流暫時無法連線');
+      });
+    } else {
+      updateUI(currentIndex, false, '⚠️ 此電台串流暫時無法連線');
+    }
   });
 
   function playByIndex(idx) {
@@ -148,12 +267,20 @@
     currentIndex = idx;
     localStorage.setItem('lastRadioIndex', idx);
 
+    // 每次換台預設先嘗試開啟 CORS 以支援 EQ
+    if (!useCorsBypass && !player.hasAttribute('crossorigin')) {
+      player.setAttribute('crossorigin', 'anonymous');
+    }
+
     updateUI(idx, false, '連線緩衝中...');
     player.src = ch.url;
     player.load();
 
     player.play().then(() => {
-      updateUI(idx, true, '正在播放 • ' + ch.sub);
+      initAudioEQ();
+      const eqName = eqPresets[currentEQ].label;
+      const modeText = useCorsBypass ? '直通原音' : `EQ:${eqName}`;
+      updateUI(idx, true, `${modeText} • ${ch.sub}`);
       setupMediaSession(ch);
     }).catch(() => {
       updateUI(idx, false, '請點擊螢幕任一按鈕啟動聲音');
@@ -162,6 +289,7 @@
 
   function toggleMasterPlay() {
     if (player.paused) {
+      useCorsBypass = false;
       playByIndex(currentIndex);
     } else {
       player.pause();
@@ -202,22 +330,25 @@
 
       navigator.mediaSession.setActionHandler('play', () => {
         player.play();
-        updateUI(currentIndex, true, '正在播放 • ' + ch.sub);
+        updateUI(currentIndex, true, `EQ:${eqPresets[currentEQ].label} • ${ch.sub}`);
       });
       navigator.mediaSession.setActionHandler('pause', () => {
         player.pause();
         updateUI(currentIndex, false, '已暫停');
       });
       navigator.mediaSession.setActionHandler('previoustrack', () => {
+        useCorsBypass = false;
         playByIndex(currentIndex - 1);
       });
       navigator.mediaSession.setActionHandler('nexttrack', () => {
+        useCorsBypass = false;
         playByIndex(currentIndex + 1);
       });
     }
   }
 
   window.addEventListener('load', () => {
+    setEQ(currentEQ);
     const savedIdx = parseInt(localStorage.getItem('lastRadioIndex'), 10);
     currentIndex = (!isNaN(savedIdx) && savedIdx >= 0 && savedIdx < channels.length) ? savedIdx : 0;
     playByIndex(currentIndex);
