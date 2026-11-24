@@ -277,7 +277,7 @@
     cursor: pointer;
   }
 
-  /* 電台新增與編輯彈窗 */
+  /* 電台新增、管理與垃圾桶彈窗 */
   .modal-backdrop {
     display: none;
     position: fixed;
@@ -294,12 +294,12 @@
     border: 1px solid #52575F;
     border-radius: 20px;
     width: 100%;
-    max-width: 420px;
-    max-height: 82dvh;
+    max-width: 440px;
+    max-height: 85dvh;
     display: flex;
     flex-direction: column;
     padding: 16px;
-    gap: 12px;
+    gap: 10px;
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
   }
   .modal-header {
@@ -309,13 +309,15 @@
     font-size: 18px;
     font-weight: 700;
     color: #E2DFD7;
+    flex-shrink: 0;
   }
   .close-modal-btn {
     background: #42464D;
     border: none;
     color: #E2DFD7;
-    font-size: 16px;
-    padding: 6px 12px;
+    font-size: 15px;
+    font-weight: 600;
+    padding: 6px 14px;
     border-radius: 10px;
     cursor: pointer;
   }
@@ -327,6 +329,7 @@
     padding: 10px;
     border-radius: 14px;
     border: 1px solid #3E4248;
+    flex-shrink: 0;
   }
   .add-form-row {
     display: grid;
@@ -338,7 +341,7 @@
     background: #32353A;
     border: 1px solid #4A4F57;
     border-radius: 10px;
-    padding: 9px 10px;
+    padding: 8px 10px;
     color: #FAF8F5;
     font-size: 14px;
     -webkit-user-select: text;
@@ -350,16 +353,45 @@
     color: #FAF8F5;
     font-size: 14px;
     font-weight: 700;
-    padding: 10px;
+    padding: 9px;
     border-radius: 10px;
+    cursor: pointer;
+  }
+  .modal-scroll-area {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow-y: auto;
+    padding-right: 2px;
+    flex: 1;
+  }
+  .section-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: #9BB7C7;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #3E4248;
+  }
+  .section-title.trash-title {
+    color: #D9C3B0;
+    margin-top: 4px;
+  }
+  .empty-trash-btn {
+    background: transparent;
+    border: 1px solid #7A4B4B;
+    color: #D69696;
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 6px;
     cursor: pointer;
   }
   .ch-manage-list {
     display: flex;
     flex-direction: column;
     gap: 6px;
-    overflow-y: auto;
-    padding-right: 2px;
   }
   .ch-manage-item {
     display: flex;
@@ -371,6 +403,12 @@
     border: 1px solid #45494F;
     gap: 8px;
   }
+  .ch-manage-item.trash-item {
+    background: #282A2E;
+    border-style: dashed;
+    border-color: #4A4E54;
+    opacity: 0.9;
+  }
   .ch-manage-info {
     display: flex;
     flex-direction: column;
@@ -378,15 +416,44 @@
   }
   .ch-manage-name { font-size: 14px; font-weight: 700; color: #E2DFD7; }
   .ch-manage-url { font-size: 11px; color: #9EA3A8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item-actions {
+    display: flex;
+    gap: 5px;
+    flex-shrink: 0;
+  }
   .del-ch-btn {
-    background: #7A4B4B;
-    border: 1px solid #A66E6E;
+    background: #6E5849;
+    border: 1px solid #9C8675;
     color: #FAF8F5;
     font-size: 12px;
     padding: 6px 10px;
     border-radius: 8px;
-    flex-shrink: 0;
     cursor: pointer;
+  }
+  .restore-ch-btn {
+    background: #4E6B5D;
+    border: 1px solid #7D9B8C;
+    color: #FAF8F5;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .perm-del-btn {
+    background: #6E3E3E;
+    border: 1px solid #9C5A5A;
+    color: #FAF8F5;
+    font-size: 12px;
+    padding: 6px 8px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .empty-hint {
+    font-size: 12px;
+    color: #7D8288;
+    text-align: center;
+    padding: 10px 0;
   }
 
   .btn-grid {
@@ -497,7 +564,7 @@
 
   <div class="btn-grid" id="btnContainer"></div>
 
-  <!-- 電台清單管理彈窗（可動態新增/刪除電台網址） -->
+  <!-- 電台清單與垃圾桶管理彈窗 -->
   <div class="modal-backdrop" id="channelModal">
     <div class="modal-card">
       <div class="modal-header">
@@ -512,7 +579,18 @@
         <input type="url" id="newChUrl" placeholder="貼上 HTTPS 串流網址 (.m3u8 / .mp3 / .m4a)">
         <button class="add-submit-btn" onclick="addNewChannel()">＋ 新增電台至面板</button>
       </div>
-      <div class="ch-manage-list" id="chManageList"></div>
+      <div class="modal-scroll-area" id="modalScrollArea">
+        <div class="section-title">
+          <span>目前顯示的電台 (<span id="activeCount">0</span>)</span>
+        </div>
+        <div class="ch-manage-list" id="chManageList"></div>
+
+        <div class="section-title trash-title">
+          <span>🗑️ 垃圾桶 (<span id="trashCount">0</span>)</span>
+          <button class="empty-trash-btn" id="emptyTrashBtn" onclick="emptyTrash()">清空垃圾桶</button>
+        </div>
+        <div class="ch-manage-list" id="chTrashList"></div>
+      </div>
     </div>
   </div>
 
@@ -520,7 +598,6 @@
   <audio id="playerDirect" preload="none" playsinline></audio>
 
 <script>
-  // 精選自 radio_taiwan.html 的 HTTPS 有效串流電台（已略過純 HTTP 與失效節點）
   const defaultChannels = [
     { id: 'ch1',  name: '中廣音樂網', sub: 'iRadio',   url: 'https://sonnykuo.appspot.com/bcc/?id=中廣音樂網' },
     { id: 'ch2',  name: '中廣新聞網', sub: 'News',     url: 'https://sonnykuo.appspot.com/bcc/?id=中廣新聞網' },
@@ -536,7 +613,6 @@
     { id: 'ch12', name: '警察廣播',   sub: '全國治安', url: 'https://stream.pbs.gov.tw/live/TPS/playlist.m3u8' }
   ];
 
-  // 載入電台清單（支援使用者自訂新增/刪除與拖曳排序）
   function loadChannelsData() {
     const savedCustomList = JSON.parse(localStorage.getItem('waltonCustomChannelsList'));
     if (Array.isArray(savedCustomList) && savedCustomList.length > 0) {
@@ -556,10 +632,12 @@
   }
 
   let channels = loadChannelsData();
+  let trashChannels = JSON.parse(localStorage.getItem('waltonTrashChannelsList')) || [];
 
   function saveChannelsData() {
     localStorage.setItem('waltonCustomChannelsList', JSON.stringify(channels));
     localStorage.setItem('customChannelOrderIds', JSON.stringify(channels.map(c => c.id)));
+    localStorage.setItem('waltonTrashChannelsList', JSON.stringify(trashChannels));
   }
 
   const eqBands = [
@@ -756,7 +834,7 @@
     });
   }
 
-  // 電台管理彈窗控制
+  // 電台管理與垃圾桶彈窗控制
   function openChannelManager() {
     renderChannelManageList();
     document.getElementById('channelModal').classList.add('show');
@@ -769,6 +847,13 @@
 
   function renderChannelManageList() {
     const listEl = document.getElementById('chManageList');
+    const trashEl = document.getElementById('chTrashList');
+    document.getElementById('activeCount').innerText = channels.length;
+    document.getElementById('trashCount').innerText = trashChannels.length;
+
+    const emptyTrashBtn = document.getElementById('emptyTrashBtn');
+    emptyTrashBtn.style.display = trashChannels.length > 0 ? 'inline-block' : 'none';
+
     listEl.innerHTML = '';
     channels.forEach((ch, idx) => {
       const item = document.createElement('div');
@@ -778,10 +863,33 @@
           <span class="ch-manage-name">${ch.name} (${ch.sub})</span>
           <span class="ch-manage-url">${ch.url}</span>
         </div>
-        <button class="del-ch-btn" onclick="deleteChannel(${idx})">刪除</button>
+        <div class="item-actions">
+          <button class="del-ch-btn" onclick="moveChannelToTrash(${idx})">刪除</button>
+        </div>
       `;
       listEl.appendChild(item);
     });
+
+    trashEl.innerHTML = '';
+    if (trashChannels.length === 0) {
+      trashEl.innerHTML = '<div class="empty-hint">垃圾桶目前是空的</div>';
+    } else {
+      trashChannels.forEach((ch, idx) => {
+        const item = document.createElement('div');
+        item.className = 'ch-manage-item trash-item';
+        item.innerHTML = `
+          <div class="ch-manage-info">
+            <span class="ch-manage-name">${ch.name} (${ch.sub})</span>
+            <span class="ch-manage-url">${ch.url}</span>
+          </div>
+          <div class="item-actions">
+            <button class="restore-ch-btn" onclick="restoreChannelFromTrash(${idx})">復原</button>
+            <button class="perm-del-btn" onclick="permanentlyDeleteFromTrash(${idx})">永久刪除</button>
+          </div>
+        `;
+        trashEl.appendChild(item);
+      });
+    }
   }
 
   function addNewChannel() {
@@ -809,13 +917,16 @@
     renderChannelButtons();
   }
 
-  function deleteChannel(idx) {
+  // 軟刪除：先移入垃圾桶，保留前級設定以便日後復原
+  function moveChannelToTrash(idx) {
     if (channels.length <= 1) {
-      alert('至少需保留一個電台');
+      alert('至少需保留一個電台在主畫面');
       return;
     }
     const removed = channels.splice(idx, 1)[0];
+    trashChannels.unshift(removed);
     saveChannelsData();
+
     if (removed.id === currentChannelId) {
       currentIndex = 0;
       currentChannelId = channels[0].id;
@@ -824,6 +935,42 @@
     }
     renderChannelManageList();
     renderChannelButtons();
+  }
+
+  // 從垃圾桶復原回主畫面
+  function restoreChannelFromTrash(trashIdx) {
+    const restored = trashChannels.splice(trashIdx, 1)[0];
+    if (!restored) return;
+    channels.push(restored);
+    saveChannelsData();
+
+    currentIndex = Math.max(0, channels.findIndex(c => c.id === currentChannelId));
+    renderChannelManageList();
+    renderChannelButtons();
+  }
+
+  // 永久刪除單一垃圾桶項目
+  function permanentlyDeleteFromTrash(trashIdx) {
+    const removed = trashChannels.splice(trashIdx, 1)[0];
+    if (removed && perChannelPreamp[removed.id] !== undefined) {
+      delete perChannelPreamp[removed.id];
+      localStorage.setItem('perChannelPreampMap', JSON.stringify(perChannelPreamp));
+    }
+    saveChannelsData();
+    renderChannelManageList();
+  }
+
+  // 清空整個垃圾桶
+  function emptyTrash() {
+    trashChannels.forEach(ch => {
+      if (perChannelPreamp[ch.id] !== undefined) {
+        delete perChannelPreamp[ch.id];
+      }
+    });
+    localStorage.setItem('perChannelPreampMap', JSON.stringify(perChannelPreamp));
+    trashChannels = [];
+    saveChannelsData();
+    renderChannelManageList();
   }
 
   function getChannelPreampDb(idx) {
@@ -1445,7 +1592,7 @@
   });
 
   document.addEventListener('touchmove', (e) => {
-    if (!e.target.closest('input[type=range]') && !e.target.closest('.ch-manage-list')) {
+    if (!e.target.closest('input[type=range]') && !e.target.closest('.modal-scroll-area')) {
       e.preventDefault();
     }
   }, { passive: false });
