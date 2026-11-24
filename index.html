@@ -277,16 +277,16 @@
     cursor: pointer;
   }
 
-  /* 電台新增、管理與垃圾桶彈窗 */
+  /* 電台新增、編輯與垃圾桶彈窗 */
   .modal-backdrop {
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.72);
+    background: rgba(0, 0, 0, 0.75);
     z-index: 100;
     align-items: center;
     justify-content: center;
-    padding: 16px;
+    padding: 14px;
   }
   .modal-backdrop.show { display: flex; }
   .modal-card {
@@ -294,30 +294,46 @@
     border: 1px solid #52575F;
     border-radius: 20px;
     width: 100%;
-    max-width: 440px;
-    max-height: 85dvh;
+    max-width: 450px;
+    max-height: 86dvh;
     display: flex;
     flex-direction: column;
     padding: 16px;
     gap: 10px;
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
   }
   .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 18px;
+    font-size: 17px;
     font-weight: 700;
     color: #E2DFD7;
     flex-shrink: 0;
+    gap: 8px;
   }
-  .close-modal-btn {
+  .modal-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .save-modal-btn {
+    background: #5B7A8C;
+    border: 1px solid #9BB7C7;
+    color: #FAF8F5;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 6px 14px;
+    border-radius: 10px;
+    cursor: pointer;
+  }
+  .cancel-modal-btn {
     background: #42464D;
-    border: none;
+    border: 1px solid #636870;
     color: #E2DFD7;
     font-size: 15px;
-    font-weight: 600;
-    padding: 6px 14px;
+    font-weight: 700;
+    padding: 6px 12px;
     border-radius: 10px;
     cursor: pointer;
   }
@@ -336,7 +352,7 @@
     grid-template-columns: 1fr 1fr;
     gap: 8px;
   }
-  .add-form input {
+  .add-form input, .edit-inline-box input {
     width: 100%;
     background: #32353A;
     border: 1px solid #4A4F57;
@@ -360,7 +376,7 @@
   .modal-scroll-area {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
     overflow-y: auto;
     padding-right: 2px;
     flex: 1;
@@ -377,7 +393,7 @@
   }
   .section-title.trash-title {
     color: #D9C3B0;
-    margin-top: 4px;
+    margin-top: 6px;
   }
   .empty-trash-btn {
     background: transparent;
@@ -395,8 +411,7 @@
   }
   .ch-manage-item {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
     background: #32353A;
     padding: 8px 10px;
     border-radius: 12px;
@@ -408,6 +423,12 @@
     border-style: dashed;
     border-color: #4A4E54;
     opacity: 0.9;
+  }
+  .ch-item-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
   }
   .ch-manage-info {
     display: flex;
@@ -421,12 +442,21 @@
     gap: 5px;
     flex-shrink: 0;
   }
+  .edit-ch-btn {
+    background: #455661;
+    border: 1px solid #677E8C;
+    color: #FAF8F5;
+    font-size: 12px;
+    padding: 6px 9px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
   .del-ch-btn {
     background: #6E5849;
     border: 1px solid #9C8675;
     color: #FAF8F5;
     font-size: 12px;
-    padding: 6px 10px;
+    padding: 6px 9px;
     border-radius: 8px;
     cursor: pointer;
   }
@@ -449,11 +479,115 @@
     border-radius: 8px;
     cursor: pointer;
   }
+  /* 原地展開的編輯表單 */
+  .edit-inline-box {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    background: #25282C;
+    padding: 8px;
+    border-radius: 10px;
+    border: 1px solid #5B7A8C;
+  }
+  .edit-inline-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+  .apply-edit-btn {
+    background: #6B7E74;
+    border: 1px solid #9EB3A8;
+    color: #FAF8F5;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 5px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .cancel-edit-btn {
+    background: #3E4248;
+    border: 1px solid #5A5F68;
+    color: #D6CFC7;
+    font-size: 12px;
+    padding: 5px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
   .empty-hint {
     font-size: 12px;
     color: #7D8288;
     text-align: center;
     padding: 10px 0;
+  }
+
+  /* 未儲存變更確認對話框 */
+  .confirm-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.78);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .confirm-backdrop.show { display: flex; }
+  .confirm-card {
+    background: #2E3238;
+    border: 1.5px solid #8C7A6B;
+    border-radius: 18px;
+    width: 100%;
+    max-width: 340px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.65);
+    text-align: center;
+  }
+  .confirm-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #E6C7AD;
+  }
+  .confirm-desc {
+    font-size: 14px;
+    color: #D6CFC7;
+    line-height: 1.45;
+  }
+  .confirm-btns {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .confirm-save-btn {
+    background: #6B7E74;
+    border: 1px solid #9EB3A8;
+    color: #FAF8F5;
+    font-size: 15px;
+    font-weight: 700;
+    padding: 10px;
+    border-radius: 12px;
+    cursor: pointer;
+  }
+  .confirm-discard-btn {
+    background: #8C5656;
+    border: 1px solid #B87B7B;
+    color: #FAF8F5;
+    font-size: 15px;
+    font-weight: 700;
+    padding: 10px;
+    border-radius: 12px;
+    cursor: pointer;
+  }
+  .confirm-back-btn {
+    background: #3E4248;
+    border: 1px solid #5A5F68;
+    color: #D6CFC7;
+    font-size: 14px;
+    padding: 9px;
+    border-radius: 12px;
+    cursor: pointer;
   }
 
   .btn-grid {
@@ -564,12 +698,15 @@
 
   <div class="btn-grid" id="btnContainer"></div>
 
-  <!-- 電台清單與垃圾桶管理彈窗 -->
+  <!-- 電台清單編輯與垃圾桶管理彈窗 -->
   <div class="modal-backdrop" id="channelModal">
     <div class="modal-card">
       <div class="modal-header">
-        <span>📻 walton電台清單管理</span>
-        <button class="close-modal-btn" onclick="closeChannelManager()">完成</button>
+        <span>📻 walton電台管理</span>
+        <div class="modal-header-actions">
+          <button class="save-modal-btn" onclick="commitChannelManagerChanges()">儲存</button>
+          <button class="cancel-modal-btn" onclick="attemptCloseChannelManager()" title="取消">✕</button>
+        </div>
       </div>
       <div class="add-form">
         <div class="add-form-row">
@@ -577,7 +714,7 @@
           <input type="text" id="newChSub" placeholder="頻率標籤 (例: FM 100.7)">
         </div>
         <input type="url" id="newChUrl" placeholder="貼上 HTTPS 串流網址 (.m3u8 / .mp3 / .m4a)">
-        <button class="add-submit-btn" onclick="addNewChannel()">＋ 新增電台至面板</button>
+        <button class="add-submit-btn" onclick="addNewChannel()">＋ 新增電台至清單</button>
       </div>
       <div class="modal-scroll-area" id="modalScrollArea">
         <div class="section-title">
@@ -590,6 +727,19 @@
           <button class="empty-trash-btn" id="emptyTrashBtn" onclick="emptyTrash()">清空垃圾桶</button>
         </div>
         <div class="ch-manage-list" id="chTrashList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 未儲存變更確認對話框 -->
+  <div class="confirm-backdrop" id="unsavedConfirmModal">
+    <div class="confirm-card">
+      <div class="confirm-title">⚠️ 尚有未儲存的變更</div>
+      <div class="confirm-desc">你已修改了電台名稱、網址或清單內容，是否要儲存這些變更？</div>
+      <div class="confirm-btns">
+        <button class="confirm-save-btn" onclick="confirmSaveAndClose()">儲存變更</button>
+        <button class="confirm-discard-btn" onclick="confirmDiscardAndClose()">放棄變更（還原）</button>
+        <button class="confirm-back-btn" onclick="dismissConfirmModal()">繼續編輯</button>
       </div>
     </div>
   </div>
@@ -633,6 +783,12 @@
 
   let channels = loadChannelsData();
   let trashChannels = JSON.parse(localStorage.getItem('waltonTrashChannelsList')) || [];
+
+  // 管理彈窗暫存工作副本與初始快照（用於偵測是否有變更）
+  let draftChannels = [];
+  let draftTrashChannels = [];
+  let initialSnapshotStr = '';
+  let editingChannelId = null;
 
   function saveChannelsData() {
     localStorage.setItem('waltonCustomChannelsList', JSON.stringify(channels));
@@ -834,62 +990,216 @@
     });
   }
 
-  // 電台管理與垃圾桶彈窗控制
+  // ==================== 電台管理彈窗（支援編輯、暫存、取消變更偵測） ====================
   function openChannelManager() {
+    // 建立深度拷貝暫存複本
+    draftChannels = JSON.parse(JSON.stringify(channels));
+    draftTrashChannels = JSON.parse(JSON.stringify(trashChannels));
+    editingChannelId = null;
+    initialSnapshotStr = JSON.stringify({ c: draftChannels, t: draftTrashChannels });
+
+    document.getElementById('newChName').value = '';
+    document.getElementById('newChSub').value = '';
+    document.getElementById('newChUrl').value = '';
+
     renderChannelManageList();
     document.getElementById('channelModal').classList.add('show');
   }
 
-  function closeChannelManager() {
+  function hasUnsavedChanges() {
+    // 檢查上方新增欄位是否有未按新增的文字，或列表/垃圾桶是否與初始快照不同
+    const pendingName = document.getElementById('newChName').value.trim();
+    const pendingUrl = document.getElementById('newChUrl').value.trim();
+    if (pendingName || pendingUrl) return true;
+
+    const currentSnapshotStr = JSON.stringify({ c: draftChannels, t: draftTrashChannels });
+    return currentSnapshotStr !== initialSnapshotStr;
+  }
+
+  // 點擊右上角「✕」取消按鈕
+  function attemptCloseChannelManager() {
+    if (hasUnsavedChanges()) {
+      document.getElementById('unsavedConfirmModal').classList.add('show');
+    } else {
+      document.getElementById('channelModal').classList.remove('show');
+    }
+  }
+
+  function dismissConfirmModal() {
+    document.getElementById('unsavedConfirmModal').classList.remove('show');
+  }
+
+  function confirmDiscardAndClose() {
+    // 放棄所有暫存變更，直接關閉所有彈窗
+    editingChannelId = null;
+    document.getElementById('unsavedConfirmModal').classList.remove('show');
+    document.getElementById('channelModal').classList.remove('show');
+  }
+
+  function confirmSaveAndClose() {
+    document.getElementById('unsavedConfirmModal').classList.remove('show');
+    commitChannelManagerChanges();
+  }
+
+  // 正式儲存所有變更並更新主畫面
+  function commitChannelManagerChanges() {
+    // 若使用者在新增表單填了完整名稱與網址卻忘了按「＋新增」，貼心一併幫他加入
+    const pendingName = document.getElementById('newChName').value.trim();
+    const pendingSub = document.getElementById('newChSub').value.trim() || '網路電台';
+    const pendingUrl = document.getElementById('newChUrl').value.trim();
+    if (pendingName && pendingUrl) {
+      if (!pendingUrl.startsWith('https://')) {
+        alert('串流網址必須以 https:// 開頭');
+        return;
+      }
+      draftChannels.push({ id: 'ch_' + Date.now(), name: pendingName, sub: pendingSub, url: pendingUrl });
+    }
+
+    const prevPlayingCh = channels[currentIndex];
+    const prevUrl = prevPlayingCh ? prevPlayingCh.url : '';
+
+    // 清理被永久刪除電台的前級設定
+    const allRemainingIds = new Set([
+      ...draftChannels.map(c => c.id),
+      ...draftTrashChannels.map(c => c.id)
+    ]);
+    Object.keys(perChannelPreamp).forEach(id => {
+      if (!allRemainingIds.has(id)) delete perChannelPreamp[id];
+    });
+    localStorage.setItem('perChannelPreampMap', JSON.stringify(perChannelPreamp));
+
+    // 套用暫存至正式資料
+    channels = draftChannels;
+    trashChannels = draftTrashChannels;
+    saveChannelsData();
+
+    // 檢查目前播放電台是否仍在清單中或網址已更新
+    const newIdx = channels.findIndex(c => c.id === currentChannelId);
+    if (newIdx === -1) {
+      currentIndex = 0;
+      currentChannelId = channels[0].id;
+      localStorage.setItem('lastRadioChannelId', currentChannelId);
+    } else {
+      currentIndex = newIdx;
+      // 若正在播放該電台且使用者剛修改了它的串流網址，自動重新連線新網址
+      if (currentPlayState !== 'idle' && channels[currentIndex].url !== prevUrl) {
+        currentPlayState = 'idle';
+        playByIndex(currentIndex, true);
+      }
+    }
+
     document.getElementById('channelModal').classList.remove('show');
     renderChannelButtons();
+    updateStatusEQText();
   }
 
   function renderChannelManageList() {
     const listEl = document.getElementById('chManageList');
     const trashEl = document.getElementById('chTrashList');
-    document.getElementById('activeCount').innerText = channels.length;
-    document.getElementById('trashCount').innerText = trashChannels.length;
+    document.getElementById('activeCount').innerText = draftChannels.length;
+    document.getElementById('trashCount').innerText = draftTrashChannels.length;
 
     const emptyTrashBtn = document.getElementById('emptyTrashBtn');
-    emptyTrashBtn.style.display = trashChannels.length > 0 ? 'inline-block' : 'none';
+    emptyTrashBtn.style.display = draftTrashChannels.length > 0 ? 'inline-block' : 'none';
 
     listEl.innerHTML = '';
-    channels.forEach((ch, idx) => {
+    draftChannels.forEach((ch, idx) => {
       const item = document.createElement('div');
       item.className = 'ch-manage-item';
-      item.innerHTML = `
-        <div class="ch-manage-info">
-          <span class="ch-manage-name">${ch.name} (${ch.sub})</span>
-          <span class="ch-manage-url">${ch.url}</span>
-        </div>
-        <div class="item-actions">
-          <button class="del-ch-btn" onclick="moveChannelToTrash(${idx})">刪除</button>
-        </div>
-      `;
+
+      if (editingChannelId === ch.id) {
+        // 原地展開編輯表單
+        item.innerHTML = `
+          <div class="edit-inline-box">
+            <div class="add-form-row">
+              <input type="text" id="editName_${ch.id}" value="${escapeHtml(ch.name)}" placeholder="電台名稱">
+              <input type="text" id="editSub_${ch.id}" value="${escapeHtml(ch.sub)}" placeholder="頻率標籤">
+            </div>
+            <input type="url" id="editUrl_${ch.id}" value="${escapeHtml(ch.url)}" placeholder="HTTPS 串流網址">
+            <div class="edit-inline-actions">
+              <button class="cancel-edit-btn" onclick="cancelEditChannel()">取消</button>
+              <button class="apply-edit-btn" onclick="applyEditChannel(${idx}, '${ch.id}')">套用修改</button>
+            </div>
+          </div>
+        `;
+      } else {
+        item.innerHTML = `
+          <div class="ch-item-top">
+            <div class="ch-manage-info">
+              <span class="ch-manage-name">${escapeHtml(ch.name)} (${escapeHtml(ch.sub)})</span>
+              <span class="ch-manage-url">${escapeHtml(ch.url)}</span>
+            </div>
+            <div class="item-actions">
+              <button class="edit-ch-btn" onclick="startEditChannel('${ch.id}')">編輯</button>
+              <button class="del-ch-btn" onclick="moveChannelToTrash(${idx})">刪除</button>
+            </div>
+          </div>
+        `;
+      }
       listEl.appendChild(item);
     });
 
     trashEl.innerHTML = '';
-    if (trashChannels.length === 0) {
+    if (draftTrashChannels.length === 0) {
       trashEl.innerHTML = '<div class="empty-hint">垃圾桶目前是空的</div>';
     } else {
-      trashChannels.forEach((ch, idx) => {
+      draftTrashChannels.forEach((ch, idx) => {
         const item = document.createElement('div');
         item.className = 'ch-manage-item trash-item';
         item.innerHTML = `
-          <div class="ch-manage-info">
-            <span class="ch-manage-name">${ch.name} (${ch.sub})</span>
-            <span class="ch-manage-url">${ch.url}</span>
-          </div>
-          <div class="item-actions">
-            <button class="restore-ch-btn" onclick="restoreChannelFromTrash(${idx})">復原</button>
-            <button class="perm-del-btn" onclick="permanentlyDeleteFromTrash(${idx})">永久刪除</button>
+          <div class="ch-item-top">
+            <div class="ch-manage-info">
+              <span class="ch-manage-name">${escapeHtml(ch.name)} (${escapeHtml(ch.sub)})</span>
+              <span class="ch-manage-url">${escapeHtml(ch.url)}</span>
+            </div>
+            <div class="item-actions">
+              <button class="restore-ch-btn" onclick="restoreChannelFromTrash(${idx})">復原</button>
+              <button class="perm-del-btn" onclick="permanentlyDeleteFromTrash(${idx})">永久刪除</button>
+            </div>
           </div>
         `;
         trashEl.appendChild(item);
       });
     }
+  }
+
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function startEditChannel(chId) {
+    editingChannelId = chId;
+    renderChannelManageList();
+  }
+
+  function cancelEditChannel() {
+    editingChannelId = null;
+    renderChannelManageList();
+  }
+
+  function applyEditChannel(idx, chId) {
+    const newName = document.getElementById(`editName_${chId}`).value.trim();
+    const newSub = document.getElementById(`editSub_${chId}`).value.trim() || '網路電台';
+    const newUrl = document.getElementById(`editUrl_${chId}`).value.trim();
+
+    if (!newName || !newUrl) {
+      alert('電台名稱與串流網址不可空白');
+      return;
+    }
+    if (!newUrl.startsWith('https://')) {
+      alert('為確保 iOS Safari 與 GitHub Pages 正常播放，串流網址必須以 https:// 開頭');
+      return;
+    }
+
+    draftChannels[idx].name = newName;
+    draftChannels[idx].sub = newSub;
+    draftChannels[idx].url = newUrl;
+    editingChannelId = null;
+    renderChannelManageList();
   }
 
   function addNewChannel() {
@@ -907,72 +1217,43 @@
     }
 
     const newId = 'ch_' + Date.now();
-    channels.push({ id: newId, name, sub, url });
-    saveChannelsData();
+    draftChannels.push({ id: newId, name, sub, url });
 
     document.getElementById('newChName').value = '';
     document.getElementById('newChSub').value = '';
     document.getElementById('newChUrl').value = '';
     renderChannelManageList();
-    renderChannelButtons();
   }
 
-  // 軟刪除：先移入垃圾桶，保留前級設定以便日後復原
   function moveChannelToTrash(idx) {
-    if (channels.length <= 1) {
-      alert('至少需保留一個電台在主畫面');
+    if (draftChannels.length <= 1) {
+      alert('至少需保留一個電台在清單中');
       return;
     }
-    const removed = channels.splice(idx, 1)[0];
-    trashChannels.unshift(removed);
-    saveChannelsData();
-
-    if (removed.id === currentChannelId) {
-      currentIndex = 0;
-      currentChannelId = channels[0].id;
-    } else {
-      currentIndex = Math.max(0, channels.findIndex(c => c.id === currentChannelId));
-    }
+    const removed = draftChannels.splice(idx, 1)[0];
+    if (editingChannelId === removed.id) editingChannelId = null;
+    draftTrashChannels.unshift(removed);
     renderChannelManageList();
-    renderChannelButtons();
   }
 
-  // 從垃圾桶復原回主畫面
   function restoreChannelFromTrash(trashIdx) {
-    const restored = trashChannels.splice(trashIdx, 1)[0];
+    const restored = draftTrashChannels.splice(trashIdx, 1)[0];
     if (!restored) return;
-    channels.push(restored);
-    saveChannelsData();
-
-    currentIndex = Math.max(0, channels.findIndex(c => c.id === currentChannelId));
+    draftChannels.push(restored);
     renderChannelManageList();
-    renderChannelButtons();
   }
 
-  // 永久刪除單一垃圾桶項目
   function permanentlyDeleteFromTrash(trashIdx) {
-    const removed = trashChannels.splice(trashIdx, 1)[0];
-    if (removed && perChannelPreamp[removed.id] !== undefined) {
-      delete perChannelPreamp[removed.id];
-      localStorage.setItem('perChannelPreampMap', JSON.stringify(perChannelPreamp));
-    }
-    saveChannelsData();
+    draftTrashChannels.splice(trashIdx, 1);
     renderChannelManageList();
   }
 
-  // 清空整個垃圾桶
   function emptyTrash() {
-    trashChannels.forEach(ch => {
-      if (perChannelPreamp[ch.id] !== undefined) {
-        delete perChannelPreamp[ch.id];
-      }
-    });
-    localStorage.setItem('perChannelPreampMap', JSON.stringify(perChannelPreamp));
-    trashChannels = [];
-    saveChannelsData();
+    draftTrashChannels = [];
     renderChannelManageList();
   }
 
+  // ==================== 音訊與 EQ 控制核心 ====================
   function getChannelPreampDb(idx) {
     if (!channels[idx]) return 0;
     const chId = channels[idx].id;
@@ -1576,7 +1857,7 @@
   }
 
   document.addEventListener('pointerdown', (e) => {
-    if (e.target.closest('#channelModal')) return;
+    if (e.target.closest('#channelModal') || e.target.closest('#unsavedConfirmModal')) return;
     if (isMutedPrebuffered && !e.target.closest('.ch-btn')) {
       unlockPrebufferedStream();
     } else if (isAutoDirectFallback && currentPlayState === 'playing' && !e.target.closest('button') && !e.target.closest('input')) {
