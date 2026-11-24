@@ -9,6 +9,60 @@
 <title>walton電台</title>
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 <style>
+  :root {
+    /* 莫蘭迪夜間深色主題（預設） */
+    --bg-body: #232528;
+    --text-main: #E2DFD7;
+    --text-sub: #9EA3A8;
+    --bg-card: #2D3034;
+    --border-card: #45494F;
+    --title-accent: #9BB7C7;
+    --bg-badge: #23262A;
+    --border-badge: #3C4148;
+    --text-badge: #8E99A2;
+    --bg-btn: #32353A;
+    --border-btn: #484C52;
+    --text-btn: #E2DFD7;
+    --bg-eq-bar: #26292D;
+    --bg-eq-btn: #363A40;
+    --border-eq-btn: #4A4F57;
+    --text-eq-btn: #D6CFC7;
+    --bg-panel: #2B2E33;
+    --border-panel: #484D54;
+    --bg-track: #181A1D;
+    --bg-chip: #353B42;
+    --border-chip: #535C66;
+    --text-chip: #C4D4DE;
+    --shadow-card: rgba(0, 0, 0, 0.15);
+  }
+
+  /* 莫蘭迪日間淺色主題（暖燕麥米白，白天強光抗反光高對比） */
+  body.theme-day {
+    --bg-body: #EAE6DF;
+    --text-main: #2B2E33;
+    --text-sub: #636870;
+    --bg-card: #F5F2EC;
+    --border-card: #CFC8BC;
+    --title-accent: #3F5D70;
+    --bg-badge: #E3DDD3;
+    --border-badge: #C2B9AA;
+    --text-badge: #5A5F66;
+    --bg-btn: #DFD9CE;
+    --border-btn: #C4BCAE;
+    --text-btn: #26292D;
+    --bg-eq-bar: #E2DDD4;
+    --bg-eq-btn: #F2EFE9;
+    --border-eq-btn: #C7BFB2;
+    --text-eq-btn: #3A3E44;
+    --bg-panel: #F4F1EB;
+    --border-panel: #C9C1B4;
+    --bg-track: #D4CEC3;
+    --bg-chip: #E4DFD5;
+    --border-chip: #BDB4A5;
+    --text-chip: #38444D;
+    --shadow-card: rgba(43, 46, 51, 0.08);
+  }
+
   * {
     box-sizing: border-box;
     -webkit-tap-highlight-color: transparent;
@@ -22,72 +76,101 @@
     height: 100dvh;
     overflow: hidden;
     overscroll-behavior: none;
-    background: #232528;
-    color: #E2DFD7;
+    background: var(--bg-body);
+    color: var(--text-main);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    transition: background 0.25s ease, color 0.25s ease;
   }
   body {
     display: flex;
     flex-direction: column;
-    padding: env(safe-area-inset-top, 14px) 12px env(safe-area-inset-bottom, 14px) 12px;
-    gap: 10px;
+    padding: env(safe-area-inset-top, 12px) 12px env(safe-area-inset-bottom, 12px) 12px;
+    gap: 8px;
   }
   .header {
-    background: #2D3034;
-    border: 1px solid #45494F;
+    background: var(--bg-card);
+    border: 1px solid var(--border-card);
     border-radius: 18px;
-    padding: 12px 14px;
+    padding: 10px 12px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 12px var(--shadow-card);
     flex-shrink: 0;
   }
   .status-box {
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 2px;
     overflow: hidden;
     flex: 1;
     min-width: 0;
   }
-  .status-label { font-size: 12px; color: #9EA3A8; letter-spacing: 0.5px; }
-  .status-title {
-    font-size: 19px;
-    font-weight: 700;
-    color: #9BB7C7;
+  .status-top-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .status-label {
+    font-size: 11.5px;
+    color: var(--text-sub);
+    letter-spacing: 0.3px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-  }
-  .header-right {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 5px;
-    flex-shrink: 0;
   }
   .version-badge {
     font-size: 10px;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
-    color: #8E99A2;
-    background: #23262A;
-    border: 1px solid #3C4148;
+    color: var(--text-badge);
+    background: var(--bg-badge);
+    border: 1px solid var(--border-badge);
     border-radius: 6px;
-    padding: 1px 6px;
-    letter-spacing: 0.3px;
+    padding: 1px 5px;
+    flex-shrink: 0;
+  }
+  .status-title {
+    font-size: 19px;
+    font-weight: 700;
+    color: var(--title-accent);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .header-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  /* 暫時降音 ATT 按鈕 */
+  .att-btn {
+    background: var(--bg-eq-btn);
+    color: var(--text-eq-btn);
+    border: 1.5px solid var(--border-eq-btn);
+    border-radius: 13px;
+    padding: 9px 10px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .att-btn.active {
+    background: #B5895A;
+    border-color: #E3C19D;
+    color: #FAF8F5;
+    box-shadow: 0 2px 10px rgba(181, 137, 90, 0.4);
   }
   .stop-btn {
     background: #4A4E54;
-    color: #E2DFD7;
+    color: #FAF8F5;
     border: 1px solid #636870;
-    border-radius: 14px;
-    padding: 8px 14px;
-    font-size: 16px;
+    border-radius: 13px;
+    padding: 9px 13px;
+    font-size: 15px;
     font-weight: 700;
-    flex-shrink: 0;
     cursor: pointer;
     transition: background 0.25s, border-color 0.25s;
   }
@@ -104,24 +187,24 @@
 
   .eq-bar {
     display: grid;
-    grid-template-columns: repeat(5, 1fr) 44px;
+    grid-template-columns: repeat(5, 1fr) 42px;
     gap: 6px;
-    background: #26292D;
-    padding: 6px;
-    border-radius: 16px;
-    border: 1px solid #3E4248;
+    background: var(--bg-eq-bar);
+    padding: 5px;
+    border-radius: 15px;
+    border: 1px solid var(--border-card);
     flex-shrink: 0;
   }
   .eq-btn {
-    background: #363A40;
-    border: 1.5px solid #4A4F57;
-    color: #D6CFC7;
-    font-size: 16px;
+    background: var(--bg-eq-btn);
+    border: 1.5px solid var(--border-eq-btn);
+    color: var(--text-eq-btn);
+    font-size: 15px;
     font-weight: 700;
-    padding: 10px 2px;
-    border-radius: 12px;
+    padding: 9px 2px;
+    border-radius: 11px;
     cursor: pointer;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.4px;
     transition: all 0.2s ease;
   }
   .eq-btn:active { transform: scale(0.95); }
@@ -129,20 +212,20 @@
     background: #6B7E74;
     color: #FAF8F5;
     border-color: #A8BEB3;
-    box-shadow: 0 2px 10px rgba(107, 126, 116, 0.4);
+    box-shadow: 0 2px 10px rgba(107, 126, 116, 0.35);
   }
   .eq-btn[data-eq="custom"].active {
     background: #8C7A6B;
     border-color: #C9B6A6;
-    box-shadow: 0 2px 10px rgba(140, 122, 107, 0.4);
+    box-shadow: 0 2px 10px rgba(140, 122, 107, 0.35);
   }
   .eq-tune-toggle {
-    background: #3A3E44;
-    border: 1.5px solid #52575F;
-    color: #E2DFD7;
+    background: var(--bg-eq-btn);
+    border: 1.5px solid var(--border-eq-btn);
+    color: var(--text-main);
     font-size: 18px;
     padding: 0;
-    border-radius: 12px;
+    border-radius: 11px;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -152,34 +235,66 @@
   .eq-tune-toggle.open {
     background: #5B7A8C;
     border-color: #9BB7C7;
+    color: #FAF8F5;
   }
 
   .eq-panel {
     display: none;
     flex-direction: column;
-    gap: 10px;
-    background: #2B2E33;
-    border: 1px solid #484D54;
+    gap: 8px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-panel);
     border-radius: 16px;
-    padding: 12px 8px;
+    padding: 10px 8px;
     flex-shrink: 0;
   }
   .eq-panel.show { display: flex; }
+
+  /* 車用快捷設定列：主題切換 / 斷線重連秒數 / 螢幕常亮 / 排版欄數 */
+  .car-quick-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5px;
+  }
+  .quick-chip-btn {
+    background: var(--bg-chip);
+    border: 1px solid var(--border-chip);
+    color: var(--text-chip);
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 7px 3px;
+    border-radius: 10px;
+    cursor: pointer;
+    text-align: center;
+    white-space: nowrap;
+    transition: all 0.2s;
+  }
+  .quick-chip-btn.on {
+    background: #6B7E74;
+    border-color: #A8BEB3;
+    color: #FAF8F5;
+  }
+
+  .eq-hint-bar {
+    font-size: 11px;
+    color: var(--text-sub);
+    text-align: center;
+  }
 
   .graphic-eq-container {
     display: flex;
     align-items: stretch;
     justify-content: space-between;
     gap: 1px;
-    padding: 4px 0;
+    padding: 2px 0;
   }
   .db-scale {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    padding: 20px 3px 20px 0;
+    padding: 18px 3px 18px 0;
     font-size: 9px;
-    color: #8C9298;
+    color: var(--text-sub);
     font-variant-numeric: tabular-nums;
     text-align: right;
   }
@@ -188,50 +303,50 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
     min-width: 0;
   }
   .band-col.preamp-col {
-    border-right: 1px solid #45494F;
+    border-right: 1px solid var(--border-card);
     padding-right: 3px;
     margin-right: 2px;
   }
-  .band-col.preamp-col .band-freq { color: #D9C3B0; }
-  .band-col.preamp-col .band-val { color: #E6C7AD; font-weight: 700; }
+  .band-col.preamp-col .band-freq { color: #9C7858; }
+  .band-col.preamp-col .band-val { color: #A87C56; font-weight: 700; }
   .band-freq {
     font-size: 9.5px;
     font-weight: 700;
-    color: #D6CFC7;
+    color: var(--text-main);
     letter-spacing: -0.4px;
     white-space: nowrap;
   }
   .band-val {
     font-size: 9.5px;
     font-variant-numeric: tabular-nums;
-    color: #9BB7C7;
+    color: var(--title-accent);
     height: 12px;
   }
   .v-slider-wrap {
     position: relative;
     width: 100%;
-    height: 120px;
+    height: 108px;
     display: flex;
     align-items: center;
     justify-content: center;
     background-image: linear-gradient(
       to bottom,
       transparent 0%,
-      transparent calc(10% - 1px), rgba(255,255,255,0.12) 10%, transparent calc(10% + 1px),
-      transparent calc(30% - 1px), rgba(255,255,255,0.08) 30%, transparent calc(30% + 1px),
-      transparent calc(50% - 1px), rgba(155,183,199,0.35) 50%, transparent calc(50% + 1px),
-      transparent calc(70% - 1px), rgba(255,255,255,0.08) 70%, transparent calc(70% + 1px),
-      transparent calc(90% - 1px), rgba(255,255,255,0.12) 90%, transparent calc(90% + 1px)
+      transparent calc(10% - 1px), rgba(130,130,130,0.2) 10%, transparent calc(10% + 1px),
+      transparent calc(30% - 1px), rgba(130,130,130,0.14) 30%, transparent calc(30% + 1px),
+      transparent calc(50% - 1px), rgba(91,122,140,0.45) 50%, transparent calc(50% + 1px),
+      transparent calc(70% - 1px), rgba(130,130,130,0.14) 70%, transparent calc(70% + 1px),
+      transparent calc(90% - 1px), rgba(130,130,130,0.2) 90%, transparent calc(90% + 1px)
     );
   }
   input[type=range].v-slider {
     -webkit-appearance: none;
     appearance: none;
-    width: 110px;
+    width: 98px;
     height: 22px;
     background: transparent;
     transform: rotate(-90deg);
@@ -242,9 +357,9 @@
   input[type=range].v-slider::-webkit-slider-runnable-track {
     width: 100%;
     height: 6px;
-    background: #181A1D;
+    background: var(--bg-track);
     border-radius: 3px;
-    border: 1px solid #45494F;
+    border: 1px solid var(--border-card);
   }
   input[type=range].v-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
@@ -253,13 +368,13 @@
     height: 20px;
     border-radius: 4px;
     background: #5B7A8C;
-    border: 1.5px solid #D6CFC7;
+    border: 1.5px solid #FAF8F5;
     margin-top: -8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.35);
   }
   input[type=range].v-slider.preamp-slider::-webkit-slider-thumb {
     background: #9C8675;
-    border-color: #EFE5DC;
+    border-color: #FAF8F5;
   }
   input[type=range].v-slider:active::-webkit-slider-thumb {
     background: #7D9B8C;
@@ -284,26 +399,26 @@
   }
   .save-target-btn:active { background: #5B7A8C; }
   .reset-eq-btn {
-    background: #3A3D42;
-    border: 1px solid #555961;
-    color: #9EA3A8;
+    background: #4A4E54;
+    border: 1px solid #636870;
+    color: #E2DFD7;
     font-size: 12px;
     padding: 8px 8px;
     border-radius: 10px;
     cursor: pointer;
   }
   .manage-ch-btn {
-    background: #5A524C;
-    border: 1px solid #8C7A6B;
-    color: #EFE5DC;
+    background: #6E5D50;
+    border: 1px solid #9C8675;
+    color: #FAF8F5;
     font-size: 12px;
-    font-weight: 600;
+    font-weight: 700;
     padding: 8px 8px;
     border-radius: 10px;
     cursor: pointer;
   }
 
-  /* 電台新增、編輯與垃圾桶彈窗 */
+  /* 電台管理彈窗（維持深色高質感閱讀介面） */
   .modal-backdrop {
     display: none;
     position: fixed;
@@ -321,11 +436,12 @@
     border-radius: 20px;
     width: 100%;
     max-width: 450px;
-    max-height: 86dvh;
+    max-height: 88dvh;
     display: flex;
     flex-direction: column;
     padding: 16px;
     gap: 10px;
+    color: #E2DFD7;
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
   }
   .modal-header {
@@ -362,6 +478,51 @@
     padding: 6px 12px;
     border-radius: 10px;
     cursor: pointer;
+  }
+  .backup-bar {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .backup-btn {
+    background: #353B42;
+    border: 1px solid #535C66;
+    color: #C4D4DE;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 8px 6px;
+    border-radius: 10px;
+    cursor: pointer;
+  }
+  .import-box {
+    display: none;
+    flex-direction: column;
+    gap: 6px;
+    background: #232528;
+    padding: 10px;
+    border-radius: 12px;
+    border: 1px solid #5B7A8C;
+    flex-shrink: 0;
+  }
+  .import-box.show { display: flex; }
+  .import-box textarea {
+    width: 100%;
+    height: 68px;
+    background: #32353A;
+    border: 1px solid #4A4F57;
+    border-radius: 8px;
+    padding: 8px;
+    color: #FAF8F5;
+    font-size: 12px;
+    resize: none;
+    -webkit-user-select: text;
+    user-select: text;
+  }
+  .import-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
   }
   .add-form {
     display: flex;
@@ -545,7 +706,6 @@
     padding: 10px 0;
   }
 
-  /* 未儲存變更確認對話框 */
   .confirm-backdrop {
     display: none;
     position: fixed;
@@ -622,23 +782,29 @@
     gap: 8px;
     touch-action: none;
   }
+  .btn-grid.cols-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
   button.ch-btn {
     font-size: 18px;
     font-weight: 700;
-    border: 1.5px solid #484C52;
+    border: 1.5px solid var(--border-btn);
     border-radius: 16px;
-    background: #32353A;
-    color: #E2DFD7;
+    background: var(--bg-btn);
+    color: var(--text-btn);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 4px 6px;
+    padding: 4px 5px;
     text-align: center;
     line-height: 1.2;
     cursor: pointer;
     touch-action: none;
     transition: transform 0.15s ease, background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+  }
+  .btn-grid.cols-3 button.ch-btn {
+    font-size: 16px;
   }
 
   button.ch-btn.selected {
@@ -669,7 +835,7 @@
     border: 2.5px dashed #A8BEB3;
   }
 
-  .sub-tag { font-size: 11px; font-weight: 400; color: #9EA3A8; margin-top: 2px; pointer-events: none; }
+  .sub-tag { font-size: 11px; font-weight: 400; color: var(--text-sub); margin-top: 2px; pointer-events: none; }
   button.ch-btn span { pointer-events: none; }
   button.ch-btn.selected .sub-tag { color: #EFE5DC; }
   button.ch-btn.playing .sub-tag { color: #DCE6EC; }
@@ -678,11 +844,14 @@
 <body>
   <div class="header">
     <div class="status-box">
-      <span class="status-label" id="statusSub">walton電台 • 長按 1 秒可調整順序</span>
+      <div class="status-top-row">
+        <span class="version-badge" id="versionBadge">20261124_v03</span>
+        <span class="status-label" id="statusSub">walton電台 • 長按 1 秒可調整順序</span>
+      </div>
       <span class="status-title" id="statusMain">點擊任一電台開始播放</span>
     </div>
-    <div class="header-right">
-      <span class="version-badge" id="versionBadge">20261124_v01</span>
+    <div class="header-controls">
+      <button class="att-btn" id="attBtn" onclick="toggleAttMute()" title="暫時降音 -20dB（不斷線交談模式）">🔉 降音</button>
       <button class="stop-btn" id="masterStopBtn" onclick="toggleMasterPlay()">▶ 播放</button>
     </div>
   </div>
@@ -694,11 +863,20 @@
     <button class="eq-btn" data-eq="bass" onclick="setEQ('bass', true)">重低音</button>
     <button class="eq-btn" data-eq="classical" onclick="setEQ('classical', true)">古典</button>
     <button class="eq-btn" data-eq="custom" onclick="selectCustomEQ()">自訂</button>
-    <button class="eq-tune-toggle" id="tuneToggleBtn" onclick="toggleEQPanel()" title="展開EQ推桿與電台管理">🎛️</button>
+    <button class="eq-tune-toggle" id="tuneToggleBtn" onclick="toggleEQPanel()" title="展開EQ推桿與車用設定">🎛️</button>
   </div>
 
-  <!-- 各台獨立前級增益 + 10段垂直推桿 EQ 面板 -->
+  <!-- 車用快捷設定 + 各台獨立前級增益 + 10段垂直推桿 EQ 面板 -->
   <div class="eq-panel" id="eqPanel">
+    <!-- 自主調整：夜間/日間主題 | 斷線重連秒數 | 螢幕常亮(預設關閉省電) | 2/3欄排版 -->
+    <div class="car-quick-row">
+      <button class="quick-chip-btn" id="themeToggleBtn" onclick="cycleThemeMode()">🌙 夜間模式</button>
+      <button class="quick-chip-btn" id="reconnectSecBtn" onclick="cycleReconnectSec()">🔄 重連 4.5s</button>
+      <button class="quick-chip-btn" id="wakeLockBtn" onclick="toggleWakeLock()">💤 省電鎖屏</button>
+      <button class="quick-chip-btn" id="gridColsBtn" onclick="toggleGridCols()">田 2欄按鈕</button>
+    </div>
+
+    <div class="eq-hint-bar">💡 雙擊任一推桿可快速歸零 (0 dB)</div>
     <div class="graphic-eq-container" id="graphicEqContainer">
       <div class="db-scale">
         <span>+12</span>
@@ -726,7 +904,7 @@
 
   <div class="btn-grid" id="btnContainer"></div>
 
-  <!-- 電台清單編輯與垃圾桶管理彈窗 -->
+  <!-- 電台清單編輯、垃圾桶與備份管理彈窗 -->
   <div class="modal-backdrop" id="channelModal">
     <div class="modal-card">
       <div class="modal-header">
@@ -736,6 +914,19 @@
           <button class="cancel-modal-btn" onclick="attemptCloseChannelManager()" title="取消">✕</button>
         </div>
       </div>
+
+      <div class="backup-bar">
+        <button class="backup-btn" onclick="exportBackupToClipboard()">📋 複製設定備份碼</button>
+        <button class="backup-btn" onclick="toggleImportBox()">📥 貼上備份碼還原</button>
+      </div>
+      <div class="import-box" id="importBox">
+        <textarea id="importJsonInput" placeholder="在此貼上先前複製的 JSON 設定備份碼..."></textarea>
+        <div class="import-actions">
+          <button class="cancel-edit-btn" onclick="toggleImportBox()">收起</button>
+          <button class="apply-edit-btn" onclick="applyImportedBackup()">套用備份資料</button>
+        </div>
+      </div>
+
       <div class="add-form">
         <div class="add-form-row">
           <input type="text" id="newChName" placeholder="電台名稱 (例: ICRT)">
@@ -777,7 +968,7 @@
 
 <script>
   // 版本命名規則：西元年月日_v01（每日編輯重置為當天日期，同日遞增 v02, v03...，隔日歸為 v01）
-  const APP_VERSION = '20261124_v01';
+  const APP_VERSION = '20261124_v03';
 
   const defaultChannels = [
     { id: 'ch1',  name: '中廣音樂網', sub: 'iRadio',   url: 'https://sonnykuo.appspot.com/bcc/?id=中廣音樂網' },
@@ -790,7 +981,7 @@
     { id: 'ch8',  name: '全國廣播',   sub: 'FM 106.1', url: 'https://stream.rcs.revma.com/044q61ha7a0uv' },
     { id: 'ch9',  name: '佳音聯播',   sub: 'FM 90.9',  url: 'https://stream.ginnet.cloud/live0119lo-p4rb/_definst_/fm909/playlist.m3u8' },
     { id: 'ch10', name: '台北愛樂',   sub: 'FM 99.7',  url: 'https://stream.rcs.revma.com/sw7168857a0uv' },
-    { id: 'ch11', name: 'IC 之音',    sub: 'FM 97.5',  url: 'https://n04-us2.rcs.revma.com/7mnq8rt7k5zuv?rj-ttl=5&rj-tok=AAABog3mn_4AMgaflWkjmLZBVw' },
+    { id: 'ch11', name: 'IC 之音',    sub: 'FM 97.5',  url: 'https://stream.rcs.revma.com/78898857a0uv' },
     { id: 'ch12', name: '警察廣播',   sub: '全國治安', url: 'https://stream.pbs.gov.tw/live/TPS/playlist.m3u8' }
   ];
 
@@ -817,6 +1008,7 @@
 
   let draftChannels = [];
   let draftTrashChannels = [];
+  let draftPreampMap = {};
   let initialSnapshotStr = '';
   let editingChannelId = null;
 
@@ -841,7 +1033,7 @@
 
   const defaultPresets = {
     flat:      { label: '原音',   gains: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
-    voice:     { label: '人聲',   gains: [-6, -5, -3, -1, 2, 5, 6, 4, 1, -2] },
+    voice:     { label: '人聲',   gains: [-5, -4, -4, -3, 2, 5, 5, 4, 1, -2] },
     bass:      { label: '重低音', gains: [0, 4, 9, 8, 0, 0, 4, 7, 4, 0] },
     classical: { label: '古典',   gains: [4, 3, 2, 0, -1, 0, 2, 4, 5, 4] },
     custom:    { label: '自訂',   gains: [0, 2, 4, 2, 0, 2, 4, 3, 2, 0] }
@@ -853,6 +1045,17 @@
   }
   let perChannelPreamp = JSON.parse(localStorage.getItem('perChannelPreampMap')) || {};
 
+  // ==================== 車用偏好設定（主題、重連秒數、螢幕常亮、網格欄數、暫時降音） ====================
+  let themeMode = localStorage.getItem('waltonThemeMode') || 'night'; // 'night' | 'day' | 'auto'
+  const reconnectOptions = [2, 4.5, 8, 15];
+  let reconnectDelaySec = parseFloat(localStorage.getItem('waltonReconnectSec')) || 4.5;
+  if (!reconnectOptions.includes(reconnectDelaySec)) reconnectDelaySec = 4.5;
+
+  let wakeLockEnabled = false; // 預設關閉，保持鎖屏省電續播
+  let wakeLockSentinel = null;
+  let gridCols = parseInt(localStorage.getItem('waltonGridCols'), 10) === 3 ? 3 : 2;
+  let isAttMuted = false; // 暫時降音 (-20dB) 狀態
+
   const playerEQ = document.getElementById('playerEQ');
   const playerDirect = document.getElementById('playerDirect');
   let activePlayer = playerDirect;
@@ -861,6 +1064,9 @@
   let isAutoDirectFallback = false;
   let hlsInstance = null;
   let switchToken = 0;
+
+  let stallWatchdogTimer = null;
+  let reconnectRetryCount = 0;
 
   const statusMain = document.getElementById('statusMain');
   const statusSub = document.getElementById('statusSub');
@@ -888,6 +1094,149 @@
   let dropTargetChannelId = null;
   let startX = 0;
   let startY = 0;
+
+  // 主題套用與切換
+  function applyTheme() {
+    const btn = document.getElementById('themeToggleBtn');
+    const prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+    const useDay = themeMode === 'day' || (themeMode === 'auto' && prefersLight);
+
+    document.body.classList.toggle('theme-day', useDay);
+    if (themeMode === 'night') {
+      btn.innerText = '🌙 夜間模式';
+      btn.classList.remove('on');
+    } else if (themeMode === 'day') {
+      btn.innerText = '☀️ 日間模式';
+      btn.classList.add('on');
+    } else {
+      btn.innerText = '🌓 自動主題';
+      btn.classList.add('on');
+    }
+  }
+
+  function cycleThemeMode() {
+    if (themeMode === 'night') themeMode = 'day';
+    else if (themeMode === 'day') themeMode = 'auto';
+    else themeMode = 'night';
+    localStorage.setItem('waltonThemeMode', themeMode);
+    applyTheme();
+  }
+
+  if (window.matchMedia) {
+    window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {
+      if (themeMode === 'auto') applyTheme();
+    });
+  }
+
+  // 斷線重連秒數循環切換
+  function updateReconnectBtnUI() {
+    document.getElementById('reconnectSecBtn').innerText = `🔄 重連 ${reconnectDelaySec}s`;
+  }
+
+  function cycleReconnectSec() {
+    const idx = reconnectOptions.indexOf(reconnectDelaySec);
+    reconnectDelaySec = reconnectOptions[(idx + 1) % reconnectOptions.length];
+    localStorage.setItem('waltonReconnectSec', reconnectDelaySec);
+    updateReconnectBtnUI();
+  }
+
+  // 螢幕常亮防休眠自主控制（預設關閉以維持鎖屏省電）
+  async function requestWakeLockIfNeeded() {
+    if (!wakeLockEnabled) return;
+    if ('wakeLock' in navigator) {
+      try {
+        wakeLockSentinel = await navigator.wakeLock.request('screen');
+        wakeLockSentinel.addEventListener('release', () => {
+          wakeLockSentinel = null;
+        });
+      } catch (_) {}
+    }
+  }
+
+  async function toggleWakeLock() {
+    const btn = document.getElementById('wakeLockBtn');
+    if (!('wakeLock' in navigator)) {
+      alert('目前瀏覽器不支援螢幕常亮鎖定，可透過 iPhone「設定 ＞ 螢幕顯示與亮度 ＞ 自動鎖定」調整。');
+      return;
+    }
+    wakeLockEnabled = !wakeLockEnabled;
+    if (wakeLockEnabled) {
+      await requestWakeLockIfNeeded();
+      btn.innerText = '🔆 螢幕常亮';
+      btn.classList.add('on');
+    } else {
+      if (wakeLockSentinel) {
+        try { await wakeLockSentinel.release(); } catch (_) {}
+        wakeLockSentinel = null;
+      }
+      btn.innerText = '💤 省電鎖屏';
+      btn.classList.remove('on');
+    }
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && wakeLockEnabled) {
+      requestWakeLockIfNeeded();
+    }
+  });
+
+  // 網格 2欄 / 3欄切換
+  function applyGridCols() {
+    const btn = document.getElementById('gridColsBtn');
+    container.classList.toggle('cols-3', gridCols === 3);
+    btn.innerText = gridCols === 3 ? '田 3欄按鈕' : '田 2欄按鈕';
+    btn.classList.toggle('on', gridCols === 3);
+  }
+
+  function toggleGridCols() {
+    gridCols = gridCols === 2 ? 3 : 2;
+    localStorage.setItem('waltonGridCols', gridCols);
+    applyGridCols();
+  }
+
+  // 暫時降音 (-20dB) 不斷線交談模式
+  function getTargetOutputGain() {
+    return isAttMuted ? 0.1 : 1.0; // 0.1 線性倍率 = -20dB
+  }
+
+  function toggleAttMute() {
+    isAttMuted = !isAttMuted;
+    const btn = document.getElementById('attBtn');
+    btn.classList.toggle('active', isAttMuted);
+    btn.innerText = isAttMuted ? '🔇 降音中' : '🔉 降音';
+
+    const targetGain = getTargetOutputGain();
+    if (!isDirectMode && fadeGainNode && audioCtx && currentPlayState === 'playing') {
+      const now = audioCtx.currentTime;
+      fadeGainNode.gain.cancelScheduledValues(now);
+      fadeGainNode.gain.setValueAtTime(fadeGainNode.gain.value, now);
+      fadeGainNode.gain.linearRampToValueAtTime(targetGain, now + 0.25);
+    } else if (isDirectMode && currentPlayState === 'playing' && !isMutedPrebuffered) {
+      playerDirect.volume = targetGain;
+    }
+    updateStatusEQText();
+  }
+
+  // 雙擊推桿快速歸零
+  function attachDoubleTapReset(sliderEl, resetCallback) {
+    let lastTapTime = 0;
+    sliderEl.addEventListener('pointerup', (e) => {
+      const now = Date.now();
+      if (now - lastTapTime < 320) {
+        e.preventDefault();
+        sliderEl.value = 0;
+        resetCallback();
+        if (navigator.vibrate) navigator.vibrate(25);
+        lastTapTime = 0;
+      } else {
+        lastTapTime = now;
+      }
+    });
+    sliderEl.addEventListener('dblclick', () => {
+      sliderEl.value = 0;
+      resetCallback();
+    });
+  }
 
   function renderChannelButtons() {
     container.innerHTML = '';
@@ -1020,16 +1369,19 @@
     });
   }
 
-  // ==================== 電台管理彈窗（支援編輯、暫存、取消變更偵測） ====================
+  // ==================== 電台管理、編輯、垃圾桶與備份匯出/匯入 ====================
   function openChannelManager() {
     draftChannels = JSON.parse(JSON.stringify(channels));
     draftTrashChannels = JSON.parse(JSON.stringify(trashChannels));
+    draftPreampMap = JSON.parse(JSON.stringify(perChannelPreamp));
     editingChannelId = null;
-    initialSnapshotStr = JSON.stringify({ c: draftChannels, t: draftTrashChannels });
+    initialSnapshotStr = JSON.stringify({ c: draftChannels, t: draftTrashChannels, p: draftPreampMap });
 
     document.getElementById('newChName').value = '';
     document.getElementById('newChSub').value = '';
     document.getElementById('newChUrl').value = '';
+    document.getElementById('importBox').classList.remove('show');
+    document.getElementById('importJsonInput').value = '';
 
     renderChannelManageList();
     document.getElementById('channelModal').classList.add('show');
@@ -1040,7 +1392,7 @@
     const pendingUrl = document.getElementById('newChUrl').value.trim();
     if (pendingName || pendingUrl) return true;
 
-    const currentSnapshotStr = JSON.stringify({ c: draftChannels, t: draftTrashChannels });
+    const currentSnapshotStr = JSON.stringify({ c: draftChannels, t: draftTrashChannels, p: draftPreampMap });
     return currentSnapshotStr !== initialSnapshotStr;
   }
 
@@ -1086,13 +1438,14 @@
       ...draftChannels.map(c => c.id),
       ...draftTrashChannels.map(c => c.id)
     ]);
-    Object.keys(perChannelPreamp).forEach(id => {
-      if (!allRemainingIds.has(id)) delete perChannelPreamp[id];
+    Object.keys(draftPreampMap).forEach(id => {
+      if (!allRemainingIds.has(id)) delete draftPreampMap[id];
     });
-    localStorage.setItem('perChannelPreampMap', JSON.stringify(perChannelPreamp));
 
     channels = draftChannels;
     trashChannels = draftTrashChannels;
+    perChannelPreamp = draftPreampMap;
+    localStorage.setItem('perChannelPreampMap', JSON.stringify(perChannelPreamp));
     saveChannelsData();
 
     const newIdx = channels.findIndex(c => c.id === currentChannelId);
@@ -1108,9 +1461,86 @@
       }
     }
 
+    applyCurrentChannelPreamp();
     document.getElementById('channelModal').classList.remove('show');
     renderChannelButtons();
     updateStatusEQText();
+  }
+
+  function exportBackupToClipboard() {
+    const backupPayload = {
+      app: 'walton電台',
+      version: APP_VERSION,
+      exportedAt: new Date().toISOString(),
+      channels: draftChannels,
+      trashChannels: draftTrashChannels,
+      perChannelPreamp: draftPreampMap,
+      eqPresets: eqPresets,
+      lastRadioEQ: currentEQ,
+      themeMode: themeMode,
+      reconnectDelaySec: reconnectDelaySec,
+      gridCols: gridCols
+    };
+    const jsonStr = JSON.stringify(backupPayload);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(jsonStr).then(() => {
+        alert('✅ 已複製完整設定備份碼至剪貼簿！\n可貼到備忘錄或 LINE 保存。');
+      }).catch(() => {
+        prompt('請全選複製以下設定備份碼：', jsonStr);
+      });
+    } else {
+      prompt('請全選複製以下設定備份碼：', jsonStr);
+    }
+  }
+
+  function toggleImportBox() {
+    document.getElementById('importBox').classList.toggle('show');
+  }
+
+  function applyImportedBackup() {
+    const raw = document.getElementById('importJsonInput').value.trim();
+    if (!raw) {
+      alert('請先貼上設定備份碼');
+      return;
+    }
+    try {
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed.channels) || parsed.channels.length === 0) {
+        throw new Error('缺少有效的電台清單');
+      }
+      draftChannels = parsed.channels;
+      draftTrashChannels = Array.isArray(parsed.trashChannels) ? parsed.trashChannels : [];
+      if (parsed.perChannelPreamp && typeof parsed.perChannelPreamp === 'object') {
+        draftPreampMap = parsed.perChannelPreamp;
+      }
+      if (parsed.eqPresets && typeof parsed.eqPresets === 'object') {
+        eqPresets = parsed.eqPresets;
+        localStorage.setItem('customRadioEQ10Presets_v2', JSON.stringify(eqPresets));
+      }
+      if (parsed.lastRadioEQ) setEQ(parsed.lastRadioEQ, false);
+      if (parsed.themeMode) {
+        themeMode = parsed.themeMode;
+        localStorage.setItem('waltonThemeMode', themeMode);
+        applyTheme();
+      }
+      if (parsed.reconnectDelaySec) {
+        reconnectDelaySec = parsed.reconnectDelaySec;
+        localStorage.setItem('waltonReconnectSec', reconnectDelaySec);
+        updateReconnectBtnUI();
+      }
+      if (parsed.gridCols) {
+        gridCols = parsed.gridCols === 3 ? 3 : 2;
+        localStorage.setItem('waltonGridCols', gridCols);
+        applyGridCols();
+      }
+      editingChannelId = null;
+      document.getElementById('importJsonInput').value = '';
+      document.getElementById('importBox').classList.remove('show');
+      renderChannelManageList();
+      alert('✅ 備份資料已載入預覽，請按右上角「儲存」套用生效！');
+    } catch (err) {
+      alert('❌ 備份碼格式不正確，請確認已完整貼上 JSON 內容');
+    }
   }
 
   function renderChannelManageList() {
@@ -1272,7 +1702,7 @@
     renderChannelManageList();
   }
 
-  // ==================== 音訊與 EQ 控制核心 ====================
+  // ==================== 音訊、EQ 與自主斷線自動重連核心 ====================
   function getChannelPreampDb(idx) {
     if (!channels[idx]) return 0;
     const chId = channels[idx].id;
@@ -1298,6 +1728,8 @@
     });
   }
 
+  attachDoubleTapReset(document.getElementById('preampSlider'), onPreampChange);
+
   eqBands.forEach((band, i) => {
     const col = document.createElement('div');
     col.className = 'band-col';
@@ -1309,6 +1741,8 @@
       <span class="band-val" id="eqVal_${i}">0</span>
     `;
     eqContainer.appendChild(col);
+    const sliderEl = col.querySelector(`#eqSlider_${i}`);
+    attachDoubleTapReset(sliderEl, onSliderChange);
   });
 
   function dbToLinearGain(db) {
@@ -1340,7 +1774,7 @@
       limiterNode.release.value = 0.15;
 
       fadeGainNode = audioCtx.createGain();
-      fadeGainNode.gain.value = 1.0;
+      fadeGainNode.gain.value = getTargetOutputGain();
 
       source.connect(preampNode);
       preampNode.connect(filterNodes[0]);
@@ -1359,6 +1793,26 @@
     preampNode.gain.value = dbToLinearGain(getChannelPreampDb(currentIndex));
     const gains = getCurrentSliderGains();
     filterNodes.forEach((f, i) => { f.gain.value = gains[i]; });
+  }
+
+  // 依據使用者設定的 reconnectDelaySec 啟動斷線看門狗
+  function startStallWatchdog(targetPlayer, token) {
+    clearTimeout(stallWatchdogTimer);
+    if (currentPlayState !== 'playing' || isMutedPrebuffered) return;
+
+    stallWatchdogTimer = setTimeout(() => {
+      if (token !== switchToken || currentPlayState !== 'playing') return;
+      reconnectRetryCount++;
+      statusSub.innerText = `🔄 訊號中斷(${reconnectDelaySec}s)，自動重連中 (${reconnectRetryCount})...`;
+      const useEQ = !isAutoDirectFallback;
+      currentPlayState = 'idle';
+      playByIndex(currentIndex, useEQ, true);
+    }, reconnectDelaySec * 1000);
+  }
+
+  function clearStallWatchdog() {
+    clearTimeout(stallWatchdogTimer);
+    stallWatchdogTimer = null;
   }
 
   function unlockPrebufferedStream() {
@@ -1450,11 +1904,12 @@
   }
 
   function fadeInTargetAudio(isDirect) {
+    const targetGain = getTargetOutputGain();
     if (!isDirect && fadeGainNode && audioCtx) {
       const now = audioCtx.currentTime;
       fadeGainNode.gain.cancelScheduledValues(now);
       fadeGainNode.gain.setValueAtTime(0.0001, now);
-      fadeGainNode.gain.linearRampToValueAtTime(1.0, now + FADE_DURATION);
+      fadeGainNode.gain.linearRampToValueAtTime(targetGain, now + FADE_DURATION);
     } else {
       if (directFadeTimer) clearInterval(directFadeTimer);
       playerDirect.volume = 0;
@@ -1463,7 +1918,7 @@
       let currentStep = 0;
       directFadeTimer = setInterval(() => {
         currentStep++;
-        playerDirect.volume = Math.min(1, currentStep / steps);
+        playerDirect.volume = Math.min(targetGain, (currentStep / steps) * targetGain);
         if (currentStep >= steps) {
           clearInterval(directFadeTimer);
           directFadeTimer = null;
@@ -1615,26 +2070,32 @@
     }
     const ch = channels[currentIndex];
     const db = getChannelPreampDb(currentIndex);
+    const attTag = isAttMuted ? '🔇降音-20dB | ' : '';
     if (isAutoDirectFallback) {
-      statusSub.innerText = `自動直通播音 (點擊任一按鈕啟用EQ) • ${ch.sub}`;
+      statusSub.innerText = `${attTag}自動直通播音 (點擊按鈕啟用EQ) • ${ch.sub}`;
     } else if (isDirectMode) {
-      statusSub.innerText = `直通原音 (此電台不支援EQ) • ${ch.sub}`;
+      statusSub.innerText = `${attTag}直通原音 • ${ch.sub}`;
     } else {
       const eqLabel = eqPresets[currentEQ]?.label || '原音';
       const preampStr = db !== 0 ? ` | 前級${db > 0 ? '+' : ''}${db}dB` : '';
-      statusSub.innerText = `EQ:${eqLabel}${preampStr} • ${ch.sub}`;
+      statusSub.innerText = `${attTag}EQ:${eqLabel}${preampStr} • ${ch.sub}`;
     }
   }
 
   function stopAllPlayersImmediately() {
+    clearStallWatchdog();
     isMutedPrebuffered = false;
     playerEQ.onplaying = null;
+    playerEQ.onstalled = null;
+    playerEQ.onwaiting = null;
     playerEQ.onerror = null;
     playerEQ.pause();
     playerEQ.removeAttribute('src');
     playerEQ.load();
 
     playerDirect.onplaying = null;
+    playerDirect.onstalled = null;
+    playerDirect.onwaiting = null;
     playerDirect.onerror = null;
     playerDirect.muted = false;
     playerDirect.pause();
@@ -1656,19 +2117,36 @@
     if (targetPlayer === playerEQ && fadeGainNode && audioCtx) {
       fadeGainNode.gain.setValueAtTime(0.0001, audioCtx.currentTime);
     } else if (targetPlayer === playerDirect) {
-      targetPlayer.volume = startMuted ? 1 : 0;
+      targetPlayer.volume = startMuted ? getTargetOutputGain() : 0;
     }
 
     targetPlayer.onplaying = () => {
-      if (token === switchToken && !confirmed) {
-        confirmed = true;
-        onStreamConfirmed();
+      if (token === switchToken) {
+        clearStallWatchdog();
+        reconnectRetryCount = 0;
+        if (!confirmed) {
+          confirmed = true;
+          onStreamConfirmed();
+        } else {
+          updateStatusEQText();
+        }
       }
     };
 
+    targetPlayer.onstalled = () => {
+      if (token === switchToken && confirmed) startStallWatchdog(targetPlayer, token);
+    };
+    targetPlayer.onwaiting = () => {
+      if (token === switchToken && confirmed) startStallWatchdog(targetPlayer, token);
+    };
+
     targetPlayer.onerror = () => {
-      if (token === switchToken && !confirmed) {
-        onFail();
+      if (token === switchToken) {
+        if (!confirmed) {
+          onFail();
+        } else {
+          startStallWatchdog(targetPlayer, token);
+        }
       }
     };
 
@@ -1683,7 +2161,10 @@
         });
       });
       hlsInstance.on(Hls.Events.ERROR, (event, data) => {
-        if (data.fatal && token === switchToken && !confirmed) onFail();
+        if (data.fatal && token === switchToken) {
+          if (!confirmed) onFail();
+          else startStallWatchdog(targetPlayer, token);
+        }
       });
     } else {
       targetPlayer.src = url;
@@ -1694,14 +2175,14 @@
     }
   }
 
-  function playByIndex(idx, isUserClick = false) {
+  function playByIndex(idx, isUserClick = false, isAutoReconnect = false) {
     if (idx < 0) idx = channels.length - 1;
     if (idx >= channels.length) idx = 0;
 
     const ch = channels[idx];
     const myToken = ++switchToken;
 
-    if (currentPlayState !== 'idle' && currentIndex === idx && !isMutedPrebuffered) {
+    if (!isAutoReconnect && currentPlayState !== 'idle' && currentIndex === idx && !isMutedPrebuffered) {
       fadeOutCurrentAudio(() => {
         if (myToken !== switchToken) return;
         stopAllPlayersImmediately();
@@ -1716,7 +2197,8 @@
     localStorage.setItem('lastRadioChannelId', ch.id);
     applyCurrentChannelPreamp();
 
-    updateUIState(idx, 'selected', '已選台，串流連線緩衝中...');
+    const loadingMsg = isAutoReconnect ? `🔄 訊號中斷(${reconnectDelaySec}s)，自動重連中 (${reconnectRetryCount})...` : '已選台，串流連線緩衝中...';
+    updateUIState(idx, 'selected', loadingMsg);
 
     if (!isUserClick) {
       stopAllPlayersImmediately();
@@ -1875,6 +2357,14 @@
     }
   }
 
+  window.addEventListener('online', () => {
+    if (currentPlayState === 'playing' || reconnectRetryCount > 0) {
+      const useEQ = !isAutoDirectFallback;
+      currentPlayState = 'idle';
+      playByIndex(currentIndex, useEQ, true);
+    }
+  });
+
   document.addEventListener('pointerdown', (e) => {
     if (e.target.closest('#channelModal') || e.target.closest('#unsavedConfirmModal')) return;
     if (isMutedPrebuffered && !e.target.closest('.ch-btn')) {
@@ -1885,20 +2375,23 @@
   }, { passive: true });
 
   document.addEventListener('keydown', (e) => {
-    if (e.target.tagName === 'INPUT') return;
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
     if (isMutedPrebuffered) {
       unlockPrebufferedStream();
     }
   });
 
   document.addEventListener('touchmove', (e) => {
-    if (!e.target.closest('input[type=range]') && !e.target.closest('.modal-scroll-area')) {
+    if (!e.target.closest('input[type=range]') && !e.target.closest('.modal-scroll-area') && !e.target.closest('textarea')) {
       e.preventDefault();
     }
   }, { passive: false });
 
   window.addEventListener('load', () => {
     document.getElementById('versionBadge').innerText = APP_VERSION;
+    applyTheme();
+    updateReconnectBtnUI();
+    applyGridCols();
     renderChannelButtons();
     applyCurrentChannelPreamp();
     setEQ(currentEQ, false);
