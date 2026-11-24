@@ -50,6 +50,12 @@
     font-weight: 700;
     flex-shrink: 0;
     cursor: pointer;
+    transition: background 0.25s, border-color 0.25s;
+  }
+  .stop-btn.loading {
+    background: #8C7A6B;
+    border-color: #B8A696;
+    color: #FAF8F5;
   }
   .stop-btn.active {
     background: #A66E6E;
@@ -134,19 +140,13 @@
     gap: 6px;
     min-width: 0;
   }
-  /* 前級增益專屬視覺區隔 */
   .band-col.preamp-col {
     border-right: 1px solid #45494F;
     padding-right: 3px;
     margin-right: 2px;
   }
-  .band-col.preamp-col .band-freq {
-    color: #D9C3B0;
-  }
-  .band-col.preamp-col .band-val {
-    color: #E6C7AD;
-    font-weight: 700;
-  }
+  .band-col.preamp-col .band-freq { color: #D9C3B0; }
+  .band-col.preamp-col .band-val { color: #E6C7AD; font-weight: 700; }
   .band-freq {
     font-size: 9.5px;
     font-weight: 700;
@@ -205,7 +205,6 @@
     margin-top: -8px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.4);
   }
-  /* 前級增益推桿帽配色（莫蘭迪暖奶茶棕） */
   input[type=range].v-slider.preamp-slider::-webkit-slider-thumb {
     background: #9C8675;
     border-color: #EFE5DC;
@@ -253,7 +252,7 @@
     font-weight: 700;
     border: 1.5px solid #484C52;
     border-radius: 18px;
-    background: #32353A;
+    background: #32353A; /* 狀態1：待機莫蘭迪岩灰 */
     color: #E2DFD7;
     display: flex;
     flex-direction: column;
@@ -263,16 +262,32 @@
     text-align: center;
     line-height: 1.25;
     cursor: pointer;
-    transition: transform 0.1s, background 0.2s, border-color 0.2s;
+    transition: transform 0.1s, background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
   }
   button.ch-btn:active { transform: scale(0.96); }
+
+  /* 狀態2：按下按鈕 / 緩衝載入中的過渡色（莫蘭迪暖奶茶棕 + 呼吸脈動） */
+  @keyframes pulseBuffer {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.78; }
+  }
+  button.ch-btn.loading {
+    background: #8C7A6B;
+    border-color: #D9C3B0;
+    color: #FAF8F5;
+    animation: pulseBuffer 1.2s infinite ease-in-out;
+  }
+
+  /* 狀態3：確定播放出聲的正式色（莫蘭迪霧霾藍） */
   button.ch-btn.playing {
     background: #5B7A8C;
     border-color: #B4C8D4;
     color: #FAF8F5;
     box-shadow: 0 4px 16px rgba(91, 122, 140, 0.35);
+    animation: none;
   }
   .sub-tag { font-size: 12px; font-weight: 400; color: #9EA3A8; margin-top: 3px; }
+  button.ch-btn.loading .sub-tag { color: #EFE5DC; }
   button.ch-btn.playing .sub-tag { color: #DCE6EC; }
 </style>
 </head>
@@ -294,7 +309,7 @@
     <button class="eq-tune-toggle" id="tuneToggleBtn" onclick="toggleEQPanel()">🎛️ 自訂</button>
   </div>
 
-  <!-- 前級增益 + 10段垂直推桿 EQ 面板 -->
+  <!-- 各台獨立前級增益 + 10段垂直推桿 EQ 面板 -->
   <div class="eq-panel" id="eqPanel">
     <div class="graphic-eq-container" id="graphicEqContainer">
       <div class="db-scale">
@@ -304,15 +319,13 @@
         <span>-6</span>
         <span>-12</span>
       </div>
-      <!-- 前級增益推桿 (Preamp) -->
       <div class="band-col preamp-col">
-        <span class="band-freq">前級</span>
+        <span class="band-freq">本台前級</span>
         <div class="v-slider-wrap">
           <input type="range" class="v-slider preamp-slider" id="preampSlider" min="-12" max="12" step="1" value="0" oninput="onPreampChange()">
         </div>
         <span class="band-val" id="preampVal">0</span>
       </div>
-      <!-- 10 個頻段推桿由 JS 動態接續生成 -->
     </div>
     <div class="save-row">
       <button class="save-target-btn" onclick="overwritePreset('voice')">覆蓋「人聲」</button>
@@ -360,14 +373,14 @@
   };
 
   let eqPresets = JSON.parse(localStorage.getItem('customRadioEQ10Presets')) || JSON.parse(JSON.stringify(defaultPresets));
-  let currentPreampDb = parseInt(localStorage.getItem('lastRadioPreampDb'), 10);
-  if (isNaN(currentPreampDb)) currentPreampDb = 0;
+  let perChannelPreamp = JSON.parse(localStorage.getItem('perChannelPreampMap')) || {};
 
   const playerEQ = document.getElementById('playerEQ');
   const playerDirect = document.getElementById('playerDirect');
   let activePlayer = playerEQ;
   let isDirectMode = false;
   let hlsInstance = null;
+  let switchToken = 0; // 防止快速連按時舊的連線請求干擾新頻道
 
   const statusMain = document.getElementById('statusMain');
   const statusSub = document.getElementById('statusSub');
@@ -380,10 +393,37 @@
 
   let audioCtx = null;
   let preampNode = null;
+  let fadeGainNode = null; // 專責 0.3 秒淡出與淡入的音量包絡節點
   let filterNodes = [];
   let limiterNode = null;
+  let directFadeTimer = null;
 
-  // 建立 10 根頻段垂直推桿 UI
+  const FADE_DURATION = 0.3; // 淡出/淡入時間（秒）
+
+  function getChannelPreampDb(idx) {
+    const chId = channels[idx].id;
+    const val = parseInt(perChannelPreamp[chId], 10);
+    return isNaN(val) ? 0 : val;
+  }
+
+  function applyCurrentChannelPreamp() {
+    const db = getChannelPreampDb(currentIndex);
+    syncPreampUI(db);
+    if (preampNode) {
+      preampNode.gain.value = dbToLinearGain(db);
+    }
+  }
+
+  function refreshChannelSubTags() {
+    channels.forEach((ch, idx) => {
+      const btn = document.getElementById(ch.id);
+      if (!btn) return;
+      const db = getChannelPreampDb(idx);
+      const dbBadge = db !== 0 ? ` (${db > 0 ? '+' : ''}${db}dB)` : '';
+      btn.querySelector('.sub-tag').innerText = ch.sub + dbBadge;
+    });
+  }
+
   eqBands.forEach((band, i) => {
     const col = document.createElement('div');
     col.className = 'band-col';
@@ -397,23 +437,20 @@
     eqContainer.appendChild(col);
   });
 
-  // dB 轉線性增益倍率公式：10^(dB / 20)
   function dbToLinearGain(db) {
     return Math.pow(10, db / 20);
   }
 
-  // 初始化 Web Audio 音訊鏈：Source -> Preamp -> 10-Band EQ -> Limiter -> Output
+  // 初始化音訊鏈：Source -> Preamp -> 10-Band EQ -> Limiter -> FadeGain -> Output
   function initAudioEQ() {
     if (!audioCtx) {
       const AudioContext = window.AudioContext || window.webkitAudioContext;
       audioCtx = new AudioContext();
       const source = audioCtx.createMediaElementSource(playerEQ);
 
-      // 1. 前級增益節點
       preampNode = audioCtx.createGain();
-      preampNode.gain.value = dbToLinearGain(currentPreampDb);
+      preampNode.gain.value = dbToLinearGain(getChannelPreampDb(currentIndex));
 
-      // 2. 10段等化器節點
       filterNodes = eqBands.map(band => {
         const filter = audioCtx.createBiquadFilter();
         filter.type = band.type;
@@ -422,7 +459,6 @@
         return filter;
       });
 
-      // 3. 防破音限制器（避免前級放大後爆音）
       limiterNode = audioCtx.createDynamicsCompressor();
       limiterNode.threshold.value = -1.5;
       limiterNode.knee.value = 6;
@@ -430,33 +466,96 @@
       limiterNode.attack.value = 0.003;
       limiterNode.release.value = 0.15;
 
-      // 串接完整音訊鏈
+      fadeGainNode = audioCtx.createGain();
+      fadeGainNode.gain.value = 1.0;
+
       source.connect(preampNode);
       preampNode.connect(filterNodes[0]);
       for (let i = 0; i < filterNodes.length - 1; i++) {
         filterNodes[i].connect(filterNodes[i + 1]);
       }
       filterNodes[filterNodes.length - 1].connect(limiterNode);
-      limiterNode.connect(audioCtx.destination);
+      limiterNode.connect(fadeGainNode);
+      fadeGainNode.connect(audioCtx.destination);
     }
 
     if (audioCtx.state === 'suspended') {
       audioCtx.resume();
     }
 
-    preampNode.gain.value = dbToLinearGain(currentPreampDb);
+    preampNode.gain.value = dbToLinearGain(getChannelPreampDb(currentIndex));
     const gains = getCurrentSliderGains();
     filterNodes.forEach((f, i) => { f.gain.value = gains[i]; });
   }
 
-  // 前級增益推桿變更
+  // 執行 0.3 秒平滑淡出，完成後執行回呼
+  function fadeOutCurrentAudio(callback) {
+    if (activePlayer.paused) {
+      callback();
+      return;
+    }
+
+    if (!isDirectMode && fadeGainNode && audioCtx) {
+      const now = audioCtx.currentTime;
+      fadeGainNode.gain.cancelScheduledValues(now);
+      fadeGainNode.gain.setValueAtTime(fadeGainNode.gain.value, now);
+      fadeGainNode.gain.linearRampToValueAtTime(0.0001, now + FADE_DURATION);
+      setTimeout(callback, FADE_DURATION * 1000);
+    } else {
+      // 直通模式使用 playerDirect.volume 進行 0.3 秒步進淡出
+      if (directFadeTimer) clearInterval(directFadeTimer);
+      const startVol = playerDirect.volume;
+      const steps = 15;
+      const stepTime = (FADE_DURATION * 1000) / steps;
+      let currentStep = 0;
+      directFadeTimer = setInterval(() => {
+        currentStep++;
+        const nextVol = Math.max(0, startVol * (1 - currentStep / steps));
+        playerDirect.volume = nextVol;
+        if (currentStep >= steps) {
+          clearInterval(directFadeTimer);
+          directFadeTimer = null;
+          callback();
+        }
+      }, stepTime);
+    }
+  }
+
+  // 執行 0.3 秒平滑淡入
+  function fadeInTargetAudio(isDirect) {
+    if (!isDirect && fadeGainNode && audioCtx) {
+      const now = audioCtx.currentTime;
+      fadeGainNode.gain.cancelScheduledValues(now);
+      fadeGainNode.gain.setValueAtTime(0.0001, now);
+      fadeGainNode.gain.linearRampToValueAtTime(1.0, now + FADE_DURATION);
+    } else {
+      if (directFadeTimer) clearInterval(directFadeTimer);
+      playerDirect.volume = 0;
+      const steps = 15;
+      const stepTime = (FADE_DURATION * 1000) / steps;
+      let currentStep = 0;
+      directFadeTimer = setInterval(() => {
+        currentStep++;
+        playerDirect.volume = Math.min(1, currentStep / steps);
+        if (currentStep >= steps) {
+          clearInterval(directFadeTimer);
+          directFadeTimer = null;
+        }
+      }, stepTime);
+    }
+  }
+
   function onPreampChange() {
-    currentPreampDb = parseInt(document.getElementById('preampSlider').value, 10);
-    localStorage.setItem('lastRadioPreampDb', currentPreampDb);
-    syncPreampUI(currentPreampDb);
+    const db = parseInt(document.getElementById('preampSlider').value, 10);
+    const chId = channels[currentIndex].id;
+    perChannelPreamp[chId] = db;
+    localStorage.setItem('perChannelPreampMap', JSON.stringify(perChannelPreamp));
+
+    syncPreampUI(db);
+    refreshChannelSubTags();
 
     if (preampNode) {
-      preampNode.gain.value = dbToLinearGain(currentPreampDb);
+      preampNode.gain.value = dbToLinearGain(db);
     }
     if (audioCtx && audioCtx.state === 'suspended') {
       audioCtx.resume();
@@ -531,13 +630,15 @@
   function resetDefaultPresets() {
     eqPresets = JSON.parse(JSON.stringify(defaultPresets));
     localStorage.removeItem('customRadioEQ10Presets');
-    currentPreampDb = 0;
-    localStorage.removeItem('lastRadioPreampDb');
+
+    perChannelPreamp = {};
+    localStorage.removeItem('perChannelPreampMap');
     syncPreampUI(0);
+    refreshChannelSubTags();
     if (preampNode) preampNode.gain.value = 1;
 
     setEQ(currentEQ === 'custom' ? 'flat' : currentEQ);
-    statusSub.innerText = '🔄 已還原預設 EQ 與前級歸零';
+    statusSub.innerText = '🔄 已還原預設 EQ 與各台前級歸零';
   }
 
   function toggleEQPanel() {
@@ -550,16 +651,17 @@
   function updateStatusEQText() {
     if (activePlayer.paused) return;
     const ch = channels[currentIndex];
+    const db = getChannelPreampDb(currentIndex);
     if (isDirectMode) {
       statusSub.innerText = `直通原音 (此電台不支援EQ) • ${ch.sub}`;
     } else {
       const eqLabel = currentEQ === 'custom' ? '自訂10段' : (eqPresets[currentEQ]?.label || '原音');
-      const preampStr = currentPreampDb !== 0 ? ` | 前級${currentPreampDb > 0 ? '+' : ''}${currentPreampDb}dB` : '';
+      const preampStr = db !== 0 ? ` | 本台前級${db > 0 ? '+' : ''}${db}dB` : '';
       statusSub.innerText = `EQ:${eqLabel}${preampStr} • ${ch.sub}`;
     }
   }
 
-  function stopAllPlayers() {
+  function stopAllPlayersImmediately() {
     playerEQ.pause();
     playerEQ.removeAttribute('src');
     playerEQ.load();
@@ -574,24 +676,42 @@
     }
   }
 
-  function attachAndPlay(targetPlayer, url, onSuccess, onFail) {
+  function attachAndPlay(targetPlayer, url, token, onSuccess, onFail) {
     const isM3u8 = url.includes('.m3u8') || url.includes('sonnykuo.appspot.com');
+
+    // 先將目標播放器設為靜音起點，確保出聲瞬間從 0 開始 0.3 秒淡入
+    if (targetPlayer === playerEQ && fadeGainNode && audioCtx) {
+      fadeGainNode.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+    } else if (targetPlayer === playerDirect) {
+      targetPlayer.volume = 0;
+    }
 
     if (isM3u8 && !targetPlayer.canPlayType('application/vnd.apple.mpegurl') && window.Hls && Hls.isSupported()) {
       hlsInstance = new Hls();
       hlsInstance.loadSource(url);
       hlsInstance.attachMedia(targetPlayer);
       hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
-        targetPlayer.play().then(onSuccess).catch(onFail);
+        if (token !== switchToken) return;
+        targetPlayer.play().then(() => {
+          if (token === switchToken) onSuccess();
+        }).catch(() => {
+          if (token === switchToken) onFail();
+        });
       });
       hlsInstance.on(Hls.Events.ERROR, (event, data) => {
-        if (data.fatal) onFail();
+        if (data.fatal && token === switchToken) onFail();
       });
     } else {
       targetPlayer.src = url;
       targetPlayer.load();
-      targetPlayer.onerror = onFail;
-      targetPlayer.play().then(onSuccess).catch(onFail);
+      targetPlayer.onerror = () => {
+        if (token === switchToken) onFail();
+      };
+      targetPlayer.play().then(() => {
+        if (token === switchToken) onSuccess();
+      }).catch(() => {
+        if (token === switchToken) onFail();
+      });
     }
   }
 
@@ -609,79 +729,104 @@
     if (idx >= channels.length) idx = 0;
 
     const ch = channels[idx];
+    const myToken = ++switchToken;
 
+    // 若點擊正在播放中的同一台 -> 0.3秒淡出後暫停
     if (!activePlayer.paused && currentIndex === idx) {
-      stopAllPlayers();
-      updateUI(idx, false, '已暫停');
+      fadeOutCurrentAudio(() => {
+        if (myToken !== switchToken) return;
+        stopAllPlayersImmediately();
+        updateUIState(idx, 'idle', '已暫停');
+      });
       return;
     }
 
     currentIndex = idx;
     localStorage.setItem('lastRadioIndex', idx);
-    stopAllPlayers();
-    updateUI(idx, false, '連線緩衝中...');
+    applyCurrentChannelPreamp();
+
+    // 按下按鈕當下，立即切換為「緩衝過渡色 (loading)」
+    updateUIState(idx, 'loading', '切換緩衝中...');
 
     if (isUserClick) initAudioEQ();
 
-    attachAndPlay(
-      playerEQ,
-      ch.url,
-      () => {
-        activePlayer = playerEQ;
-        isDirectMode = false;
-        initAudioEQ();
-        updateUI(idx, true, '');
-        updateStatusEQText();
-        setupMediaSession(ch);
-      },
-      () => {
-        if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
-        attachAndPlay(
-          playerDirect,
-          ch.url,
-          () => {
-            activePlayer = playerDirect;
-            isDirectMode = true;
-            updateUI(idx, true, '');
-            updateStatusEQText();
-            setupMediaSession(ch);
-          },
-          () => {
-            updateUI(idx, false, '點擊任一按鈕啟動播放（或此台暫無訊號）');
-          }
-        );
-      }
-    );
+    // 先讓前一台在 0.3 秒內平滑淡出，再載入並淡入新電台
+    fadeOutCurrentAudio(() => {
+      if (myToken !== switchToken) return;
+      stopAllPlayersImmediately();
+
+      attachAndPlay(
+        playerEQ,
+        ch.url,
+        myToken,
+        () => {
+          activePlayer = playerEQ;
+          isDirectMode = false;
+          initAudioEQ();
+          fadeInTargetAudio(false); // 0.3秒淡入
+          updateUIState(idx, 'playing', ''); // 確定出聲後切換為「正式播放色」
+          updateStatusEQText();
+          setupMediaSession(ch);
+        },
+        () => {
+          if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
+          attachAndPlay(
+            playerDirect,
+            ch.url,
+            myToken,
+            () => {
+              activePlayer = playerDirect;
+              isDirectMode = true;
+              fadeInTargetAudio(true); // 0.3秒淡入
+              updateUIState(idx, 'playing', ''); // 確定出聲後切換為「正式播放色」
+              updateStatusEQText();
+              setupMediaSession(ch);
+            },
+            () => {
+              updateUIState(idx, 'idle', '點擊任一按鈕啟動播放（或此台暫無訊號）');
+            }
+          );
+        }
+      );
+    });
   }
 
   function toggleMasterPlay() {
     if (activePlayer.paused) {
       playByIndex(currentIndex, true);
     } else {
-      stopAllPlayers();
-      updateUI(currentIndex, false, '已暫停');
+      const myToken = ++switchToken;
+      fadeOutCurrentAudio(() => {
+        if (myToken !== switchToken) return;
+        stopAllPlayersImmediately();
+        updateUIState(currentIndex, 'idle', '已暫停');
+      });
     }
   }
 
-  function updateUI(activeIdx, isPlaying, subMsg) {
+  // 三階段 UI 狀態管理：'idle' (待機灰) | 'loading' (緩衝暖棕) | 'playing' (播放霧藍)
+  function updateUIState(activeIdx, state, subMsg) {
     const ch = channels[activeIdx];
     statusMain.innerText = ch.name;
     if (subMsg) statusSub.innerText = subMsg;
 
-    if (isPlaying) {
+    masterStopBtn.classList.remove('loading', 'active');
+    if (state === 'playing') {
       masterStopBtn.innerText = '⏸ 暫停';
       masterStopBtn.classList.add('active');
+    } else if (state === 'loading') {
+      masterStopBtn.innerText = '⏳ 緩衝';
+      masterStopBtn.classList.add('loading');
     } else {
       masterStopBtn.innerText = '▶ 播放';
-      masterStopBtn.classList.remove('active');
     }
 
     channels.forEach((item, i) => {
       const btn = document.getElementById(item.id);
-      if (i === activeIdx && isPlaying) {
-        btn.classList.add('playing');
-      } else {
-        btn.classList.remove('playing');
+      btn.classList.remove('loading', 'playing');
+      if (i === activeIdx) {
+        if (state === 'loading') btn.classList.add('loading');
+        if (state === 'playing') btn.classList.add('playing');
       }
     });
   }
@@ -696,8 +841,12 @@
 
       navigator.mediaSession.setActionHandler('play', () => playByIndex(currentIndex, true));
       navigator.mediaSession.setActionHandler('pause', () => {
-        stopAllPlayers();
-        updateUI(currentIndex, false, '已暫停');
+        const myToken = ++switchToken;
+        fadeOutCurrentAudio(() => {
+          if (myToken !== switchToken) return;
+          stopAllPlayersImmediately();
+          updateUIState(currentIndex, 'idle', '已暫停');
+        });
       });
       navigator.mediaSession.setActionHandler('previoustrack', () => playByIndex(currentIndex - 1, true));
       navigator.mediaSession.setActionHandler('nexttrack', () => playByIndex(currentIndex + 1, true));
@@ -705,10 +854,12 @@
   }
 
   window.addEventListener('load', () => {
-    syncPreampUI(currentPreampDb);
-    setEQ(currentEQ === 'custom' ? 'flat' : currentEQ);
     const savedIdx = parseInt(localStorage.getItem('lastRadioIndex'), 10);
     currentIndex = (!isNaN(savedIdx) && savedIdx >= 0 && savedIdx < channels.length) ? savedIdx : 0;
+
+    refreshChannelSubTags();
+    applyCurrentChannelPreamp();
+    setEQ(currentEQ === 'custom' ? 'flat' : currentEQ);
     playByIndex(currentIndex, false);
   });
 </script>
