@@ -6,7 +6,6 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>台灣車用電台</title>
-<!-- 讓筆電版 Chrome 也能播放 .m3u8 電台串流 -->
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -105,7 +104,7 @@
     background: #2B2E33;
     border: 1px solid #484D54;
     border-radius: 16px;
-    padding: 12px 10px;
+    padding: 12px 8px;
   }
   .eq-panel.show { display: flex; }
 
@@ -113,15 +112,15 @@
     display: flex;
     align-items: stretch;
     justify-content: space-between;
-    gap: 2px;
+    gap: 1px;
     padding: 4px 0;
   }
   .db-scale {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    padding: 20px 4px 20px 0;
-    font-size: 10px;
+    padding: 20px 3px 20px 0;
+    font-size: 9px;
     color: #8C9298;
     font-variant-numeric: tabular-nums;
     text-align: right;
@@ -135,14 +134,28 @@
     gap: 6px;
     min-width: 0;
   }
+  /* 前級增益專屬視覺區隔 */
+  .band-col.preamp-col {
+    border-right: 1px solid #45494F;
+    padding-right: 3px;
+    margin-right: 2px;
+  }
+  .band-col.preamp-col .band-freq {
+    color: #D9C3B0;
+  }
+  .band-col.preamp-col .band-val {
+    color: #E6C7AD;
+    font-weight: 700;
+  }
   .band-freq {
-    font-size: 10px;
+    font-size: 9.5px;
     font-weight: 700;
     color: #D6CFC7;
-    letter-spacing: -0.3px;
+    letter-spacing: -0.4px;
+    white-space: nowrap;
   }
   .band-val {
-    font-size: 10px;
+    font-size: 9.5px;
     font-variant-numeric: tabular-nums;
     color: #9BB7C7;
     height: 12px;
@@ -168,7 +181,7 @@
     -webkit-appearance: none;
     appearance: none;
     width: 118px;
-    height: 24px;
+    height: 22px;
     background: transparent;
     transform: rotate(-90deg);
     margin: 0;
@@ -184,13 +197,18 @@
   input[type=range].v-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 16px;
-    height: 22px;
+    width: 15px;
+    height: 20px;
     border-radius: 4px;
     background: #5B7A8C;
     border: 1.5px solid #D6CFC7;
-    margin-top: -9px;
+    margin-top: -8px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+  }
+  /* 前級增益推桿帽配色（莫蘭迪暖奶茶棕） */
+  input[type=range].v-slider.preamp-slider::-webkit-slider-thumb {
+    background: #9C8675;
+    border-color: #EFE5DC;
   }
   input[type=range].v-slider:active::-webkit-slider-thumb {
     background: #7D9B8C;
@@ -276,7 +294,7 @@
     <button class="eq-tune-toggle" id="tuneToggleBtn" onclick="toggleEQPanel()">🎛️ 自訂</button>
   </div>
 
-  <!-- 10段垂直推桿 EQ 面板 -->
+  <!-- 前級增益 + 10段垂直推桿 EQ 面板 -->
   <div class="eq-panel" id="eqPanel">
     <div class="graphic-eq-container" id="graphicEqContainer">
       <div class="db-scale">
@@ -286,6 +304,15 @@
         <span>-6</span>
         <span>-12</span>
       </div>
+      <!-- 前級增益推桿 (Preamp) -->
+      <div class="band-col preamp-col">
+        <span class="band-freq">前級</span>
+        <div class="v-slider-wrap">
+          <input type="range" class="v-slider preamp-slider" id="preampSlider" min="-12" max="12" step="1" value="0" oninput="onPreampChange()">
+        </div>
+        <span class="band-val" id="preampVal">0</span>
+      </div>
+      <!-- 10 個頻段推桿由 JS 動態接續生成 -->
     </div>
     <div class="save-row">
       <button class="save-target-btn" onclick="overwritePreset('voice')">覆蓋「人聲」</button>
@@ -297,7 +324,6 @@
 
   <div class="btn-grid" id="btnContainer"></div>
 
-  <!-- 雙播放器分離：playerEQ 專責 CORS+EQ 處理；playerDirect 專責不支援 CORS 的直通播放 -->
   <audio id="playerEQ" preload="none" playsinline crossorigin="anonymous"></audio>
   <audio id="playerDirect" preload="none" playsinline></audio>
 
@@ -334,6 +360,8 @@
   };
 
   let eqPresets = JSON.parse(localStorage.getItem('customRadioEQ10Presets')) || JSON.parse(JSON.stringify(defaultPresets));
+  let currentPreampDb = parseInt(localStorage.getItem('lastRadioPreampDb'), 10);
+  if (isNaN(currentPreampDb)) currentPreampDb = 0;
 
   const playerEQ = document.getElementById('playerEQ');
   const playerDirect = document.getElementById('playerDirect');
@@ -351,9 +379,11 @@
   let currentEQ = localStorage.getItem('lastRadioEQ') || 'flat';
 
   let audioCtx = null;
+  let preampNode = null;
   let filterNodes = [];
+  let limiterNode = null;
 
-  // 建立 10 根垂直推桿 UI
+  // 建立 10 根頻段垂直推桿 UI
   eqBands.forEach((band, i) => {
     const col = document.createElement('div');
     col.className = 'band-col';
@@ -367,13 +397,23 @@
     eqContainer.appendChild(col);
   });
 
-  // 僅針對 playerEQ 初始化 Web Audio 10段濾波器
+  // dB 轉線性增益倍率公式：10^(dB / 20)
+  function dbToLinearGain(db) {
+    return Math.pow(10, db / 20);
+  }
+
+  // 初始化 Web Audio 音訊鏈：Source -> Preamp -> 10-Band EQ -> Limiter -> Output
   function initAudioEQ() {
     if (!audioCtx) {
       const AudioContext = window.AudioContext || window.webkitAudioContext;
       audioCtx = new AudioContext();
       const source = audioCtx.createMediaElementSource(playerEQ);
 
+      // 1. 前級增益節點
+      preampNode = audioCtx.createGain();
+      preampNode.gain.value = dbToLinearGain(currentPreampDb);
+
+      // 2. 10段等化器節點
       filterNodes = eqBands.map(band => {
         const filter = audioCtx.createBiquadFilter();
         filter.type = band.type;
@@ -382,19 +422,53 @@
         return filter;
       });
 
-      source.connect(filterNodes[0]);
+      // 3. 防破音限制器（避免前級放大後爆音）
+      limiterNode = audioCtx.createDynamicsCompressor();
+      limiterNode.threshold.value = -1.5;
+      limiterNode.knee.value = 6;
+      limiterNode.ratio.value = 12;
+      limiterNode.attack.value = 0.003;
+      limiterNode.release.value = 0.15;
+
+      // 串接完整音訊鏈
+      source.connect(preampNode);
+      preampNode.connect(filterNodes[0]);
       for (let i = 0; i < filterNodes.length - 1; i++) {
         filterNodes[i].connect(filterNodes[i + 1]);
       }
-      filterNodes[filterNodes.length - 1].connect(audioCtx.destination);
+      filterNodes[filterNodes.length - 1].connect(limiterNode);
+      limiterNode.connect(audioCtx.destination);
     }
 
     if (audioCtx.state === 'suspended') {
       audioCtx.resume();
     }
 
+    preampNode.gain.value = dbToLinearGain(currentPreampDb);
     const gains = getCurrentSliderGains();
     filterNodes.forEach((f, i) => { f.gain.value = gains[i]; });
+  }
+
+  // 前級增益推桿變更
+  function onPreampChange() {
+    currentPreampDb = parseInt(document.getElementById('preampSlider').value, 10);
+    localStorage.setItem('lastRadioPreampDb', currentPreampDb);
+    syncPreampUI(currentPreampDb);
+
+    if (preampNode) {
+      preampNode.gain.value = dbToLinearGain(currentPreampDb);
+    }
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+    updateStatusEQText();
+  }
+
+  function syncPreampUI(db) {
+    const slider = document.getElementById('preampSlider');
+    const valText = document.getElementById('preampVal');
+    if (slider) slider.value = db;
+    if (valText) valText.innerText = (db > 0 ? '+' : '') + db;
   }
 
   function applyEQGains(presetKey) {
@@ -431,7 +505,6 @@
     updateStatusEQText();
   }
 
-  // 拉動滑桿時絕不觸發 playerDirect 的 Web Audio 綁定，避免 Chrome 靜音
   function onSliderChange() {
     const gains = getCurrentSliderGains();
     syncSlidersUI(gains);
@@ -458,8 +531,13 @@
   function resetDefaultPresets() {
     eqPresets = JSON.parse(JSON.stringify(defaultPresets));
     localStorage.removeItem('customRadioEQ10Presets');
+    currentPreampDb = 0;
+    localStorage.removeItem('lastRadioPreampDb');
+    syncPreampUI(0);
+    if (preampNode) preampNode.gain.value = 1;
+
     setEQ(currentEQ === 'custom' ? 'flat' : currentEQ);
-    statusSub.innerText = '🔄 已還原預設 10 段曲線';
+    statusSub.innerText = '🔄 已還原預設 EQ 與前級歸零';
   }
 
   function toggleEQPanel() {
@@ -476,7 +554,8 @@
       statusSub.innerText = `直通原音 (此電台不支援EQ) • ${ch.sub}`;
     } else {
       const eqLabel = currentEQ === 'custom' ? '自訂10段' : (eqPresets[currentEQ]?.label || '原音');
-      statusSub.innerText = `EQ:${eqLabel} • ${ch.sub}`;
+      const preampStr = currentPreampDb !== 0 ? ` | 前級${currentPreampDb > 0 ? '+' : ''}${currentPreampDb}dB` : '';
+      statusSub.innerText = `EQ:${eqLabel}${preampStr} • ${ch.sub}`;
     }
   }
 
@@ -495,7 +574,6 @@
     }
   }
 
-  // 載入串流至指定播放器（自動判斷是否需用 hls.js 支援 Chrome）
   function attachAndPlay(targetPlayer, url, onSuccess, onFail) {
     const isM3u8 = url.includes('.m3u8') || url.includes('sonnykuo.appspot.com');
 
@@ -543,7 +621,6 @@
     stopAllPlayers();
     updateUI(idx, false, '連線緩衝中...');
 
-    // 1. 優先嘗試用 playerEQ（帶 CORS 與 10 段 EQ）播放
     if (isUserClick) initAudioEQ();
 
     attachAndPlay(
@@ -558,7 +635,6 @@
         setupMediaSession(ch);
       },
       () => {
-        // 2. 若該電台不支援 CORS，自動切換至獨立的 playerDirect 播放，避免靜音
         if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
         attachAndPlay(
           playerDirect,
@@ -629,6 +705,7 @@
   }
 
   window.addEventListener('load', () => {
+    syncPreampUI(currentPreampDb);
     setEQ(currentEQ === 'custom' ? 'flat' : currentEQ);
     const savedIdx = parseInt(localStorage.getItem('lastRadioIndex'), 10);
     currentIndex = (!isNaN(savedIdx) && savedIdx >= 0 && savedIdx < channels.length) ? savedIdx : 0;
