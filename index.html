@@ -145,7 +145,6 @@
     gap: 6px;
     flex-shrink: 0;
   }
-  /* 暫時降音 ATT 按鈕 */
   .att-btn {
     background: var(--bg-eq-btn);
     color: var(--text-eq-btn);
@@ -250,23 +249,24 @@
   }
   .eq-panel.show { display: flex; }
 
-  /* 車用快捷設定列：主題切換 / 斷線重連秒數 / 螢幕常亮 / 排版欄數 */
   .car-quick-row {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 5px;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 4px;
   }
   .quick-chip-btn {
     background: var(--bg-chip);
     border: 1px solid var(--border-chip);
     color: var(--text-chip);
-    font-size: 11.5px;
+    font-size: 11px;
     font-weight: 700;
-    padding: 7px 3px;
-    border-radius: 10px;
+    padding: 7px 2px;
+    border-radius: 9px;
     cursor: pointer;
     text-align: center;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     transition: all 0.2s;
   }
   .quick-chip-btn.on {
@@ -418,7 +418,7 @@
     cursor: pointer;
   }
 
-  /* 電台管理彈窗（維持深色高質感閱讀介面） */
+  /* 電台管理彈窗 */
   .modal-backdrop {
     display: none;
     position: fixed;
@@ -845,7 +845,7 @@
   <div class="header">
     <div class="status-box">
       <div class="status-top-row">
-        <span class="version-badge" id="versionBadge">20261124_v03</span>
+        <span class="version-badge" id="versionBadge">20261124_v05</span>
         <span class="status-label" id="statusSub">walton電台 • 長按 1 秒可調整順序</span>
       </div>
       <span class="status-title" id="statusMain">點擊任一電台開始播放</span>
@@ -868,12 +868,12 @@
 
   <!-- 車用快捷設定 + 各台獨立前級增益 + 10段垂直推桿 EQ 面板 -->
   <div class="eq-panel" id="eqPanel">
-    <!-- 自主調整：夜間/日間主題 | 斷線重連秒數 | 螢幕常亮(預設關閉省電) | 2/3欄排版 -->
     <div class="car-quick-row">
-      <button class="quick-chip-btn" id="themeToggleBtn" onclick="cycleThemeMode()">🌙 夜間模式</button>
-      <button class="quick-chip-btn" id="reconnectSecBtn" onclick="cycleReconnectSec()">🔄 重連 4.5s</button>
-      <button class="quick-chip-btn" id="wakeLockBtn" onclick="toggleWakeLock()">💤 省電鎖屏</button>
-      <button class="quick-chip-btn" id="gridColsBtn" onclick="toggleGridCols()">田 2欄按鈕</button>
+      <button class="quick-chip-btn" id="themeToggleBtn" onclick="cycleThemeMode()">🌙 夜間</button>
+      <button class="quick-chip-btn" id="reconnectSecBtn" onclick="cycleReconnectSec()">🔄 重連4.5s</button>
+      <button class="quick-chip-btn" id="wakeLockBtn" onclick="toggleWakeLock()">💤 鎖屏省電</button>
+      <button class="quick-chip-btn" id="sleepTimerBtn" onclick="cycleSleepTimer()">⏰ 定時關</button>
+      <button class="quick-chip-btn" id="gridColsBtn" onclick="toggleGridCols()">田 2欄</button>
     </div>
 
     <div class="eq-hint-bar">💡 雙擊任一推桿可快速歸零 (0 dB)</div>
@@ -968,7 +968,9 @@
 
 <script>
   // 版本命名規則：西元年月日_v01（每日編輯重置為當天日期，同日遞增 v02, v03...，隔日歸為 v01）
-  const APP_VERSION = '20261124_v03';
+  const APP_VERSION = '20261124_v05';
+
+  const IC_VOICE_REVMA_URL = 'https://stream.rcs.revma.com/7mnq8rt7k5zuv';
 
   const defaultChannels = [
     { id: 'ch1',  name: '中廣音樂網', sub: 'iRadio',   url: 'https://sonnykuo.appspot.com/bcc/?id=中廣音樂網' },
@@ -981,13 +983,23 @@
     { id: 'ch8',  name: '全國廣播',   sub: 'FM 106.1', url: 'https://stream.rcs.revma.com/044q61ha7a0uv' },
     { id: 'ch9',  name: '佳音聯播',   sub: 'FM 90.9',  url: 'https://stream.ginnet.cloud/live0119lo-p4rb/_definst_/fm909/playlist.m3u8' },
     { id: 'ch10', name: '台北愛樂',   sub: 'FM 99.7',  url: 'https://stream.rcs.revma.com/sw7168857a0uv' },
-    { id: 'ch11', name: 'IC 之音',    sub: 'FM 97.5',  url: 'https://stream.rcs.revma.com/78898857a0uv' },
+    { id: 'ch11', name: 'IC 之音',    sub: 'FM 97.5',  url: IC_VOICE_REVMA_URL },
     { id: 'ch12', name: '警察廣播',   sub: '全國治安', url: 'https://stream.pbs.gov.tw/live/TPS/playlist.m3u8' }
   ];
 
   function loadChannelsData() {
     const savedCustomList = JSON.parse(localStorage.getItem('waltonCustomChannelsList'));
     if (Array.isArray(savedCustomList) && savedCustomList.length > 0) {
+      let migrated = false;
+      savedCustomList.forEach(item => {
+        if (item.id === 'ch11' && item.url.includes('78898857a0uv')) {
+          item.url = IC_VOICE_REVMA_URL;
+          migrated = true;
+        }
+      });
+      if (migrated) {
+        localStorage.setItem('waltonCustomChannelsList', JSON.stringify(savedCustomList));
+      }
       return savedCustomList;
     }
     const savedOrder = JSON.parse(localStorage.getItem('customChannelOrderIds'));
@@ -1045,16 +1057,23 @@
   }
   let perChannelPreamp = JSON.parse(localStorage.getItem('perChannelPreampMap')) || {};
 
-  // ==================== 車用偏好設定（主題、重連秒數、螢幕常亮、網格欄數、暫時降音） ====================
-  let themeMode = localStorage.getItem('waltonThemeMode') || 'night'; // 'night' | 'day' | 'auto'
+  // ==================== 車用偏好設定（主題、重連秒數、螢幕常亮、擴充睡眠定時、網格欄數、iPhone 降音） ====================
+  let themeMode = localStorage.getItem('waltonThemeMode') || 'night';
   const reconnectOptions = [2, 4.5, 8, 15];
   let reconnectDelaySec = parseFloat(localStorage.getItem('waltonReconnectSec')) || 4.5;
   if (!reconnectOptions.includes(reconnectDelaySec)) reconnectDelaySec = 4.5;
 
-  let wakeLockEnabled = false; // 預設關閉，保持鎖屏省電續播
+  let wakeLockEnabled = false;
   let wakeLockSentinel = null;
   let gridCols = parseInt(localStorage.getItem('waltonGridCols'), 10) === 3 ? 3 : 2;
-  let isAttMuted = false; // 暫時降音 (-20dB) 狀態
+  let isAttMuted = false;
+
+  // 方案 A：擴充睡眠定時循環預設檔位 (0=關, 10, 15, 30, 45, 60, 90 分鐘)，時間到執行 5 秒平滑淡出停止
+  const sleepTimerOptions = [0, 10, 15, 30, 45, 60, 90];
+  let sleepTimerMinutes = 0;
+  let sleepEndTimestamp = 0;
+  let sleepCheckInterval = null;
+  let isSleepFadingOut = false;
 
   const playerEQ = document.getElementById('playerEQ');
   const playerDirect = document.getElementById('playerDirect');
@@ -1087,6 +1106,7 @@
   let directFadeTimer = null;
 
   const FADE_DURATION = 0.3;
+  const SLEEP_FADE_DURATION = 5.0; // 睡眠定時結束時採用 5 秒平滑淡出
 
   let longPressTimer = null;
   let isDraggingMode = false;
@@ -1095,7 +1115,6 @@
   let startX = 0;
   let startY = 0;
 
-  // 主題套用與切換
   function applyTheme() {
     const btn = document.getElementById('themeToggleBtn');
     const prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
@@ -1103,13 +1122,13 @@
 
     document.body.classList.toggle('theme-day', useDay);
     if (themeMode === 'night') {
-      btn.innerText = '🌙 夜間模式';
+      btn.innerText = '🌙 夜間';
       btn.classList.remove('on');
     } else if (themeMode === 'day') {
-      btn.innerText = '☀️ 日間模式';
+      btn.innerText = '☀️ 日間';
       btn.classList.add('on');
     } else {
-      btn.innerText = '🌓 自動主題';
+      btn.innerText = '🌓 自動';
       btn.classList.add('on');
     }
   }
@@ -1128,9 +1147,8 @@
     });
   }
 
-  // 斷線重連秒數循環切換
   function updateReconnectBtnUI() {
-    document.getElementById('reconnectSecBtn').innerText = `🔄 重連 ${reconnectDelaySec}s`;
+    document.getElementById('reconnectSecBtn').innerText = `🔄 重連${reconnectDelaySec}s`;
   }
 
   function cycleReconnectSec() {
@@ -1140,7 +1158,6 @@
     updateReconnectBtnUI();
   }
 
-  // 螢幕常亮防休眠自主控制（預設關閉以維持鎖屏省電）
   async function requestWakeLockIfNeeded() {
     if (!wakeLockEnabled) return;
     if ('wakeLock' in navigator) {
@@ -1162,14 +1179,14 @@
     wakeLockEnabled = !wakeLockEnabled;
     if (wakeLockEnabled) {
       await requestWakeLockIfNeeded();
-      btn.innerText = '🔆 螢幕常亮';
+      btn.innerText = '🔆 常亮';
       btn.classList.add('on');
     } else {
       if (wakeLockSentinel) {
         try { await wakeLockSentinel.release(); } catch (_) {}
         wakeLockSentinel = null;
       }
-      btn.innerText = '💤 省電鎖屏';
+      btn.innerText = '💤 鎖屏省電';
       btn.classList.remove('on');
     }
   }
@@ -1180,11 +1197,94 @@
     }
   });
 
-  // 網格 2欄 / 3欄切換
+  // 睡眠定時器（10 / 15 / 30 / 45 / 60 / 90 分鐘循環，時間到執行 5 秒平滑淡出停止）
+  function cycleSleepTimer() {
+    const idx = sleepTimerOptions.indexOf(sleepTimerMinutes);
+    sleepTimerMinutes = sleepTimerOptions[(idx + 1) % sleepTimerOptions.length];
+
+    if (sleepTimerMinutes === 0) {
+      cancelSleepTimer();
+    } else {
+      sleepEndTimestamp = Date.now() + sleepTimerMinutes * 60 * 1000;
+      startSleepTimerLoop();
+    }
+    updateSleepTimerUI();
+    updateStatusEQText();
+  }
+
+  function cancelSleepTimer() {
+    sleepTimerMinutes = 0;
+    sleepEndTimestamp = 0;
+    isSleepFadingOut = false;
+    if (sleepCheckInterval) {
+      clearInterval(sleepCheckInterval);
+      sleepCheckInterval = null;
+    }
+    updateSleepTimerUI();
+  }
+
+  function getRemainingSleepMinutes() {
+    if (!sleepTimerMinutes || !sleepEndTimestamp) return 0;
+    const msLeft = sleepEndTimestamp - Date.now();
+    if (msLeft <= 0) return 0;
+    return Math.ceil(msLeft / 60000);
+  }
+
+  function updateSleepTimerUI() {
+    const btn = document.getElementById('sleepTimerBtn');
+    if (!btn) return;
+    if (sleepTimerMinutes === 0) {
+      btn.innerText = '⏰ 定時關';
+      btn.classList.remove('on');
+    } else {
+      const minsLeft = getRemainingSleepMinutes();
+      btn.innerText = isSleepFadingOut ? '⏰ 淡出中' : `⏰ 剩${minsLeft}分`;
+      btn.classList.add('on');
+    }
+  }
+
+  function startSleepTimerLoop() {
+    if (sleepCheckInterval) clearInterval(sleepCheckInterval);
+    sleepCheckInterval = setInterval(() => {
+      if (!sleepTimerMinutes || !sleepEndTimestamp) return;
+      const msLeft = sleepEndTimestamp - Date.now();
+
+      if (msLeft <= 0 && !isSleepFadingOut) {
+        clearInterval(sleepCheckInterval);
+        sleepCheckInterval = null;
+        triggerSleepFadeOutStop();
+      } else {
+        updateSleepTimerUI();
+        updateStatusEQText();
+      }
+    }, 1000);
+  }
+
+  function triggerSleepFadeOutStop() {
+    if (currentPlayState === 'idle' || activePlayer.paused) {
+      cancelSleepTimer();
+      updateStatusEQText();
+      return;
+    }
+
+    isSleepFadingOut = true;
+    updateSleepTimerUI();
+    statusSub.innerText = '🌙 睡眠時間到，5 秒平滑淡出停止中...';
+
+    const myToken = ++switchToken;
+    fadeOutCurrentAudio(() => {
+      if (myToken !== switchToken) return;
+      stopAllPlayersImmediately();
+      isAutoDirectFallback = false;
+      cancelSleepTimer();
+      updateUIState(currentIndex, 'idle', '🌙 已依睡眠定時淡出停止播放');
+    }, SLEEP_FADE_DURATION);
+  }
+
   function applyGridCols() {
     const btn = document.getElementById('gridColsBtn');
     container.classList.toggle('cols-3', gridCols === 3);
-    btn.innerText = gridCols === 3 ? '田 3欄按鈕' : '田 2欄按鈕';
+    btn.innerText = gridCols === 3 ? '田 3欄' : '田 2欄';
     btn.classList.toggle('on', gridCols === 3);
   }
 
@@ -1194,30 +1294,61 @@
     applyGridCols();
   }
 
-  // 暫時降音 (-20dB) 不斷線交談模式
+  // ==================== iPhone 專屬雙軌降音機制 ====================
   function getTargetOutputGain() {
-    return isAttMuted ? 0.1 : 1.0; // 0.1 線性倍率 = -20dB
+    return isAttMuted ? 0.1 : 1.0; // Web Audio 通道中 0.1 = -20dB
+  }
+
+  function updateAttButtonUI() {
+    const btn = document.getElementById('attBtn');
+    btn.classList.toggle('active', isAttMuted);
+    if (!isAttMuted) {
+      btn.innerText = '🔉 降音';
+    } else if (isDirectMode) {
+      btn.innerText = '🔇 靜音保活';
+    } else {
+      btn.innerText = '🔇 降音中';
+    }
   }
 
   function toggleAttMute() {
     isAttMuted = !isAttMuted;
-    const btn = document.getElementById('attBtn');
-    btn.classList.toggle('active', isAttMuted);
-    btn.innerText = isAttMuted ? '🔇 降音中' : '🔉 降音';
+    updateAttButtonUI();
+
+    // 若處於靜音預緩衝狀態，按降音鈕順便解鎖連線
+    if (isMutedPrebuffered) {
+      unlockPrebufferedStream();
+      return;
+    }
+
+    // 1. 若目前在自動直通模式（尚未解鎖 AudioContext），利用這次點擊手勢自動升級進 Web Audio EQ 通道，
+    //    這樣 iPhone 才能透過 GainNode 真正執行 -20dB 數位衰減（不支援 CORS 的電台則會自動退回 playerDirect 並套用 .muted 保活）
+    if (isAutoDirectFallback && currentPlayState === 'playing') {
+      isAutoDirectFallback = false;
+      currentPlayState = 'idle';
+      playByIndex(currentIndex, true);
+      return;
+    }
 
     const targetGain = getTargetOutputGain();
+
+    // 2. Web Audio EQ 通道：在音訊串流內部直接調整 GainNode（iPhone 100% 有效）
     if (!isDirectMode && fadeGainNode && audioCtx && currentPlayState === 'playing') {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
       const now = audioCtx.currentTime;
       fadeGainNode.gain.cancelScheduledValues(now);
       fadeGainNode.gain.setValueAtTime(fadeGainNode.gain.value, now);
       fadeGainNode.gain.linearRampToValueAtTime(targetGain, now + 0.25);
-    } else if (isDirectMode && currentPlayState === 'playing' && !isMutedPrebuffered) {
+    }
+    // 3. 不支援 CORS 的直通電台（如中廣）：在 iOS 上無法改 .volume，改以 .muted = true/false 保持串流不斷線
+    else if (isDirectMode && currentPlayState === 'playing') {
+      playerDirect.muted = isAttMuted;
       playerDirect.volume = targetGain;
     }
+
     updateStatusEQText();
   }
 
-  // 雙擊推桿快速歸零
   function attachDoubleTapReset(sliderEl, resetCallback) {
     let lastTapTime = 0;
     sliderEl.addEventListener('pointerup', (e) => {
@@ -1795,7 +1926,6 @@
     filterNodes.forEach((f, i) => { f.gain.value = gains[i]; });
   }
 
-  // 依據使用者設定的 reconnectDelaySec 啟動斷線看門狗
   function startStallWatchdog(targetPlayer, token) {
     clearTimeout(stallWatchdogTimer);
     if (currentPlayState !== 'playing' || isMutedPrebuffered) return;
@@ -1820,7 +1950,7 @@
     isMutedPrebuffered = false;
 
     const ch = channels[currentIndex];
-    playerDirect.muted = false;
+    playerDirect.muted = isAttMuted;
     fadeInTargetAudio(true);
     updateUIState(currentIndex, 'playing', '');
     setupMediaSession(ch);
@@ -1848,12 +1978,15 @@
           initAudioEQ();
           fadeInTargetAudio(false);
           updateUIState(currentIndex, 'playing', '');
+          updateAttButtonUI();
           updateStatusEQText();
           setupMediaSession(ch);
         },
         () => {
           isAutoDirectFallback = false;
           isDirectMode = true;
+          playerDirect.muted = isAttMuted;
+          updateAttButtonUI();
           updateStatusEQText();
         }
       );
@@ -1872,7 +2005,7 @@
     }
   }
 
-  function fadeOutCurrentAudio(callback) {
+  function fadeOutCurrentAudio(callback, durationSec = FADE_DURATION) {
     if (activePlayer.paused || activePlayer.muted) {
       callback();
       return;
@@ -1882,13 +2015,13 @@
       const now = audioCtx.currentTime;
       fadeGainNode.gain.cancelScheduledValues(now);
       fadeGainNode.gain.setValueAtTime(fadeGainNode.gain.value, now);
-      fadeGainNode.gain.linearRampToValueAtTime(0.0001, now + FADE_DURATION);
-      setTimeout(callback, FADE_DURATION * 1000);
+      fadeGainNode.gain.linearRampToValueAtTime(0.0001, now + durationSec);
+      setTimeout(callback, durationSec * 1000);
     } else {
       if (directFadeTimer) clearInterval(directFadeTimer);
       const startVol = playerDirect.volume;
-      const steps = 15;
-      const stepTime = (FADE_DURATION * 1000) / steps;
+      const steps = Math.max(15, Math.round(durationSec * 25));
+      const stepTime = (durationSec * 1000) / steps;
       let currentStep = 0;
       directFadeTimer = setInterval(() => {
         currentStep++;
@@ -2056,34 +2189,41 @@
   }
 
   function updateStatusEQText() {
+    if (isSleepFadingOut) return;
+    const sleepTag = sleepTimerMinutes > 0 ? ` | ⏰${getRemainingSleepMinutes()}m` : '';
+
     if (isMutedPrebuffered) {
-      statusSub.innerText = '🟢 已緩衝就緒 • 點擊畫面任意處零延遲出聲';
+      statusSub.innerText = `🟢 已緩衝就緒 • 點擊任意處出聲${sleepTag}`;
       return;
     }
     if (currentPlayState === 'idle') {
-      statusSub.innerText = 'walton電台 • 長按 1 秒可調整順序';
+      statusSub.innerText = `walton電台 • 長按 1 秒調整順序${sleepTag}`;
       return;
     }
     if (currentPlayState === 'selected') {
-      statusSub.innerText = '已選台，串流連線緩衝中...';
+      statusSub.innerText = `已選台，串流連線緩衝中...${sleepTag}`;
       return;
     }
     const ch = channels[currentIndex];
     const db = getChannelPreampDb(currentIndex);
-    const attTag = isAttMuted ? '🔇降音-20dB | ' : '';
+    const attTag = isAttMuted ? (isDirectMode ? '🔇靜音保活 | ' : '🔇降音-20dB | ') : '';
     if (isAutoDirectFallback) {
-      statusSub.innerText = `${attTag}自動直通播音 (點擊按鈕啟用EQ) • ${ch.sub}`;
+      statusSub.innerText = `${attTag}自動直通 (點按鈕啟用EQ) • ${ch.sub}${sleepTag}`;
     } else if (isDirectMode) {
-      statusSub.innerText = `${attTag}直通原音 • ${ch.sub}`;
+      statusSub.innerText = `${attTag}直通原音 • ${ch.sub}${sleepTag}`;
     } else {
       const eqLabel = eqPresets[currentEQ]?.label || '原音';
       const preampStr = db !== 0 ? ` | 前級${db > 0 ? '+' : ''}${db}dB` : '';
-      statusSub.innerText = `${attTag}EQ:${eqLabel}${preampStr} • ${ch.sub}`;
+      statusSub.innerText = `${attTag}EQ:${eqLabel}${preampStr} • ${ch.sub}${sleepTag}`;
     }
   }
 
   function stopAllPlayersImmediately() {
     clearStallWatchdog();
+    if (directFadeTimer) {
+      clearInterval(directFadeTimer);
+      directFadeTimer = null;
+    }
     isMutedPrebuffered = false;
     playerEQ.onplaying = null;
     playerEQ.onstalled = null;
@@ -2183,6 +2323,7 @@
     const myToken = ++switchToken;
 
     if (!isAutoReconnect && currentPlayState !== 'idle' && currentIndex === idx && !isMutedPrebuffered) {
+      cancelSleepTimer();
       fadeOutCurrentAudio(() => {
         if (myToken !== switchToken) return;
         stopAllPlayersImmediately();
@@ -2206,7 +2347,7 @@
         playerDirect,
         ch.url,
         myToken,
-        false,
+        isAttMuted,
         () => {
           activePlayer = playerDirect;
           isDirectMode = true;
@@ -2214,6 +2355,7 @@
           isMutedPrebuffered = false;
           fadeInTargetAudio(true);
           updateUIState(idx, 'playing', '');
+          updateAttButtonUI();
           updateStatusEQText();
           setupMediaSession(ch);
         },
@@ -2260,6 +2402,7 @@
           initAudioEQ();
           fadeInTargetAudio(false);
           updateUIState(idx, 'playing', '');
+          updateAttButtonUI();
           updateStatusEQText();
           setupMediaSession(ch);
         },
@@ -2269,12 +2412,13 @@
             playerDirect,
             ch.url,
             myToken,
-            false,
+            isAttMuted,
             () => {
               activePlayer = playerDirect;
               isDirectMode = true;
               fadeInTargetAudio(true);
               updateUIState(idx, 'playing', '');
+              updateAttButtonUI();
               updateStatusEQText();
               setupMediaSession(ch);
             },
@@ -2296,6 +2440,7 @@
       currentPlayState = 'idle';
       playByIndex(currentIndex, true);
     } else {
+      cancelSleepTimer();
       const myToken = ++switchToken;
       fadeOutCurrentAudio(() => {
         if (myToken !== switchToken) return;
@@ -2344,6 +2489,7 @@
 
       navigator.mediaSession.setActionHandler('play', () => playByIndex(currentIndex, true));
       navigator.mediaSession.setActionHandler('pause', () => {
+        cancelSleepTimer();
         const myToken = ++switchToken;
         fadeOutCurrentAudio(() => {
           if (myToken !== switchToken) return;
@@ -2391,6 +2537,7 @@
     document.getElementById('versionBadge').innerText = APP_VERSION;
     applyTheme();
     updateReconnectBtnUI();
+    updateSleepTimerUI();
     applyGridCols();
     renderChannelButtons();
     applyCurrentChannelPreamp();
