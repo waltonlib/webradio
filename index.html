@@ -9,48 +9,89 @@
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   body {
-    margin: 0; background: #0d1117; color: #fff;
+    margin: 0;
+    background: #232528; /* 莫蘭迪深炭灰底色 */
+    color: #E2DFD7;      /* 溫潤燕麥白文字 */
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    display: flex; flex-direction: column; height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
     padding: env(safe-area-inset-top, 16px) 14px env(safe-area-inset-bottom, 16px) 14px;
-    gap: 10px;
+    gap: 12px;
   }
   .header {
-    background: #161b22; border: 1px solid #30363d; border-radius: 16px;
-    padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;
+    background: #2D3034;
+    border: 1px solid #45494F;
+    border-radius: 18px;
+    padding: 14px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   }
   .status-box { display: flex; flex-direction: column; gap: 4px; overflow: hidden; }
-  .status-label { font-size: 13px; color: #8b949e; }
-  .status-title { font-size: 20px; font-weight: 700; color: #58a6ff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .stop-btn {
-    background: #30363d; color: #fff; border: none; border-radius: 12px;
-    padding: 12px 18px; font-size: 18px; font-weight: 700; flex-shrink: 0;
+  .status-label { font-size: 13px; color: #9EA3A8; letter-spacing: 0.5px; }
+  .status-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #9BB7C7; /* 莫蘭迪淺霧藍 */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
-  .stop-btn.active { background: #da3633; }
+  .stop-btn {
+    background: #4A4E54;
+    color: #E2DFD7;
+    border: 1px solid #636870;
+    border-radius: 14px;
+    padding: 12px 18px;
+    font-size: 18px;
+    font-weight: 700;
+    flex-shrink: 0;
+    transition: background 0.2s;
+  }
+  .stop-btn.active {
+    background: #A66E6E; /* 莫蘭迪乾燥玫瑰粉 */
+    border-color: #C79292;
+    color: #FAF8F5;
+  }
   .btn-grid {
-    display: grid; grid-template-columns: 1fr 1fr; flex: 1; gap: 10px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    flex: 1;
+    gap: 12px;
   }
   button.ch-btn {
-    font-size: 21px; font-weight: 700;
-    border: 2px solid #30363d; border-radius: 18px;
-    background: #161b22; color: #f0f6fc;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    padding: 8px; text-align: center; line-height: 1.3;
-    transition: transform 0.1s, background 0.15s;
+    font-size: 21px;
+    font-weight: 700;
+    border: 1.5px solid #484C52;
+    border-radius: 20px;
+    background: #32353A; /* 莫蘭迪岩灰 */
+    color: #E2DFD7;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    text-align: center;
+    line-height: 1.3;
+    transition: transform 0.1s, background 0.2s, border-color 0.2s;
   }
   button.ch-btn:active { transform: scale(0.96); }
   button.ch-btn.playing {
-    background: #1f6feb; border-color: #79c0ff; color: #ffffff;
-    box-shadow: 0 0 15px rgba(31, 111, 235, 0.5);
+    background: #5B7A8C; /* 莫蘭迪霧霾藍 */
+    border-color: #B4C8D4;
+    color: #FAF8F5;
+    box-shadow: 0 4px 16px rgba(91, 122, 140, 0.35);
   }
-  .sub-tag { font-size: 13px; font-weight: 400; color: #8b949e; margin-top: 4px; }
-  button.ch-btn.playing .sub-tag { color: #dbeafe; }
+  .sub-tag { font-size: 13px; font-weight: 400; color: #9EA3A8; margin-top: 4px; }
+  button.ch-btn.playing .sub-tag { color: #DCE6EC; }
 </style>
 </head>
 <body>
   <div class="header">
     <div class="status-box">
-      <span class="status-label" id="statusSub">準備就緒（支援方向盤上下首切台）</span>
+      <span class="status-label" id="statusSub">準備就緒（支援方向盤切台）</span>
       <span class="status-title" id="statusMain">點擊任一電台開始播放</span>
     </div>
     <button class="stop-btn" id="masterStopBtn" onclick="toggleMasterPlay()">▶ 播放</button>
@@ -60,16 +101,16 @@
   <audio id="player" preload="none" playsinline></audio>
 
 <script>
-  // 8大常用電台清單（已針對 HTTPS 安全連線優化協定）
+  // 電台清單（全數採用 HTTPS 加密串流，避免 iOS Safari 混合內容封鎖）
   const channels = [
     { id: 'ch1', name: '中廣音樂網', sub: 'iRadio', url: 'https://sonnykuo.appspot.com/bcc/?id=中廣音樂網' },
     { id: 'ch2', name: '中廣新聞網', sub: 'News', url: 'https://sonnykuo.appspot.com/bcc/?id=中廣新聞網' },
     { id: 'ch3', name: '古典 97.7', sub: 'FM 97.7', url: 'https://onair.family977.com.tw:8977/live.mp3' },
     { id: 'ch4', name: 'Bravo 91.3', sub: 'FM 91.3', url: 'https://onair.family977.com.tw:8977/live.mp3' },
-    { id: 'ch5', name: '城市廣播', sub: 'FM 90.1', url: 'https://fm901.cityfm.tw:8080/901.mp3', fallback: 'http://fm901.cityfm.tw:8080/901.mp3' },
+    { id: 'ch5', name: '城市廣播', sub: 'FM 90.1 (需HTTPS源)', url: 'https://sonnykuo.appspot.com/bcc/?id=城市廣播網' },
     { id: 'ch6', name: '飛碟聯播網', sub: 'FM 92.1', url: 'https://stream.rcs.revma.com/em90w4aeewzuv.m4a' },
     { id: 'ch7', name: '全國廣播', sub: 'FM 106.1', url: 'https://stream.rcs.revma.com/044q61ha7a0uv' },
-    { id: 'ch8', name: '台北愛樂', sub: 'FM 99.7', url: 'https://202.39.43.67:1935/live/RA000018/chunklist.m3u8', fallback: 'http://202.39.43.67:1935/live/RA000018/chunklist.m3u8' }
+    { id: 'ch8', name: '台北愛樂', sub: 'FM 99.7', url: 'https://stream.rcs.revma.com/sw7168857a0uv' }
   ];
 
   const player = document.getElementById('player');
@@ -80,7 +121,6 @@
 
   let currentIndex = 0;
 
-  // 產生 2x4 滿版大按鈕
   channels.forEach((ch, idx) => {
     const btn = document.createElement('button');
     btn.className = 'ch-btn';
@@ -90,14 +130,17 @@
     container.appendChild(btn);
   });
 
+  // 監聽音訊載入錯誤，避免無聲卡死
+  player.addEventListener('error', () => {
+    updateUI(currentIndex, false, '⚠️ 此電台串流暫時無法連線');
+  });
+
   function playByIndex(idx) {
-    // 循環索引處理（支援方向盤無限上下切台）
     if (idx < 0) idx = channels.length - 1;
     if (idx >= channels.length) idx = 0;
 
     const ch = channels[idx];
 
-    // 如果點擊正在播放的同一台，則暫停
     if (!player.paused && currentIndex === idx && player.src) {
       player.pause();
       updateUI(idx, false, '已暫停');
@@ -105,7 +148,7 @@
     }
 
     currentIndex = idx;
-    localStorage.setItem('lastRadioIndex', idx); // 記憶最後收聽電台
+    localStorage.setItem('lastRadioIndex', idx);
 
     updateUI(idx, false, '連線緩衝中...');
     player.src = ch.url;
@@ -114,8 +157,7 @@
     player.play().then(() => {
       updateUI(idx, true, '正在播放 • ' + ch.sub);
       setupMediaSession(ch);
-    }).catch(err => {
-      // 若瀏覽器阻擋自動播放或憑證失敗，提示點擊啟動
+    }).catch(() => {
       updateUI(idx, false, '請點擊螢幕任一按鈕啟動聲音');
     });
   }
@@ -152,7 +194,6 @@
     });
   }
 
-  // 設定車機藍牙 / CarPlay / iPhone 鎖定畫面資訊與方向盤按鍵
   function setupMediaSession(ch) {
     if ('mediaSession' in navigator) {
       navigator.mediaSession.metadata = new MediaMetadata({
@@ -178,7 +219,6 @@
     }
   }
 
-  // 網頁開啟時讀取上次收聽紀錄並嘗試自動播放
   window.addEventListener('load', () => {
     const savedIdx = parseInt(localStorage.getItem('lastRadioIndex'), 10);
     currentIndex = (!isNaN(savedIdx) && savedIdx >= 0 && savedIdx < channels.length) ? savedIdx : 0;
