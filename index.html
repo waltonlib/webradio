@@ -8,15 +8,26 @@
 <title>台灣車用電台</title>
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 <style>
-  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  body {
+  * {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  html, body {
     margin: 0;
-    background: #232528; /* 莫蘭迪深炭灰底色 */
-    color: #E2DFD7;      /* 溫潤燕麥白文字 */
+    padding: 0;
+    width: 100%;
+    height: 100dvh;
+    overflow: hidden;              /* 徹底鎖定頁面捲動 */
+    overscroll-behavior: none;     /* 防止 iOS 下拉彈性捲動或重整 */
+    background: #232528;           /* 莫蘭迪深炭灰底色 */
+    color: #E2DFD7;                /* 溫潤燕麥白文字 */
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  body {
     display: flex;
     flex-direction: column;
-    height: 100dvh;
     padding: env(safe-area-inset-top, 14px) 12px env(safe-area-inset-bottom, 14px) 12px;
     gap: 10px;
   }
@@ -29,6 +40,7 @@
     justify-content: space-between;
     align-items: center;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    flex-shrink: 0;
   }
   .status-box { display: flex; flex-direction: column; gap: 3px; overflow: hidden; }
   .status-label { font-size: 12px; color: #9EA3A8; letter-spacing: 0.5px; }
@@ -70,6 +82,7 @@
     padding: 6px;
     border-radius: 14px;
     border: 1px solid #3E4248;
+    flex-shrink: 0;
   }
   .eq-btn {
     background: transparent;
@@ -111,6 +124,7 @@
     border: 1px solid #484D54;
     border-radius: 16px;
     padding: 12px 8px;
+    flex-shrink: 0;
   }
   .eq-panel.show { display: flex; }
 
@@ -130,7 +144,6 @@
     color: #8C9298;
     font-variant-numeric: tabular-nums;
     text-align: right;
-    user-select: none;
   }
   .band-col {
     flex: 1;
@@ -186,6 +199,7 @@
     transform: rotate(-90deg);
     margin: 0;
     cursor: pointer;
+    touch-action: none;
   }
   input[type=range].v-slider::-webkit-slider-runnable-track {
     width: 100%;
@@ -246,13 +260,14 @@
     grid-template-columns: 1fr 1fr;
     flex: 1;
     gap: 10px;
+    touch-action: none; /* 鎖定按鈕網格區的原生手勢捲動 */
   }
   button.ch-btn {
     font-size: 20px;
     font-weight: 700;
     border: 1.5px solid #484C52;
     border-radius: 18px;
-    background: #32353A; /* 狀態1：待機莫蘭迪岩灰 */
+    background: #32353A;
     color: #E2DFD7;
     display: flex;
     flex-direction: column;
@@ -262,11 +277,11 @@
     text-align: center;
     line-height: 1.25;
     cursor: pointer;
-    transition: transform 0.1s, background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+    touch-action: none;
+    transition: transform 0.15s ease, background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
   }
-  button.ch-btn:active { transform: scale(0.96); }
 
-  /* 狀態2：按下按鈕 / 緩衝載入中的過渡色（莫蘭迪暖奶茶棕 + 呼吸脈動） */
+  /* 緩衝載入過渡色 */
   @keyframes pulseBuffer {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.78; }
@@ -278,7 +293,7 @@
     animation: pulseBuffer 1.2s infinite ease-in-out;
   }
 
-  /* 狀態3：確定播放出聲的正式色（莫蘭迪霧霾藍） */
+  /* 確定播放正式色 */
   button.ch-btn.playing {
     background: #5B7A8C;
     border-color: #B4C8D4;
@@ -286,7 +301,19 @@
     box-shadow: 0 4px 16px rgba(91, 122, 140, 0.35);
     animation: none;
   }
-  .sub-tag { font-size: 12px; font-weight: 400; color: #9EA3A8; margin-top: 3px; }
+
+  /* 長按 1 秒進入拖曳排序模式的視覺回饋 */
+  button.ch-btn.dragging {
+    transform: scale(1.05);
+    background: #6E655F;
+    border: 2px dashed #E6C7AD;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    z-index: 20;
+    animation: none;
+  }
+
+  .sub-tag { font-size: 12px; font-weight: 400; color: #9EA3A8; margin-top: 3px; pointer-events: none; }
+  button.ch-btn span { pointer-events: none; }
   button.ch-btn.loading .sub-tag { color: #EFE5DC; }
   button.ch-btn.playing .sub-tag { color: #DCE6EC; }
 </style>
@@ -294,7 +321,7 @@
 <body>
   <div class="header">
     <div class="status-box">
-      <span class="status-label" id="statusSub">準備就緒（支援方向盤切台）</span>
+      <span class="status-label" id="statusSub">長按電台 1 秒可滑動調整順序</span>
       <span class="status-title" id="statusMain">點擊任一電台開始播放</span>
     </div>
     <button class="stop-btn" id="masterStopBtn" onclick="toggleMasterPlay()">▶ 播放</button>
@@ -331,7 +358,7 @@
       <button class="save-target-btn" onclick="overwritePreset('voice')">覆蓋「人聲」</button>
       <button class="save-target-btn" onclick="overwritePreset('bass')">覆蓋「重低音」</button>
       <button class="save-target-btn" onclick="overwritePreset('classical')">覆蓋「古典」</button>
-      <button class="reset-eq-btn" onclick="resetDefaultPresets()">還原預設</button>
+      <button class="reset-eq-btn" onclick="resetDefaultPresets()">還原EQ</button>
     </div>
   </div>
 
@@ -341,7 +368,8 @@
   <audio id="playerDirect" preload="none" playsinline></audio>
 
 <script>
-  const channels = [
+  // 預設電台列表
+  const defaultChannels = [
     { id: 'ch1', name: '中廣音樂網', sub: 'iRadio', url: 'https://sonnykuo.appspot.com/bcc/?id=中廣音樂網' },
     { id: 'ch2', name: '中廣新聞網', sub: 'News', url: 'https://sonnykuo.appspot.com/bcc/?id=中廣新聞網' },
     { id: 'ch3', name: '古典 97.7', sub: 'FM 97.7', url: 'https://onair.family977.com.tw:8977/live.mp3' },
@@ -351,6 +379,24 @@
     { id: 'ch7', name: '佳音聯播', sub: 'FM 90.9', url: 'https://stream.ginnet.cloud/live0119lo-p4rb/_definst_/fm909/playlist.m3u8' },
     { id: 'ch8', name: 'News98', sub: 'FM 98.1', url: 'https://stream.rcs.revma.com/pntx1639ntzuv.m4a' }
   ];
+
+  // 從 localStorage 載入自訂電台排列順序（依 ID 對應，確保資料最新）
+  function loadOrderedChannels() {
+    const savedOrder = JSON.parse(localStorage.getItem('customChannelOrderIds'));
+    if (!Array.isArray(savedOrder)) return [...defaultChannels];
+    const ordered = [];
+    savedOrder.forEach(id => {
+      const found = defaultChannels.find(c => c.id === id);
+      if (found) ordered.push(found);
+    });
+    // 補上任何尚未在儲存清單中的新電台
+    defaultChannels.forEach(c => {
+      if (!ordered.some(o => o.id === c.id)) ordered.push(c);
+    });
+    return ordered;
+  }
+
+  let channels = loadOrderedChannels();
 
   const eqBands = [
     { label: '31.25', freq: 31.25, type: 'lowshelf' },
@@ -380,7 +426,7 @@
   let activePlayer = playerEQ;
   let isDirectMode = false;
   let hlsInstance = null;
-  let switchToken = 0; // 防止快速連按時舊的連線請求干擾新頻道
+  let switchToken = 0;
 
   const statusMain = document.getElementById('statusMain');
   const statusSub = document.getElementById('statusSub');
@@ -388,19 +434,138 @@
   const container = document.getElementById('btnContainer');
   const eqContainer = document.getElementById('graphicEqContainer');
 
-  let currentIndex = 0;
+  let currentChannelId = localStorage.getItem('lastRadioChannelId') || channels[0].id;
+  let currentIndex = Math.max(0, channels.findIndex(c => c.id === currentChannelId));
   let currentEQ = localStorage.getItem('lastRadioEQ') || 'flat';
+  let currentPlayState = 'idle'; // 'idle' | 'loading' | 'playing'
 
   let audioCtx = null;
   let preampNode = null;
-  let fadeGainNode = null; // 專責 0.3 秒淡出與淡入的音量包絡節點
+  let fadeGainNode = null;
   let filterNodes = [];
   let limiterNode = null;
   let directFadeTimer = null;
 
-  const FADE_DURATION = 0.3; // 淡出/淡入時間（秒）
+  const FADE_DURATION = 0.3;
+
+  // 長按 1 秒拖曳排序相關變數
+  let longPressTimer = null;
+  let isDraggingMode = false;
+  let draggedChannelId = null;
+  let startX = 0;
+  let startY = 0;
+
+  // 渲染電台按鈕並綁定「短按播放 / 長按 1 秒拖曳」事件
+  function renderChannelButtons() {
+    container.innerHTML = '';
+    channels.forEach((ch, idx) => {
+      const btn = document.createElement('button');
+      btn.className = 'ch-btn';
+      btn.id = ch.id;
+      btn.dataset.id = ch.id;
+
+      if (idx === currentIndex) {
+        if (currentPlayState === 'loading') btn.classList.add('loading');
+        if (currentPlayState === 'playing') btn.classList.add('playing');
+      }
+      if (isDraggingMode && ch.id === draggedChannelId) {
+        btn.classList.add('dragging');
+      }
+
+      const db = getChannelPreampDb(idx);
+      const dbBadge = db !== 0 ? ` (${db > 0 ? '+' : ''}${db}dB)` : '';
+      btn.innerHTML = `<span>${ch.name}</span><span class="sub-tag">${ch.sub}${dbBadge}</span>`;
+
+      // Pointer Down：啟動 1 秒計時器
+      btn.addEventListener('pointerdown', (e) => {
+        if (e.button !== 0 && e.pointerType === 'mouse') return;
+        startX = e.clientX;
+        startY = e.clientY;
+        isDraggingMode = false;
+        draggedChannelId = ch.id;
+
+        clearTimeout(longPressTimer);
+        longPressTimer = setTimeout(() => {
+          isDraggingMode = true;
+          btn.classList.add('dragging');
+          if (navigator.vibrate) navigator.vibrate(40);
+          statusSub.innerText = '🔀 拖曳至目標位置交換順序，放開即儲存';
+        }, 1000);
+      });
+
+      // Pointer Move：未滿 1 秒若大幅滑動則取消長按；滿 1 秒則偵測下方按鈕即時交換
+      btn.addEventListener('pointermove', (e) => {
+        if (!draggedChannelId) return;
+
+        if (!isDraggingMode) {
+          const dist = Math.hypot(e.clientX - startX, e.clientY - startY);
+          if (dist > 10) {
+            clearTimeout(longPressTimer);
+            draggedChannelId = null;
+          }
+          return;
+        }
+
+        // 已經在拖曳排序模式：找出手指座標正下方的另一顆電台按鈕
+        btn.style.pointerEvents = 'none';
+        const elemBelow = document.elementFromPoint(e.clientX, e.clientY);
+        btn.style.pointerEvents = 'auto';
+
+        const targetBtn = elemBelow ? elemBelow.closest('.ch-btn') : null;
+        if (targetBtn && targetBtn.dataset.id && targetBtn.dataset.id !== draggedChannelId) {
+          const fromIdx = channels.findIndex(c => c.id === draggedChannelId);
+          const toIdx = channels.findIndex(c => c.id === targetBtn.dataset.id);
+          if (fromIdx !== -1 && toIdx !== -1) {
+            // 交換陣列順序
+            const [movedItem] = channels.splice(fromIdx, 1);
+            channels.splice(toIdx, 0, movedItem);
+
+            // 同步更新目前正在播放電台的索引位置，確保方向盤切台順序正確
+            currentIndex = Math.max(0, channels.findIndex(c => c.id === currentChannelId));
+            renderChannelButtons();
+          }
+        }
+      });
+
+      // Pointer Up / Cancel：結束手勢
+      const finishPointer = () => {
+        clearTimeout(longPressTimer);
+        if (isDraggingMode) {
+          isDraggingMode = false;
+          draggedChannelId = null;
+          // 儲存新順序至 localStorage
+          localStorage.setItem('customChannelOrderIds', JSON.stringify(channels.map(c => c.id)));
+          renderChannelButtons();
+          statusSub.innerText = '✅ 已儲存新的電台排列順序';
+          setTimeout(() => updateStatusEQText(), 1500);
+        } else if (draggedChannelId === ch.id) {
+          // 未滿 1 秒放開 -> 視為一般點擊，執行播放或切換電台
+          draggedChannelId = null;
+          const targetIdx = channels.findIndex(c => c.id === ch.id);
+          if (targetIdx !== -1) playByIndex(targetIdx, true);
+        }
+      };
+
+      btn.addEventListener('pointerup', finishPointer);
+      btn.addEventListener('pointercancel', () => {
+        clearTimeout(longPressTimer);
+        if (isDraggingMode) {
+          isDraggingMode = false;
+          draggedChannelId = null;
+          renderChannelButtons();
+        }
+        draggedChannelId = null;
+      });
+
+      // 阻擋 iOS 長按跳出系統右鍵選單
+      btn.addEventListener('contextmenu', (e) => e.preventDefault());
+
+      container.appendChild(btn);
+    });
+  }
 
   function getChannelPreampDb(idx) {
+    if (!channels[idx]) return 0;
     const chId = channels[idx].id;
     const val = parseInt(perChannelPreamp[chId], 10);
     return isNaN(val) ? 0 : val;
@@ -441,7 +606,6 @@
     return Math.pow(10, db / 20);
   }
 
-  // 初始化音訊鏈：Source -> Preamp -> 10-Band EQ -> Limiter -> FadeGain -> Output
   function initAudioEQ() {
     if (!audioCtx) {
       const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -488,7 +652,6 @@
     filterNodes.forEach((f, i) => { f.gain.value = gains[i]; });
   }
 
-  // 執行 0.3 秒平滑淡出，完成後執行回呼
   function fadeOutCurrentAudio(callback) {
     if (activePlayer.paused) {
       callback();
@@ -502,7 +665,6 @@
       fadeGainNode.gain.linearRampToValueAtTime(0.0001, now + FADE_DURATION);
       setTimeout(callback, FADE_DURATION * 1000);
     } else {
-      // 直通模式使用 playerDirect.volume 進行 0.3 秒步進淡出
       if (directFadeTimer) clearInterval(directFadeTimer);
       const startVol = playerDirect.volume;
       const steps = 15;
@@ -521,7 +683,6 @@
     }
   }
 
-  // 執行 0.3 秒平滑淡入
   function fadeInTargetAudio(isDirect) {
     if (!isDirect && fadeGainNode && audioCtx) {
       const now = audioCtx.currentTime;
@@ -638,7 +799,7 @@
     if (preampNode) preampNode.gain.value = 1;
 
     setEQ(currentEQ === 'custom' ? 'flat' : currentEQ);
-    statusSub.innerText = '🔄 已還原預設 EQ 與各台前級歸零';
+    statusSub.innerText = '🔄 已還原 EQ 曲線與各台前級歸零';
   }
 
   function toggleEQPanel() {
@@ -649,14 +810,17 @@
   }
 
   function updateStatusEQText() {
-    if (activePlayer.paused) return;
+    if (activePlayer.paused) {
+      statusSub.innerText = '長按電台 1 秒可滑動調整順序';
+      return;
+    }
     const ch = channels[currentIndex];
     const db = getChannelPreampDb(currentIndex);
     if (isDirectMode) {
       statusSub.innerText = `直通原音 (此電台不支援EQ) • ${ch.sub}`;
     } else {
       const eqLabel = currentEQ === 'custom' ? '自訂10段' : (eqPresets[currentEQ]?.label || '原音');
-      const preampStr = db !== 0 ? ` | 本台前級${db > 0 ? '+' : ''}${db}dB` : '';
+      const preampStr = db !== 0 ? ` | 前級${db > 0 ? '+' : ''}${db}dB` : '';
       statusSub.innerText = `EQ:${eqLabel}${preampStr} • ${ch.sub}`;
     }
   }
@@ -679,7 +843,6 @@
   function attachAndPlay(targetPlayer, url, token, onSuccess, onFail) {
     const isM3u8 = url.includes('.m3u8') || url.includes('sonnykuo.appspot.com');
 
-    // 先將目標播放器設為靜音起點，確保出聲瞬間從 0 開始 0.3 秒淡入
     if (targetPlayer === playerEQ && fadeGainNode && audioCtx) {
       fadeGainNode.gain.setValueAtTime(0.0001, audioCtx.currentTime);
     } else if (targetPlayer === playerDirect) {
@@ -715,15 +878,6 @@
     }
   }
 
-  channels.forEach((ch, idx) => {
-    const btn = document.createElement('button');
-    btn.className = 'ch-btn';
-    btn.id = ch.id;
-    btn.innerHTML = `<span>${ch.name}</span><span class="sub-tag">${ch.sub}</span>`;
-    btn.onclick = () => playByIndex(idx, true);
-    container.appendChild(btn);
-  });
-
   function playByIndex(idx, isUserClick = false) {
     if (idx < 0) idx = channels.length - 1;
     if (idx >= channels.length) idx = 0;
@@ -731,7 +885,6 @@
     const ch = channels[idx];
     const myToken = ++switchToken;
 
-    // 若點擊正在播放中的同一台 -> 0.3秒淡出後暫停
     if (!activePlayer.paused && currentIndex === idx) {
       fadeOutCurrentAudio(() => {
         if (myToken !== switchToken) return;
@@ -742,15 +895,14 @@
     }
 
     currentIndex = idx;
-    localStorage.setItem('lastRadioIndex', idx);
+    currentChannelId = ch.id;
+    localStorage.setItem('lastRadioChannelId', ch.id);
     applyCurrentChannelPreamp();
 
-    // 按下按鈕當下，立即切換為「緩衝過渡色 (loading)」
     updateUIState(idx, 'loading', '切換緩衝中...');
 
     if (isUserClick) initAudioEQ();
 
-    // 先讓前一台在 0.3 秒內平滑淡出，再載入並淡入新電台
     fadeOutCurrentAudio(() => {
       if (myToken !== switchToken) return;
       stopAllPlayersImmediately();
@@ -763,8 +915,8 @@
           activePlayer = playerEQ;
           isDirectMode = false;
           initAudioEQ();
-          fadeInTargetAudio(false); // 0.3秒淡入
-          updateUIState(idx, 'playing', ''); // 確定出聲後切換為「正式播放色」
+          fadeInTargetAudio(false);
+          updateUIState(idx, 'playing', '');
           updateStatusEQText();
           setupMediaSession(ch);
         },
@@ -777,8 +929,8 @@
             () => {
               activePlayer = playerDirect;
               isDirectMode = true;
-              fadeInTargetAudio(true); // 0.3秒淡入
-              updateUIState(idx, 'playing', ''); // 確定出聲後切換為「正式播放色」
+              fadeInTargetAudio(true);
+              updateUIState(idx, 'playing', '');
               updateStatusEQText();
               setupMediaSession(ch);
             },
@@ -804,8 +956,8 @@
     }
   }
 
-  // 三階段 UI 狀態管理：'idle' (待機灰) | 'loading' (緩衝暖棕) | 'playing' (播放霧藍)
   function updateUIState(activeIdx, state, subMsg) {
+    currentPlayState = state;
     const ch = channels[activeIdx];
     statusMain.innerText = ch.name;
     if (subMsg) statusSub.innerText = subMsg;
@@ -823,6 +975,7 @@
 
     channels.forEach((item, i) => {
       const btn = document.getElementById(item.id);
+      if (!btn) return;
       btn.classList.remove('loading', 'playing');
       if (i === activeIdx) {
         if (state === 'loading') btn.classList.add('loading');
@@ -853,11 +1006,15 @@
     }
   }
 
-  window.addEventListener('load', () => {
-    const savedIdx = parseInt(localStorage.getItem('lastRadioIndex'), 10);
-    currentIndex = (!isNaN(savedIdx) && savedIdx >= 0 && savedIdx < channels.length) ? savedIdx : 0;
+  // 全域阻擋觸控滑動造成頁面捲動
+  document.addEventListener('touchmove', (e) => {
+    if (!e.target.closest('input[type=range]')) {
+      e.preventDefault();
+    }
+  }, { passive: false });
 
-    refreshChannelSubTags();
+  window.addEventListener('load', () => {
+    renderChannelButtons();
     applyCurrentChannelPreamp();
     setEQ(currentEQ === 'custom' ? 'flat' : currentEQ);
     playByIndex(currentIndex, false);
