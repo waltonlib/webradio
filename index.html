@@ -34,6 +34,8 @@
     --border-chip: #535C66;
     --text-chip: #C4D4DE;
     --shadow-card: rgba(0, 0, 0, 0.15);
+    --viz-bar: #8FB3C7;
+    --star-active: #E6C17A;
   }
 
   /* 莫蘭迪日間淺色主題（暖燕麥米白，白天強光抗反光高對比） */
@@ -61,6 +63,8 @@
     --border-chip: #BDB4A5;
     --text-chip: #38444D;
     --shadow-card: rgba(43, 46, 51, 0.08);
+    --viz-bar: #4D738A;
+    --star-active: #B8862D;
   }
 
   * {
@@ -81,12 +85,84 @@
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     transition: background 0.25s ease, color 0.25s ease;
   }
-  body {
+
+  /* 主容器 RWD 佈局：直向為單欄堆疊，橫向寬螢幕自動切換為左右雙欄車機儀表板 */
+  .app-shell {
     display: flex;
     flex-direction: column;
+    width: 100%;
+    height: 100dvh;
     padding: env(safe-area-inset-top, 12px) 12px env(safe-area-inset-bottom, 12px) 12px;
     gap: 8px;
   }
+  .left-pane {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    gap: 8px;
+    min-height: 0;
+    min-width: 0;
+  }
+  .right-pane {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+  }
+
+  @media (min-width: 768px) and (orientation: landscape) {
+    .app-shell {
+      flex-direction: row;
+      gap: 12px;
+      padding: 12px 16px;
+    }
+    .left-pane {
+      flex: 1.25;
+    }
+    .right-pane {
+      flex: 0.95;
+      max-width: 440px;
+      justify-content: center;
+    }
+    /* 橫向雙欄寬螢幕下，右側調音儀表板常駐顯示 */
+    .right-pane .eq-panel {
+      display: flex !important;
+      height: 100%;
+      justify-content: space-between;
+      padding: 14px 12px;
+    }
+    .right-pane .v-slider-wrap {
+      height: 150px;
+    }
+    .right-pane input[type=range].v-slider {
+      width: 136px;
+    }
+    #tuneToggleBtn {
+      display: none;
+    }
+    .eq-bar {
+      grid-template-columns: repeat(5, 1fr) !important;
+    }
+  }
+
+  /* 駕駛模式（Drive Mode）：放大字體與按鈕，隱藏微調列降低分心 */
+  body.drive-mode .eq-bar,
+  body.drive-mode .right-pane {
+    display: none !important;
+  }
+  body.drive-mode .status-title {
+    font-size: 25px;
+  }
+  body.drive-mode button.ch-btn {
+    font-size: 22px;
+    border-radius: 20px;
+  }
+  body.drive-mode .btn-grid.cols-3 button.ch-btn {
+    font-size: 19px;
+  }
+  body.drive-mode .sub-tag {
+    font-size: 13px;
+  }
+
   .header {
     background: var(--bg-card);
     border: 1px solid var(--border-card);
@@ -95,14 +171,14 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     box-shadow: 0 4px 12px var(--shadow-card);
     flex-shrink: 0;
   }
   .status-box {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 3px;
     overflow: hidden;
     flex: 1;
     min-width: 0;
@@ -131,6 +207,12 @@
     padding: 1px 5px;
     flex-shrink: 0;
   }
+  .title-viz-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
   .status-title {
     font-size: 19px;
     font-weight: 700;
@@ -138,20 +220,61 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    transition: font-size 0.2s ease;
   }
+
+  /* 莫蘭迪 5 柱動態音波條 */
+  .viz-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 2.5px;
+    height: 16px;
+    padding-bottom: 2px;
+    flex-shrink: 0;
+    opacity: 0.35;
+    transition: opacity 0.25s;
+  }
+  .viz-bars.active {
+    opacity: 1;
+  }
+  .viz-bar {
+    width: 3px;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--viz-bar);
+    transition: height 0.08s ease-out;
+  }
+
   .header-controls {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
     flex-shrink: 0;
+  }
+  .drive-btn {
+    background: var(--bg-eq-btn);
+    color: var(--text-eq-btn);
+    border: 1.5px solid var(--border-eq-btn);
+    border-radius: 12px;
+    padding: 8px 8px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .drive-btn.active {
+    background: #5B7A8C;
+    border-color: #B4C8D4;
+    color: #FAF8F5;
+    box-shadow: 0 2px 10px rgba(91, 122, 140, 0.4);
   }
   .att-btn {
     background: var(--bg-eq-btn);
     color: var(--text-eq-btn);
     border: 1.5px solid var(--border-eq-btn);
-    border-radius: 13px;
-    padding: 9px 10px;
-    font-size: 14px;
+    border-radius: 12px;
+    padding: 8px 9px;
+    font-size: 13.5px;
     font-weight: 700;
     cursor: pointer;
     transition: all 0.2s;
@@ -166,9 +289,9 @@
     background: #4A4E54;
     color: #FAF8F5;
     border: 1px solid #636870;
-    border-radius: 13px;
-    padding: 9px 13px;
-    font-size: 15px;
+    border-radius: 12px;
+    padding: 8px 11px;
+    font-size: 14.5px;
     font-weight: 700;
     cursor: pointer;
     transition: background 0.25s, border-color 0.25s;
@@ -249,18 +372,19 @@
   }
   .eq-panel.show { display: flex; }
 
+  /* 車用快捷設定列：2排 3欄，按鈕更寬好按 */
   .car-quick-row {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 4px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5px;
   }
   .quick-chip-btn {
     background: var(--bg-chip);
     border: 1px solid var(--border-chip);
     color: var(--text-chip);
-    font-size: 11px;
+    font-size: 11.5px;
     font-weight: 700;
-    padding: 7px 2px;
+    padding: 7px 4px;
     border-radius: 9px;
     cursor: pointer;
     text-align: center;
@@ -329,7 +453,7 @@
   .v-slider-wrap {
     position: relative;
     width: 100%;
-    height: 108px;
+    height: 104px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -346,7 +470,7 @@
   input[type=range].v-slider {
     -webkit-appearance: none;
     appearance: none;
-    width: 98px;
+    width: 94px;
     height: 22px;
     background: transparent;
     transform: rotate(-90deg);
@@ -435,7 +559,7 @@
     border: 1px solid #52575F;
     border-radius: 20px;
     width: 100%;
-    max-width: 450px;
+    max-width: 460px;
     max-height: 88dvh;
     display: flex;
     flex-direction: column;
@@ -617,6 +741,32 @@
     align-items: center;
     gap: 8px;
   }
+  .ch-manage-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow: hidden;
+    flex: 1;
+  }
+  .star-toggle-btn {
+    background: transparent;
+    border: 1px solid #4E545E;
+    color: #7D8288;
+    font-size: 16px;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .star-toggle-btn.starred {
+    color: #E6C17A;
+    border-color: #9C8354;
+    background: rgba(230, 193, 122, 0.12);
+  }
   .ch-manage-info {
     display: flex;
     flex-direction: column;
@@ -781,11 +931,13 @@
     flex: 1;
     gap: 8px;
     touch-action: none;
+    min-height: 0;
   }
   .btn-grid.cols-3 {
     grid-template-columns: repeat(3, 1fr);
   }
   button.ch-btn {
+    position: relative;
     font-size: 18px;
     font-weight: 700;
     border: 1.5px solid var(--border-btn);
@@ -801,10 +953,21 @@
     line-height: 1.2;
     cursor: pointer;
     touch-action: none;
-    transition: transform 0.15s ease, background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+    transition: transform 0.15s ease, background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease, font-size 0.2s ease;
   }
   .btn-grid.cols-3 button.ch-btn {
     font-size: 16px;
+  }
+
+  /* 最愛小金星徽章 */
+  .fav-star-badge {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    font-size: 11px;
+    color: var(--star-active);
+    pointer-events: none;
+    opacity: 0.9;
   }
 
   button.ch-btn.selected {
@@ -842,69 +1005,89 @@
 </style>
 </head>
 <body>
-  <div class="header">
-    <div class="status-box">
-      <div class="status-top-row">
-        <span class="version-badge" id="versionBadge">20261124_v05</span>
-        <span class="status-label" id="statusSub">walton電台 • 長按 1 秒可調整順序</span>
-      </div>
-      <span class="status-title" id="statusMain">點擊任一電台開始播放</span>
-    </div>
-    <div class="header-controls">
-      <button class="att-btn" id="attBtn" onclick="toggleAttMute()" title="暫時降音 -20dB（不斷線交談模式）">🔉 降音</button>
-      <button class="stop-btn" id="masterStopBtn" onclick="toggleMasterPlay()">▶ 播放</button>
-    </div>
-  </div>
-
-  <!-- 5個加大字體色塊 EQ 按鈕 + 展開微調面板按鈕 -->
-  <div class="eq-bar" id="eqBar">
-    <button class="eq-btn" data-eq="flat" onclick="setEQ('flat', true)">原音</button>
-    <button class="eq-btn" data-eq="voice" onclick="setEQ('voice', true)">人聲</button>
-    <button class="eq-btn" data-eq="bass" onclick="setEQ('bass', true)">重低音</button>
-    <button class="eq-btn" data-eq="classical" onclick="setEQ('classical', true)">古典</button>
-    <button class="eq-btn" data-eq="custom" onclick="selectCustomEQ()">自訂</button>
-    <button class="eq-tune-toggle" id="tuneToggleBtn" onclick="toggleEQPanel()" title="展開EQ推桿與車用設定">🎛️</button>
-  </div>
-
-  <!-- 車用快捷設定 + 各台獨立前級增益 + 10段垂直推桿 EQ 面板 -->
-  <div class="eq-panel" id="eqPanel">
-    <div class="car-quick-row">
-      <button class="quick-chip-btn" id="themeToggleBtn" onclick="cycleThemeMode()">🌙 夜間</button>
-      <button class="quick-chip-btn" id="reconnectSecBtn" onclick="cycleReconnectSec()">🔄 重連4.5s</button>
-      <button class="quick-chip-btn" id="wakeLockBtn" onclick="toggleWakeLock()">💤 鎖屏省電</button>
-      <button class="quick-chip-btn" id="sleepTimerBtn" onclick="cycleSleepTimer()">⏰ 定時關</button>
-      <button class="quick-chip-btn" id="gridColsBtn" onclick="toggleGridCols()">田 2欄</button>
-    </div>
-
-    <div class="eq-hint-bar">💡 雙擊任一推桿可快速歸零 (0 dB)</div>
-    <div class="graphic-eq-container" id="graphicEqContainer">
-      <div class="db-scale">
-        <span>+12</span>
-        <span>+6</span>
-        <span>0</span>
-        <span>-6</span>
-        <span>-12</span>
-      </div>
-      <div class="band-col preamp-col">
-        <span class="band-freq">本台前級</span>
-        <div class="v-slider-wrap">
-          <input type="range" class="v-slider preamp-slider" id="preampSlider" min="-12" max="12" step="1" value="0" oninput="onPreampChange()">
+  <div class="app-shell">
+    <!-- 左欄：狀態儀表、EQ 模式快捷列、電台盲操大按鈕網格 -->
+    <div class="left-pane">
+      <div class="header">
+        <div class="status-box">
+          <div class="status-top-row">
+            <span class="version-badge" id="versionBadge">20261124_v06</span>
+            <span class="status-label" id="statusSub">walton電台 • 長按 1 秒調整順序</span>
+          </div>
+          <div class="title-viz-row">
+            <span class="status-title" id="statusMain">點擊任一電台開始播放</span>
+            <!-- 5 柱莫蘭迪即時動態音波指示 -->
+            <div class="viz-bars" id="vizBars" aria-hidden="true">
+              <div class="viz-bar" id="vbar0"></div>
+              <div class="viz-bar" id="vbar1"></div>
+              <div class="viz-bar" id="vbar2"></div>
+              <div class="viz-bar" id="vbar3"></div>
+              <div class="viz-bar" id="vbar4"></div>
+            </div>
+          </div>
         </div>
-        <span class="band-val" id="preampVal">0</span>
+        <div class="header-controls">
+          <button class="drive-btn" id="driveModeBtn" onclick="toggleDriveMode()" title="極簡大字駕駛模式（支援左右滑動切台）">🚗 駕駛</button>
+          <button class="att-btn" id="attBtn" onclick="toggleAttMute()" title="暫時降音 -20dB（不斷線交談模式）">🔉 降音</button>
+          <button class="stop-btn" id="masterStopBtn" onclick="toggleMasterPlay()">▶ 播放</button>
+        </div>
       </div>
+
+      <!-- 5個加大字體色塊 EQ 按鈕 + 展開微調面板按鈕 -->
+      <div class="eq-bar" id="eqBar">
+        <button class="eq-btn" data-eq="flat" onclick="setEQ('flat', true)">原音</button>
+        <button class="eq-btn" data-eq="voice" onclick="setEQ('voice', true)">人聲</button>
+        <button class="eq-btn" data-eq="bass" onclick="setEQ('bass', true)">重低音</button>
+        <button class="eq-btn" data-eq="classical" onclick="setEQ('classical', true)">古典</button>
+        <button class="eq-btn" data-eq="custom" onclick="selectCustomEQ()">自訂</button>
+        <button class="eq-tune-toggle" id="tuneToggleBtn" onclick="toggleEQPanel()" title="展開EQ推桿與車用設定">🎛️</button>
+      </div>
+
+      <div class="btn-grid" id="btnContainer"></div>
     </div>
-    <div class="save-row">
-      <button class="save-target-btn" onclick="overwritePreset('voice')">覆蓋「人聲」</button>
-      <button class="save-target-btn" onclick="overwritePreset('bass')">覆蓋「重低音」</button>
-      <button class="save-target-btn" onclick="overwritePreset('classical')">覆蓋「古典」</button>
-      <button class="reset-eq-btn" onclick="resetDefaultPresets()">還原EQ</button>
-      <button class="manage-ch-btn" onclick="openChannelManager()">📻 電台</button>
+
+    <!-- 右欄（直向時可收合；橫向寬螢幕時自動常駐顯示） -->
+    <div class="right-pane">
+      <div class="eq-panel" id="eqPanel">
+        <!-- 6顆車用快捷控制按鈕 -->
+        <div class="car-quick-row">
+          <button class="quick-chip-btn" id="themeToggleBtn" onclick="cycleThemeMode()">🌙 夜間</button>
+          <button class="quick-chip-btn" id="reconnectSecBtn" onclick="cycleReconnectSec()">🔄 重連4.5s</button>
+          <button class="quick-chip-btn" id="wakeLockBtn" onclick="toggleWakeLock()">💤 鎖屏省電</button>
+          <button class="quick-chip-btn" id="sleepTimerBtn" onclick="cycleSleepTimer()">⏰ 定時關</button>
+          <button class="quick-chip-btn" id="favOnlyBtn" onclick="toggleFavOnlyScan()">☆ 全部輪播</button>
+          <button class="quick-chip-btn" id="gridColsBtn" onclick="toggleGridCols()">田 2欄</button>
+        </div>
+
+        <div class="eq-hint-bar">💡 雙擊推桿歸零 (0dB) • 駕駛模式支援左右滑動切台</div>
+        <div class="graphic-eq-container" id="graphicEqContainer">
+          <div class="db-scale">
+            <span>+12</span>
+            <span>+6</span>
+            <span>0</span>
+            <span>-6</span>
+            <span>-12</span>
+          </div>
+          <div class="band-col preamp-col">
+            <span class="band-freq">本台前級</span>
+            <div class="v-slider-wrap">
+              <input type="range" class="v-slider preamp-slider" id="preampSlider" min="-12" max="12" step="1" value="0" oninput="onPreampChange()">
+            </div>
+            <span class="band-val" id="preampVal">0</span>
+          </div>
+        </div>
+        <div class="save-row">
+          <button class="save-target-btn" onclick="overwritePreset('voice')">覆蓋「人聲」</button>
+          <button class="save-target-btn" onclick="overwritePreset('bass')">覆蓋「重低音」</button>
+          <button class="save-target-btn" onclick="overwritePreset('classical')">覆蓋「古典」</button>
+          <button class="reset-eq-btn" onclick="resetDefaultPresets()">還原EQ</button>
+          <button class="manage-ch-btn" onclick="openChannelManager()">📻 電台</button>
+        </div>
+      </div>
     </div>
   </div>
 
-  <div class="btn-grid" id="btnContainer"></div>
-
-  <!-- 電台清單編輯、垃圾桶與備份管理彈窗 -->
+  <!-- 電台清單編輯、最愛星號、垃圾桶與備份管理彈窗 -->
   <div class="modal-backdrop" id="channelModal">
     <div class="modal-card">
       <div class="modal-header">
@@ -937,7 +1120,7 @@
       </div>
       <div class="modal-scroll-area" id="modalScrollArea">
         <div class="section-title">
-          <span>目前顯示的電台 (<span id="activeCount">0</span>)</span>
+          <span>目前顯示的電台 (<span id="activeCount">0</span>) • 點擊 ★ 設為輪播最愛</span>
         </div>
         <div class="ch-manage-list" id="chManageList"></div>
 
@@ -954,7 +1137,7 @@
   <div class="confirm-backdrop" id="unsavedConfirmModal">
     <div class="confirm-card">
       <div class="confirm-title">⚠️ 尚有未儲存的變更</div>
-      <div class="confirm-desc">你已修改了電台名稱、網址或清單內容，是否要儲存這些變更？</div>
+      <div class="confirm-desc">你已修改了電台名稱、網址、最愛標記或清單內容，是否要儲存這些變更？</div>
       <div class="confirm-btns">
         <button class="confirm-save-btn" onclick="confirmSaveAndClose()">儲存變更</button>
         <button class="confirm-discard-btn" onclick="confirmDiscardAndClose()">放棄變更（還原）</button>
@@ -968,23 +1151,23 @@
 
 <script>
   // 版本命名規則：西元年月日_v01（每日編輯重置為當天日期，同日遞增 v02, v03...，隔日歸為 v01）
-  const APP_VERSION = '20261124_v05';
+  const APP_VERSION = '20261124_v06';
 
   const IC_VOICE_REVMA_URL = 'https://stream.rcs.revma.com/7mnq8rt7k5zuv';
 
   const defaultChannels = [
-    { id: 'ch1',  name: '中廣音樂網', sub: 'iRadio',   url: 'https://sonnykuo.appspot.com/bcc/?id=中廣音樂網' },
-    { id: 'ch2',  name: '中廣新聞網', sub: 'News',     url: 'https://sonnykuo.appspot.com/bcc/?id=中廣新聞網' },
-    { id: 'ch3',  name: '中廣流行網', sub: 'I Like',   url: 'https://sonnykuo.appspot.com/bcc/?id=中廣流行網' },
-    { id: 'ch4',  name: '古典 97.7',  sub: 'FM 97.7',  url: 'https://onair.family977.com.tw:8977/live.mp3' },
-    { id: 'ch5',  name: 'Bravo 91.3', sub: 'FM 91.3',  url: 'https://onair.family977.com.tw:8977/live.mp3' },
-    { id: 'ch6',  name: '飛碟聯播網', sub: 'FM 92.1',  url: 'https://stream.rcs.revma.com/em90w4aeewzuv.m4a' },
-    { id: 'ch7',  name: 'News98',     sub: 'FM 98.1',  url: 'https://stream.rcs.revma.com/pntx1639ntzuv.m4a' },
-    { id: 'ch8',  name: '全國廣播',   sub: 'FM 106.1', url: 'https://stream.rcs.revma.com/044q61ha7a0uv' },
-    { id: 'ch9',  name: '佳音聯播',   sub: 'FM 90.9',  url: 'https://stream.ginnet.cloud/live0119lo-p4rb/_definst_/fm909/playlist.m3u8' },
-    { id: 'ch10', name: '台北愛樂',   sub: 'FM 99.7',  url: 'https://stream.rcs.revma.com/sw7168857a0uv' },
-    { id: 'ch11', name: 'IC 之音',    sub: 'FM 97.5',  url: IC_VOICE_REVMA_URL },
-    { id: 'ch12', name: '警察廣播',   sub: '全國治安', url: 'https://stream.pbs.gov.tw/live/TPS/playlist.m3u8' }
+    { id: 'ch1',  name: '中廣音樂網', sub: 'iRadio',   url: 'https://sonnykuo.appspot.com/bcc/?id=中廣音樂網', fav: true },
+    { id: 'ch2',  name: '中廣新聞網', sub: 'News',     url: 'https://sonnykuo.appspot.com/bcc/?id=中廣新聞網', fav: false },
+    { id: 'ch3',  name: '中廣流行網', sub: 'I Like',   url: 'https://sonnykuo.appspot.com/bcc/?id=中廣流行網', fav: false },
+    { id: 'ch4',  name: '古典 97.7',  sub: 'FM 97.7',  url: 'https://onair.family977.com.tw:8977/live.mp3', fav: true },
+    { id: 'ch5',  name: 'Bravo 91.3', sub: 'FM 91.3',  url: 'https://onair.family977.com.tw:8977/live.mp3', fav: false },
+    { id: 'ch6',  name: '飛碟聯播網', sub: 'FM 92.1',  url: 'https://stream.rcs.revma.com/em90w4aeewzuv.m4a', fav: true },
+    { id: 'ch7',  name: 'News98',     sub: 'FM 98.1',  url: 'https://stream.rcs.revma.com/pntx1639ntzuv.m4a', fav: false },
+    { id: 'ch8',  name: '全國廣播',   sub: 'FM 106.1', url: 'https://stream.rcs.revma.com/044q61ha7a0uv', fav: false },
+    { id: 'ch9',  name: '佳音聯播',   sub: 'FM 90.9',  url: 'https://stream.ginnet.cloud/live0119lo-p4rb/_definst_/fm909/playlist.m3u8', fav: false },
+    { id: 'ch10', name: '台北愛樂',   sub: 'FM 99.7',  url: 'https://stream.rcs.revma.com/sw7168857a0uv', fav: false },
+    { id: 'ch11', name: 'IC 之音',    sub: 'FM 97.5',  url: IC_VOICE_REVMA_URL, fav: true },
+    { id: 'ch12', name: '警察廣播',   sub: '全國治安', url: 'https://stream.pbs.gov.tw/live/TPS/playlist.m3u8', fav: false }
   ];
 
   function loadChannelsData() {
@@ -996,6 +1179,11 @@
           item.url = IC_VOICE_REVMA_URL;
           migrated = true;
         }
+        if (typeof item.fav !== 'boolean') {
+          const def = defaultChannels.find(d => d.id === item.id);
+          item.fav = def ? !!def.fav : false;
+          migrated = true;
+        }
       });
       if (migrated) {
         localStorage.setItem('waltonCustomChannelsList', JSON.stringify(savedCustomList));
@@ -1003,14 +1191,14 @@
       return savedCustomList;
     }
     const savedOrder = JSON.parse(localStorage.getItem('customChannelOrderIds'));
-    if (!Array.isArray(savedOrder)) return [...defaultChannels];
+    if (!Array.isArray(savedOrder)) return JSON.parse(JSON.stringify(defaultChannels));
     const ordered = [];
     savedOrder.forEach(id => {
       const found = defaultChannels.find(c => c.id === id);
-      if (found) ordered.push(found);
+      if (found) ordered.push({ ...found });
     });
     defaultChannels.forEach(c => {
-      if (!ordered.some(o => o.id === c.id)) ordered.push(c);
+      if (!ordered.some(o => o.id === c.id)) ordered.push({ ...c });
     });
     return ordered;
   }
@@ -1057,7 +1245,8 @@
   }
   let perChannelPreamp = JSON.parse(localStorage.getItem('perChannelPreampMap')) || {};
 
-  // ==================== 車用偏好設定（主題、重連秒數、螢幕常亮、擴充睡眠定時、網格欄數、iPhone 降音） ====================
+  // ==================== 車用偏好設定 ====================
+  // themeMode: 'night' | 'day' | 'schedule' (06:30~18:00 日間) | 'system'
   let themeMode = localStorage.getItem('waltonThemeMode') || 'night';
   const reconnectOptions = [2, 4.5, 8, 15];
   let reconnectDelaySec = parseFloat(localStorage.getItem('waltonReconnectSec')) || 4.5;
@@ -1067,8 +1256,9 @@
   let wakeLockSentinel = null;
   let gridCols = parseInt(localStorage.getItem('waltonGridCols'), 10) === 3 ? 3 : 2;
   let isAttMuted = false;
+  let isDriveMode = localStorage.getItem('waltonDriveMode') === 'true';
+  let favOnlyScan = localStorage.getItem('waltonFavOnlyScan') === 'true';
 
-  // 方案 A：擴充睡眠定時循環預設檔位 (0=關, 10, 15, 30, 45, 60, 90 分鐘)，時間到執行 5 秒平滑淡出停止
   const sleepTimerOptions = [0, 10, 15, 30, 45, 60, 90];
   let sleepTimerMinutes = 0;
   let sleepEndTimestamp = 0;
@@ -1103,10 +1293,13 @@
   let fadeGainNode = null;
   let filterNodes = [];
   let limiterNode = null;
+  let analyserNode = null;
+  let analyserData = null;
+  let vizAnimFrame = null;
   let directFadeTimer = null;
 
   const FADE_DURATION = 0.3;
-  const SLEEP_FADE_DURATION = 5.0; // 睡眠定時結束時採用 5 秒平滑淡出
+  const SLEEP_FADE_DURATION = 5.0;
 
   let longPressTimer = null;
   let isDraggingMode = false;
@@ -1115,10 +1308,18 @@
   let startX = 0;
   let startY = 0;
 
+  // ==================== 1. 主題切換（夜間 / 日間 / 06:30~18:00 時段自動 / 跟隨系統） ====================
   function applyTheme() {
     const btn = document.getElementById('themeToggleBtn');
     const prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
-    const useDay = themeMode === 'day' || (themeMode === 'auto' && prefersLight);
+    const now = new Date();
+    const minsNow = now.getHours() * 60 + now.getMinutes();
+    const isDaytimeSchedule = minsNow >= (6 * 60 + 30) && minsNow < (18 * 60);
+
+    let useDay = false;
+    if (themeMode === 'day') useDay = true;
+    else if (themeMode === 'schedule') useDay = isDaytimeSchedule;
+    else if (themeMode === 'system') useDay = prefersLight;
 
     document.body.classList.toggle('theme-day', useDay);
     if (themeMode === 'night') {
@@ -1127,26 +1328,118 @@
     } else if (themeMode === 'day') {
       btn.innerText = '☀️ 日間';
       btn.classList.add('on');
+    } else if (themeMode === 'schedule') {
+      btn.innerText = '🌅 時段自動';
+      btn.classList.add('on');
     } else {
-      btn.innerText = '🌓 自動';
+      btn.innerText = '🌓 系統自動';
       btn.classList.add('on');
     }
   }
 
   function cycleThemeMode() {
-    if (themeMode === 'night') themeMode = 'day';
-    else if (themeMode === 'day') themeMode = 'auto';
-    else themeMode = 'night';
+    const order = ['night', 'day', 'schedule', 'system'];
+    themeMode = order[(order.indexOf(themeMode) + 1) % order.length];
     localStorage.setItem('waltonThemeMode', themeMode);
     applyTheme();
   }
 
+  setInterval(() => {
+    if (themeMode === 'schedule') applyTheme();
+  }, 60000);
+
   if (window.matchMedia) {
     window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {
-      if (themeMode === 'auto') applyTheme();
+      if (themeMode === 'system') applyTheme();
     });
   }
 
+  // ==================== 2. 駕駛模式（Drive Mode）＋ 左右滑動切台手勢 ====================
+  function applyDriveMode() {
+    const btn = document.getElementById('driveModeBtn');
+    document.body.classList.toggle('drive-mode', isDriveMode);
+    btn.classList.toggle('active', isDriveMode);
+    btn.innerText = isDriveMode ? '🚗 駕駛中' : '🚗 駕駛';
+  }
+
+  function toggleDriveMode() {
+    isDriveMode = !isDriveMode;
+    localStorage.setItem('waltonDriveMode', isDriveMode);
+    applyDriveMode();
+  }
+
+  // 網格區域左右滑動切台手勢（Swipe Left = 下一台，Swipe Right = 上一台）
+  let swipeStartX = 0;
+  let swipeStartY = 0;
+  let swipeTracking = false;
+
+  container.addEventListener('pointerdown', (e) => {
+    if (isDraggingMode) return;
+    swipeStartX = e.clientX;
+    swipeStartY = e.clientY;
+    swipeTracking = true;
+  }, { passive: true });
+
+  container.addEventListener('pointerup', (e) => {
+    if (!swipeTracking || isDraggingMode) {
+      swipeTracking = false;
+      return;
+    }
+    swipeTracking = false;
+    const dx = e.clientX - swipeStartX;
+    const dy = e.clientY - swipeStartY;
+    // 水平位移超過 68px 且明顯大於垂直位移，判定為左右滑動切台
+    if (Math.abs(dx) > 68 && Math.abs(dx) > Math.abs(dy) * 1.6) {
+      clearTimeout(longPressTimer);
+      draggedChannelId = null;
+      if (navigator.vibrate) navigator.vibrate(30);
+      if (dx < 0) {
+        stepChannelByScanRule(1);
+      } else {
+        stepChannelByScanRule(-1);
+      }
+    }
+  }, { passive: true });
+
+  // ==================== 3. 最愛星號輪播切換（支援方向盤與滑動切台） ====================
+  function updateFavOnlyUI() {
+    const btn = document.getElementById('favOnlyBtn');
+    btn.classList.toggle('on', favOnlyScan);
+    btn.innerText = favOnlyScan ? '★ 僅播最愛' : '☆ 全部輪播';
+  }
+
+  function toggleFavOnlyScan() {
+    const hasAnyFav = channels.some(c => c.fav);
+    if (!favOnlyScan && !hasAnyFav) {
+      alert('目前尚未標記任何「★ 最愛」電台，請先在「📻 電台」管理中點擊星星標記。');
+      return;
+    }
+    favOnlyScan = !favOnlyScan;
+    localStorage.setItem('waltonFavOnlyScan', favOnlyScan);
+    updateFavOnlyUI();
+  }
+
+  function stepChannelByScanRule(direction) {
+    if (channels.length === 0) return;
+    if (!favOnlyScan) {
+      playByIndex(currentIndex + direction, true);
+      return;
+    }
+    const favIndices = channels.map((c, idx) => c.fav ? idx : -1).filter(idx => idx !== -1);
+    if (favIndices.length === 0) {
+      playByIndex(currentIndex + direction, true);
+      return;
+    }
+    const posInFav = favIndices.indexOf(currentIndex);
+    if (posInFav === -1) {
+      playByIndex(favIndices[0], true);
+    } else {
+      const nextFavPos = (posInFav + direction + favIndices.length) % favIndices.length;
+      playByIndex(favIndices[nextFavPos], true);
+    }
+  }
+
+  // ==================== 4. 斷線重連秒數 / 螢幕常亮 / 睡眠定時 / 網格欄數 ====================
   function updateReconnectBtnUI() {
     document.getElementById('reconnectSecBtn').innerText = `🔄 重連${reconnectDelaySec}s`;
   }
@@ -1197,7 +1490,6 @@
     }
   });
 
-  // 睡眠定時器（10 / 15 / 30 / 45 / 60 / 90 分鐘循環，時間到執行 5 秒平滑淡出停止）
   function cycleSleepTimer() {
     const idx = sleepTimerOptions.indexOf(sleepTimerMinutes);
     sleepTimerMinutes = sleepTimerOptions[(idx + 1) % sleepTimerOptions.length];
@@ -1294,9 +1586,9 @@
     applyGridCols();
   }
 
-  // ==================== iPhone 專屬雙軌降音機制 ====================
+  // ==================== 5. iPhone 雙軌降音機制 ====================
   function getTargetOutputGain() {
-    return isAttMuted ? 0.1 : 1.0; // Web Audio 通道中 0.1 = -20dB
+    return isAttMuted ? 0.1 : 1.0;
   }
 
   function updateAttButtonUI() {
@@ -1315,14 +1607,11 @@
     isAttMuted = !isAttMuted;
     updateAttButtonUI();
 
-    // 若處於靜音預緩衝狀態，按降音鈕順便解鎖連線
     if (isMutedPrebuffered) {
       unlockPrebufferedStream();
       return;
     }
 
-    // 1. 若目前在自動直通模式（尚未解鎖 AudioContext），利用這次點擊手勢自動升級進 Web Audio EQ 通道，
-    //    這樣 iPhone 才能透過 GainNode 真正執行 -20dB 數位衰減（不支援 CORS 的電台則會自動退回 playerDirect 並套用 .muted 保活）
     if (isAutoDirectFallback && currentPlayState === 'playing') {
       isAutoDirectFallback = false;
       currentPlayState = 'idle';
@@ -1332,21 +1621,75 @@
 
     const targetGain = getTargetOutputGain();
 
-    // 2. Web Audio EQ 通道：在音訊串流內部直接調整 GainNode（iPhone 100% 有效）
     if (!isDirectMode && fadeGainNode && audioCtx && currentPlayState === 'playing') {
       if (audioCtx.state === 'suspended') audioCtx.resume();
       const now = audioCtx.currentTime;
       fadeGainNode.gain.cancelScheduledValues(now);
       fadeGainNode.gain.setValueAtTime(fadeGainNode.gain.value, now);
       fadeGainNode.gain.linearRampToValueAtTime(targetGain, now + 0.25);
-    }
-    // 3. 不支援 CORS 的直通電台（如中廣）：在 iOS 上無法改 .volume，改以 .muted = true/false 保持串流不斷線
-    else if (isDirectMode && currentPlayState === 'playing') {
+    } else if (isDirectMode && currentPlayState === 'playing') {
       playerDirect.muted = isAttMuted;
       playerDirect.volume = targetGain;
     }
 
     updateStatusEQText();
+  }
+
+  // ==================== 6. 5 柱莫蘭迪動態音波指示器 ====================
+  function startVisualizerLoop() {
+    stopVisualizerLoop();
+    const vizBox = document.getElementById('vizBars');
+    const bars = [
+      document.getElementById('vbar0'),
+      document.getElementById('vbar1'),
+      document.getElementById('vbar2'),
+      document.getElementById('vbar3'),
+      document.getElementById('vbar4')
+    ];
+    vizBox.classList.add('active');
+
+    let phase = 0;
+    const renderFrame = () => {
+      if (currentPlayState !== 'playing' || isMutedPrebuffered || isAttMuted) {
+        bars.forEach(b => { if (b) b.style.height = '3px'; });
+        vizBox.classList.remove('active');
+        return;
+      }
+      vizBox.classList.add('active');
+
+      if (!isDirectMode && analyserNode && analyserData) {
+        analyserNode.getByteFrequencyData(analyserData);
+        // 抽取低、中低、中、中高、高 5 個代表頻段能量
+        const bins = [2, 5, 10, 18, 28];
+        bins.forEach((binIdx, i) => {
+          const val = analyserData[binIdx] || 0;
+          const h = Math.max(3, Math.min(16, Math.round((val / 255) * 16)));
+          if (bars[i]) bars[i].style.height = h + 'px';
+        });
+      } else {
+        // 直通模式下的柔和呼吸律動指示
+        phase += 0.14;
+        bars.forEach((b, i) => {
+          const h = Math.max(4, Math.round(7 + Math.sin(phase + i * 1.1) * 4.5));
+          if (b) b.style.height = h + 'px';
+        });
+      }
+      vizAnimFrame = requestAnimationFrame(renderFrame);
+    };
+    vizAnimFrame = requestAnimationFrame(renderFrame);
+  }
+
+  function stopVisualizerLoop() {
+    if (vizAnimFrame) {
+      cancelAnimationFrame(vizAnimFrame);
+      vizAnimFrame = null;
+    }
+    const vizBox = document.getElementById('vizBars');
+    if (vizBox) vizBox.classList.remove('active');
+    for (let i = 0; i < 5; i++) {
+      const b = document.getElementById(`vbar${i}`);
+      if (b) b.style.height = '3px';
+    }
   }
 
   function attachDoubleTapReset(sliderEl, resetCallback) {
@@ -1384,7 +1727,8 @@
 
       const db = getChannelPreampDb(idx);
       const dbBadge = db !== 0 ? ` (${db > 0 ? '+' : ''}${db}dB)` : '';
-      btn.innerHTML = `<span>${ch.name}</span><span class="sub-tag">${ch.sub}${dbBadge}</span>`;
+      const starBadge = ch.fav ? `<span class="fav-star-badge">★</span>` : '';
+      btn.innerHTML = `${starBadge}<span>${ch.name}</span><span class="sub-tag">${ch.sub}${dbBadge}</span>`;
 
       btn.addEventListener('pointerdown', (e) => {
         if (e.button !== 0 && e.pointerType === 'mouse') return;
@@ -1397,6 +1741,7 @@
         clearTimeout(longPressTimer);
         longPressTimer = setTimeout(() => {
           isDraggingMode = true;
+          swipeTracking = false;
           btn.classList.add('dragging');
           try { btn.setPointerCapture(e.pointerId); } catch (_) {}
           if (navigator.vibrate) navigator.vibrate(40);
@@ -1500,7 +1845,7 @@
     });
   }
 
-  // ==================== 電台管理、編輯、垃圾桶與備份匯出/匯入 ====================
+  // ==================== 電台管理、最愛標記、編輯、垃圾桶與備份匯出/匯入 ====================
   function openChannelManager() {
     draftChannels = JSON.parse(JSON.stringify(channels));
     draftTrashChannels = JSON.parse(JSON.stringify(trashChannels));
@@ -1559,7 +1904,7 @@
         alert('串流網址必須以 https:// 開頭');
         return;
       }
-      draftChannels.push({ id: 'ch_' + Date.now(), name: pendingName, sub: pendingSub, url: pendingUrl });
+      draftChannels.push({ id: 'ch_' + Date.now(), name: pendingName, sub: pendingSub, url: pendingUrl, fav: false });
     }
 
     const prevPlayingCh = channels[currentIndex];
@@ -1578,6 +1923,12 @@
     perChannelPreamp = draftPreampMap;
     localStorage.setItem('perChannelPreampMap', JSON.stringify(perChannelPreamp));
     saveChannelsData();
+
+    if (favOnlyScan && !channels.some(c => c.fav)) {
+      favOnlyScan = false;
+      localStorage.setItem('waltonFavOnlyScan', false);
+      updateFavOnlyUI();
+    }
 
     const newIdx = channels.findIndex(c => c.id === currentChannelId);
     if (newIdx === -1) {
@@ -1598,6 +1949,11 @@
     updateStatusEQText();
   }
 
+  function toggleDraftFav(idx) {
+    draftChannels[idx].fav = !draftChannels[idx].fav;
+    renderChannelManageList();
+  }
+
   function exportBackupToClipboard() {
     const backupPayload = {
       app: 'walton電台',
@@ -1610,7 +1966,8 @@
       lastRadioEQ: currentEQ,
       themeMode: themeMode,
       reconnectDelaySec: reconnectDelaySec,
-      gridCols: gridCols
+      gridCols: gridCols,
+      favOnlyScan: favOnlyScan
     };
     const jsonStr = JSON.stringify(backupPayload);
     if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -1664,6 +2021,11 @@
         localStorage.setItem('waltonGridCols', gridCols);
         applyGridCols();
       }
+      if (typeof parsed.favOnlyScan === 'boolean') {
+        favOnlyScan = parsed.favOnlyScan;
+        localStorage.setItem('waltonFavOnlyScan', favOnlyScan);
+        updateFavOnlyUI();
+      }
       editingChannelId = null;
       document.getElementById('importJsonInput').value = '';
       document.getElementById('importBox').classList.remove('show');
@@ -1703,11 +2065,15 @@
           </div>
         `;
       } else {
+        const isStar = !!ch.fav;
         item.innerHTML = `
           <div class="ch-item-top">
-            <div class="ch-manage-info">
-              <span class="ch-manage-name">${escapeHtml(ch.name)} (${escapeHtml(ch.sub)})</span>
-              <span class="ch-manage-url">${escapeHtml(ch.url)}</span>
+            <div class="ch-manage-left">
+              <button class="star-toggle-btn ${isStar ? 'starred' : ''}" onclick="toggleDraftFav(${idx})" title="標記為最愛輪播">${isStar ? '★' : '☆'}</button>
+              <div class="ch-manage-info">
+                <span class="ch-manage-name">${escapeHtml(ch.name)} (${escapeHtml(ch.sub)})</span>
+                <span class="ch-manage-url">${escapeHtml(ch.url)}</span>
+              </div>
             </div>
             <div class="item-actions">
               <button class="edit-ch-btn" onclick="startEditChannel('${ch.id}')">編輯</button>
@@ -1797,7 +2163,7 @@
     }
 
     const newId = 'ch_' + Date.now();
-    draftChannels.push({ id: newId, name, sub, url });
+    draftChannels.push({ id: newId, name, sub, url, fav: false });
 
     document.getElementById('newChName').value = '';
     document.getElementById('newChSub').value = '';
@@ -1907,6 +2273,11 @@
       fadeGainNode = audioCtx.createGain();
       fadeGainNode.gain.value = getTargetOutputGain();
 
+      analyserNode = audioCtx.createAnalyser();
+      analyserNode.fftSize = 64;
+      analyserNode.smoothingTimeConstant = 0.78;
+      analyserData = new Uint8Array(analyserNode.frequencyBinCount);
+
       source.connect(preampNode);
       preampNode.connect(filterNodes[0]);
       for (let i = 0; i < filterNodes.length - 1; i++) {
@@ -1914,7 +2285,8 @@
       }
       filterNodes[filterNodes.length - 1].connect(limiterNode);
       limiterNode.connect(fadeGainNode);
-      fadeGainNode.connect(audioCtx.destination);
+      fadeGainNode.connect(analyserNode);
+      analyserNode.connect(audioCtx.destination);
     }
 
     if (audioCtx.state === 'suspended') {
@@ -2197,7 +2569,7 @@
       return;
     }
     if (currentPlayState === 'idle') {
-      statusSub.innerText = `walton電台 • 長按 1 秒調整順序${sleepTag}`;
+      statusSub.innerText = `walton電台 • 長按1秒排序 | 左右滑切台${sleepTag}`;
       return;
     }
     if (currentPlayState === 'selected') {
@@ -2208,7 +2580,7 @@
     const db = getChannelPreampDb(currentIndex);
     const attTag = isAttMuted ? (isDirectMode ? '🔇靜音保活 | ' : '🔇降音-20dB | ') : '';
     if (isAutoDirectFallback) {
-      statusSub.innerText = `${attTag}自動直通 (點按鈕啟用EQ) • ${ch.sub}${sleepTag}`;
+      statusSub.innerText = `${attTag}自動直通 • ${ch.sub}${sleepTag}`;
     } else if (isDirectMode) {
       statusSub.innerText = `${attTag}直通原音 • ${ch.sub}${sleepTag}`;
     } else {
@@ -2220,6 +2592,7 @@
 
   function stopAllPlayersImmediately() {
     clearStallWatchdog();
+    stopVisualizerLoop();
     if (directFadeTimer) {
       clearInterval(directFadeTimer);
       directFadeTimer = null;
@@ -2461,11 +2834,14 @@
     if (state === 'playing') {
       masterStopBtn.innerText = '⏸ 暫停';
       masterStopBtn.classList.add('active');
+      startVisualizerLoop();
     } else if (state === 'selected') {
-      masterStopBtn.innerText = isMutedPrebuffered ? '🔊 點擊出聲' : '⏳ 連線中';
+      masterStopBtn.innerText = isMutedPrebuffered ? '🔊 出聲' : '⏳ 連線';
       masterStopBtn.classList.add('selected');
+      stopVisualizerLoop();
     } else {
       masterStopBtn.innerText = '▶ 播放';
+      stopVisualizerLoop();
     }
 
     channels.forEach((item, i) => {
@@ -2498,8 +2874,9 @@
           updateUIState(currentIndex, 'idle', '已暫停');
         });
       });
-      navigator.mediaSession.setActionHandler('previoustrack', () => playByIndex(currentIndex - 1, true));
-      navigator.mediaSession.setActionHandler('nexttrack', () => playByIndex(currentIndex + 1, true));
+      // 方向盤上一首 / 下一首，支援「僅輪播最愛星號」過濾規則
+      navigator.mediaSession.setActionHandler('previoustrack', () => stepChannelByScanRule(-1));
+      navigator.mediaSession.setActionHandler('nexttrack', () => stepChannelByScanRule(1));
     }
   }
 
@@ -2536,8 +2913,10 @@
   window.addEventListener('load', () => {
     document.getElementById('versionBadge').innerText = APP_VERSION;
     applyTheme();
+    applyDriveMode();
     updateReconnectBtnUI();
     updateSleepTimerUI();
+    updateFavOnlyUI();
     applyGridCols();
     renderChannelButtons();
     applyCurrentChannelPreamp();
