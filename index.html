@@ -19,10 +19,10 @@
     padding: 0;
     width: 100%;
     height: 100dvh;
-    overflow: hidden;              /* 徹底鎖定頁面捲動 */
-    overscroll-behavior: none;     /* 防止 iOS 下拉彈性捲動或重整 */
-    background: #232528;           /* 莫蘭迪深炭灰底色 */
-    color: #E2DFD7;                /* 溫潤燕麥白文字 */
+    overflow: hidden;
+    overscroll-behavior: none;
+    background: #232528;
+    color: #E2DFD7;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   }
   body {
@@ -74,46 +74,59 @@
     border-color: #C79292;
     color: #FAF8F5;
   }
+
+  /* EQ 音效切換列：5 個模式色塊按鈕 + 1 個展開面板圖示鈕 */
   .eq-bar {
     display: grid;
-    grid-template-columns: repeat(4, 1fr) auto;
+    grid-template-columns: repeat(5, 1fr) 44px;
     gap: 6px;
-    background: #2A2D31;
+    background: #26292D;
     padding: 6px;
-    border-radius: 14px;
+    border-radius: 16px;
     border: 1px solid #3E4248;
     flex-shrink: 0;
   }
   .eq-btn {
-    background: transparent;
-    border: 1px solid transparent;
-    color: #9EA3A8;
-    font-size: 13px;
-    font-weight: 600;
-    padding: 8px 4px;
-    border-radius: 10px;
+    background: #363A40;       /* 未選取時也具備清晰莫蘭迪色塊底色 */
+    border: 1.5px solid #4A4F57;
+    color: #D6CFC7;
+    font-size: 16px;           /* 加大字體 */
+    font-weight: 700;
+    padding: 10px 2px;
+    border-radius: 12px;
     cursor: pointer;
-    transition: all 0.2s;
+    letter-spacing: 0.5px;
+    transition: all 0.2s ease;
   }
+  .eq-btn:active { transform: scale(0.95); }
   .eq-btn.active {
-    background: #6B7E74;
+    background: #6B7E74;       /* 啟用時莫蘭迪鼠尾草綠高亮色塊 */
     color: #FAF8F5;
-    border-color: #9EB3A8;
+    border-color: #A8BEB3;
+    box-shadow: 0 2px 10px rgba(107, 126, 116, 0.4);
+  }
+  /* 自訂模式按鈕在啟用時給溫暖奶茶棕區隔 */
+  .eq-btn[data-eq="custom"].active {
+    background: #8C7A6B;
+    border-color: #C9B6A6;
+    box-shadow: 0 2px 10px rgba(140, 122, 107, 0.4);
   }
   .eq-tune-toggle {
     background: #3A3E44;
-    border: 1px solid #52575F;
-    color: #D6CFC7;
-    font-size: 13px;
-    font-weight: 600;
-    padding: 8px 10px;
-    border-radius: 10px;
+    border: 1.5px solid #52575F;
+    color: #E2DFD7;
+    font-size: 18px;
+    padding: 0;
+    border-radius: 12px;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
   }
   .eq-tune-toggle.open {
-    background: #8C7A6B;
-    color: #FAF8F5;
-    border-color: #B8A696;
+    background: #5B7A8C;
+    border-color: #9BB7C7;
   }
 
   .eq-panel {
@@ -238,7 +251,7 @@
     background: #455661;
     border: 1px solid #677E8C;
     color: #FAF8F5;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
     padding: 8px 4px;
     border-radius: 10px;
@@ -249,8 +262,8 @@
     background: #3A3D42;
     border: 1px solid #555961;
     color: #9EA3A8;
-    font-size: 12px;
-    padding: 8px 8px;
+    font-size: 13px;
+    padding: 8px 10px;
     border-radius: 10px;
     cursor: pointer;
   }
@@ -260,7 +273,7 @@
     grid-template-columns: 1fr 1fr;
     flex: 1;
     gap: 10px;
-    touch-action: none; /* 鎖定按鈕網格區的原生手勢捲動 */
+    touch-action: none;
   }
   button.ch-btn {
     font-size: 20px;
@@ -281,7 +294,6 @@
     transition: transform 0.15s ease, background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
   }
 
-  /* 緩衝載入過渡色 */
   @keyframes pulseBuffer {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.78; }
@@ -293,7 +305,6 @@
     animation: pulseBuffer 1.2s infinite ease-in-out;
   }
 
-  /* 確定播放正式色 */
   button.ch-btn.playing {
     background: #5B7A8C;
     border-color: #B4C8D4;
@@ -302,7 +313,6 @@
     animation: none;
   }
 
-  /* 長按 1 秒進入拖曳排序模式的視覺回饋 */
   button.ch-btn.dragging {
     transform: scale(1.05);
     background: #6E655F;
@@ -327,13 +337,14 @@
     <button class="stop-btn" id="masterStopBtn" onclick="toggleMasterPlay()">▶ 播放</button>
   </div>
 
-  <!-- EQ 音效預設模式列 -->
+  <!-- 5個加大字體色塊 EQ 按鈕 + 展開微調面板按鈕 -->
   <div class="eq-bar" id="eqBar">
     <button class="eq-btn" data-eq="flat" onclick="setEQ('flat')">原音</button>
     <button class="eq-btn" data-eq="voice" onclick="setEQ('voice')">人聲</button>
     <button class="eq-btn" data-eq="bass" onclick="setEQ('bass')">重低音</button>
     <button class="eq-btn" data-eq="classical" onclick="setEQ('classical')">古典</button>
-    <button class="eq-tune-toggle" id="tuneToggleBtn" onclick="toggleEQPanel()">🎛️ 自訂</button>
+    <button class="eq-btn" data-eq="custom" onclick="selectCustomEQ()">自訂</button>
+    <button class="eq-tune-toggle" id="tuneToggleBtn" onclick="toggleEQPanel()" title="展開EQ推桿">🎛️</button>
   </div>
 
   <!-- 各台獨立前級增益 + 10段垂直推桿 EQ 面板 -->
@@ -368,7 +379,6 @@
   <audio id="playerDirect" preload="none" playsinline></audio>
 
 <script>
-  // 預設電台列表
   const defaultChannels = [
     { id: 'ch1', name: '中廣音樂網', sub: 'iRadio', url: 'https://sonnykuo.appspot.com/bcc/?id=中廣音樂網' },
     { id: 'ch2', name: '中廣新聞網', sub: 'News', url: 'https://sonnykuo.appspot.com/bcc/?id=中廣新聞網' },
@@ -380,7 +390,6 @@
     { id: 'ch8', name: 'News98', sub: 'FM 98.1', url: 'https://stream.rcs.revma.com/pntx1639ntzuv.m4a' }
   ];
 
-  // 從 localStorage 載入自訂電台排列順序（依 ID 對應，確保資料最新）
   function loadOrderedChannels() {
     const savedOrder = JSON.parse(localStorage.getItem('customChannelOrderIds'));
     if (!Array.isArray(savedOrder)) return [...defaultChannels];
@@ -389,7 +398,6 @@
       const found = defaultChannels.find(c => c.id === id);
       if (found) ordered.push(found);
     });
-    // 補上任何尚未在儲存清單中的新電台
     defaultChannels.forEach(c => {
       if (!ordered.some(o => o.id === c.id)) ordered.push(c);
     });
@@ -411,14 +419,19 @@
     { label: '16K',   freq: 16000, type: 'highshelf' }
   ];
 
+  // 包含獨立儲存的「自訂 (custom)」10段曲線
   const defaultPresets = {
-    flat:      { label: '原音',     gains: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
-    voice:     { label: '人聲', gains: [-6, -5, -3, -1, 2, 5, 6, 4, 1, -2] },
-    bass:      { label: '重低音',   gains: [0, 4, 9, 8, 0, 0, 4, 7, 4, 0] },
-    classical: { label: '古典', gains: [4, 3, 2, 0, -1, 0, 2, 4, 5, 4] }
+    flat:      { label: '原音',   gains: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+    voice:     { label: '人聲',   gains: [-6, -5, -3, -1, 2, 5, 6, 4, 1, -2] },
+    bass:      { label: '重低音', gains: [0, 4, 9, 8, 0, 0, 4, 7, 4, 0] },
+    classical: { label: '古典',   gains: [4, 3, 2, 0, -1, 0, 2, 4, 5, 4] },
+    custom:    { label: '自訂',   gains: [0, 2, 4, 2, 0, 2, 4, 3, 2, 0] }
   };
 
-  let eqPresets = JSON.parse(localStorage.getItem('customRadioEQ10Presets')) || JSON.parse(JSON.stringify(defaultPresets));
+  let eqPresets = JSON.parse(localStorage.getItem('customRadioEQ10Presets_v2')) || JSON.parse(JSON.stringify(defaultPresets));
+  if (!eqPresets.custom) {
+    eqPresets.custom = JSON.parse(JSON.stringify(defaultPresets.custom));
+  }
   let perChannelPreamp = JSON.parse(localStorage.getItem('perChannelPreampMap')) || {};
 
   const playerEQ = document.getElementById('playerEQ');
@@ -437,7 +450,7 @@
   let currentChannelId = localStorage.getItem('lastRadioChannelId') || channels[0].id;
   let currentIndex = Math.max(0, channels.findIndex(c => c.id === currentChannelId));
   let currentEQ = localStorage.getItem('lastRadioEQ') || 'flat';
-  let currentPlayState = 'idle'; // 'idle' | 'loading' | 'playing'
+  let currentPlayState = 'idle';
 
   let audioCtx = null;
   let preampNode = null;
@@ -448,14 +461,12 @@
 
   const FADE_DURATION = 0.3;
 
-  // 長按 1 秒拖曳排序相關變數
   let longPressTimer = null;
   let isDraggingMode = false;
   let draggedChannelId = null;
   let startX = 0;
   let startY = 0;
 
-  // 渲染電台按鈕並綁定「短按播放 / 長按 1 秒拖曳」事件
   function renderChannelButtons() {
     container.innerHTML = '';
     channels.forEach((ch, idx) => {
@@ -476,7 +487,6 @@
       const dbBadge = db !== 0 ? ` (${db > 0 ? '+' : ''}${db}dB)` : '';
       btn.innerHTML = `<span>${ch.name}</span><span class="sub-tag">${ch.sub}${dbBadge}</span>`;
 
-      // Pointer Down：啟動 1 秒計時器
       btn.addEventListener('pointerdown', (e) => {
         if (e.button !== 0 && e.pointerType === 'mouse') return;
         startX = e.clientX;
@@ -493,7 +503,6 @@
         }, 1000);
       });
 
-      // Pointer Move：未滿 1 秒若大幅滑動則取消長按；滿 1 秒則偵測下方按鈕即時交換
       btn.addEventListener('pointermove', (e) => {
         if (!draggedChannelId) return;
 
@@ -506,7 +515,6 @@
           return;
         }
 
-        // 已經在拖曳排序模式：找出手指座標正下方的另一顆電台按鈕
         btn.style.pointerEvents = 'none';
         const elemBelow = document.elementFromPoint(e.clientX, e.clientY);
         btn.style.pointerEvents = 'auto';
@@ -516,30 +524,24 @@
           const fromIdx = channels.findIndex(c => c.id === draggedChannelId);
           const toIdx = channels.findIndex(c => c.id === targetBtn.dataset.id);
           if (fromIdx !== -1 && toIdx !== -1) {
-            // 交換陣列順序
             const [movedItem] = channels.splice(fromIdx, 1);
             channels.splice(toIdx, 0, movedItem);
-
-            // 同步更新目前正在播放電台的索引位置，確保方向盤切台順序正確
             currentIndex = Math.max(0, channels.findIndex(c => c.id === currentChannelId));
             renderChannelButtons();
           }
         }
       });
 
-      // Pointer Up / Cancel：結束手勢
       const finishPointer = () => {
         clearTimeout(longPressTimer);
         if (isDraggingMode) {
           isDraggingMode = false;
           draggedChannelId = null;
-          // 儲存新順序至 localStorage
           localStorage.setItem('customChannelOrderIds', JSON.stringify(channels.map(c => c.id)));
           renderChannelButtons();
           statusSub.innerText = '✅ 已儲存新的電台排列順序';
           setTimeout(() => updateStatusEQText(), 1500);
         } else if (draggedChannelId === ch.id) {
-          // 未滿 1 秒放開 -> 視為一般點擊，執行播放或切換電台
           draggedChannelId = null;
           const targetIdx = channels.findIndex(c => c.id === ch.id);
           if (targetIdx !== -1) playByIndex(targetIdx, true);
@@ -557,9 +559,7 @@
         draggedChannelId = null;
       });
 
-      // 阻擋 iOS 長按跳出系統右鍵選單
       btn.addEventListener('contextmenu', (e) => e.preventDefault());
-
       container.appendChild(btn);
     });
   }
@@ -765,6 +765,20 @@
     updateStatusEQText();
   }
 
+  // 點擊「自訂」按鈕：套用獨立記憶的自訂曲線；若已在自訂模式再點一次則自動展開/收合推桿面板
+  function selectCustomEQ() {
+    if (currentEQ === 'custom') {
+      toggleEQPanel();
+    } else {
+      setEQ('custom');
+      const panel = document.getElementById('eqPanel');
+      if (!panel.classList.contains('show')) {
+        toggleEQPanel();
+      }
+    }
+  }
+
+  // 拖動任一推桿時，即時更新並自動存入「自訂 (custom)」曲線
   function onSliderChange() {
     const gains = getCurrentSliderGains();
     syncSlidersUI(gains);
@@ -776,21 +790,27 @@
       audioCtx.resume();
     }
 
+    eqPresets.custom.gains = gains;
+    localStorage.setItem('customRadioEQ10Presets_v2', JSON.stringify(eqPresets));
+
     currentEQ = 'custom';
-    document.querySelectorAll('.eq-btn').forEach(btn => btn.classList.remove('active'));
+    localStorage.setItem('lastRadioEQ', 'custom');
+    document.querySelectorAll('.eq-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.eq === 'custom');
+    });
     updateStatusEQText();
   }
 
   function overwritePreset(targetKey) {
     eqPresets[targetKey].gains = getCurrentSliderGains();
-    localStorage.setItem('customRadioEQ10Presets', JSON.stringify(eqPresets));
+    localStorage.setItem('customRadioEQ10Presets_v2', JSON.stringify(eqPresets));
     setEQ(targetKey);
     statusSub.innerText = `✅ 已覆蓋至「${eqPresets[targetKey].label}」`;
   }
 
   function resetDefaultPresets() {
     eqPresets = JSON.parse(JSON.stringify(defaultPresets));
-    localStorage.removeItem('customRadioEQ10Presets');
+    localStorage.removeItem('customRadioEQ10Presets_v2');
 
     perChannelPreamp = {};
     localStorage.removeItem('perChannelPreampMap');
@@ -798,7 +818,7 @@
     refreshChannelSubTags();
     if (preampNode) preampNode.gain.value = 1;
 
-    setEQ(currentEQ === 'custom' ? 'flat' : currentEQ);
+    setEQ(currentEQ);
     statusSub.innerText = '🔄 已還原 EQ 曲線與各台前級歸零';
   }
 
@@ -819,7 +839,7 @@
     if (isDirectMode) {
       statusSub.innerText = `直通原音 (此電台不支援EQ) • ${ch.sub}`;
     } else {
-      const eqLabel = currentEQ === 'custom' ? '自訂10段' : (eqPresets[currentEQ]?.label || '原音');
+      const eqLabel = eqPresets[currentEQ]?.label || '原音';
       const preampStr = db !== 0 ? ` | 前級${db > 0 ? '+' : ''}${db}dB` : '';
       statusSub.innerText = `EQ:${eqLabel}${preampStr} • ${ch.sub}`;
     }
@@ -1006,7 +1026,6 @@
     }
   }
 
-  // 全域阻擋觸控滑動造成頁面捲動
   document.addEventListener('touchmove', (e) => {
     if (!e.target.closest('input[type=range]')) {
       e.preventDefault();
@@ -1016,7 +1035,7 @@
   window.addEventListener('load', () => {
     renderChannelButtons();
     applyCurrentChannelPreamp();
-    setEQ(currentEQ === 'custom' ? 'flat' : currentEQ);
+    setEQ(currentEQ);
     playByIndex(currentIndex, false);
   });
 </script>
