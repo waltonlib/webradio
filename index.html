@@ -330,9 +330,9 @@
   <!-- EQ 音效預設模式列 -->
   <div class="eq-bar" id="eqBar">
     <button class="eq-btn" data-eq="flat" onclick="setEQ('flat')">原音</button>
-    <button class="eq-btn" data-eq="voice" onclick="setEQ('voice')">人聲清晰</button>
+    <button class="eq-btn" data-eq="voice" onclick="setEQ('voice')">人聲</button>
     <button class="eq-btn" data-eq="bass" onclick="setEQ('bass')">重低音</button>
-    <button class="eq-btn" data-eq="classical" onclick="setEQ('classical')">古典劇院</button>
+    <button class="eq-btn" data-eq="classical" onclick="setEQ('classical')">古典</button>
     <button class="eq-tune-toggle" id="tuneToggleBtn" onclick="toggleEQPanel()">🎛️ 自訂</button>
   </div>
 
@@ -413,9 +413,9 @@
 
   const defaultPresets = {
     flat:      { label: '原音',     gains: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
-    voice:     { label: '人聲清晰', gains: [-6, -5, -3, -1, 2, 5, 6, 4, 1, -2] },
+    voice:     { label: '人聲', gains: [-6, -5, -3, -1, 2, 5, 6, 4, 1, -2] },
     bass:      { label: '重低音',   gains: [0, 4, 9, 8, 0, 0, 4, 7, 4, 0] },
-    classical: { label: '古典劇院', gains: [4, 3, 2, 0, -1, 0, 2, 4, 5, 4] }
+    classical: { label: '古典', gains: [4, 3, 2, 0, -1, 0, 2, 4, 5, 4] }
   };
 
   let eqPresets = JSON.parse(localStorage.getItem('customRadioEQ10Presets')) || JSON.parse(JSON.stringify(defaultPresets));
