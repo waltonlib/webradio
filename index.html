@@ -101,7 +101,6 @@
   <audio id="player" preload="none" playsinline></audio>
 
 <script>
-  // 電台清單（全數採用 HTTPS 加密串流，避免 iOS Safari 混合內容封鎖）
   const channels = [
     { id: 'ch1', name: '中廣音樂網', sub: 'iRadio', url: 'https://sonnykuo.appspot.com/bcc/?id=中廣音樂網' },
     { id: 'ch2', name: '中廣新聞網', sub: 'News', url: 'https://sonnykuo.appspot.com/bcc/?id=中廣新聞網' },
@@ -109,6 +108,8 @@
     { id: 'ch4', name: 'Bravo 91.3', sub: 'FM 91.3', url: 'https://onair.family977.com.tw:8977/live.mp3' },
     { id: 'ch5', name: '飛碟聯播網', sub: 'FM 92.1', url: 'https://stream.rcs.revma.com/em90w4aeewzuv.m4a' },
     { id: 'ch6', name: '全國廣播', sub: 'FM 106.1', url: 'https://stream.rcs.revma.com/044q61ha7a0uv' },
+    { id: 'ch7', name: '佳音聯播', sub: 'FM 90.9', url: 'https://stream.ginnet.cloud/live0119lo-p4rb/_definst_/fm909/playlist.m3u8' },
+    { id: 'ch8', name: 'News98', sub: 'FM 98.1', url: 'https://stream.rcs.revma.com/pntx1639ntzuv.m4a' }
   ];
 
   const player = document.getElementById('player');
@@ -128,7 +129,6 @@
     container.appendChild(btn);
   });
 
-  // 監聽音訊載入錯誤，避免無聲卡死
   player.addEventListener('error', () => {
     updateUI(currentIndex, false, '⚠️ 此電台串流暫時無法連線');
   });
