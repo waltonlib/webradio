@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>walton電台</title>
+<title>台灣車用電台</title>
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 <style>
   * {
@@ -75,7 +75,6 @@
     color: #FAF8F5;
   }
 
-  /* EQ 音效切換列：5 個模式色塊按鈕 + 1 個展開面板圖示鈕 */
   .eq-bar {
     display: grid;
     grid-template-columns: repeat(5, 1fr) 44px;
@@ -279,7 +278,7 @@
     font-weight: 700;
     border: 1.5px solid #484C52;
     border-radius: 18px;
-    background: #32353A; /* 狀態1：未選取待機色（莫蘭迪岩灰） */
+    background: #32353A;
     color: #E2DFD7;
     display: flex;
     flex-direction: column;
@@ -293,7 +292,6 @@
     transition: transform 0.15s ease, background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
   }
 
-  /* 狀態2：已確定選台、等待串流連線出聲的專屬按鈕色（莫蘭迪暖奶茶棕） */
   button.ch-btn.selected {
     background: #8C7A6B;
     border: 2px solid #E6C7AD;
@@ -301,7 +299,6 @@
     box-shadow: 0 4px 14px rgba(140, 122, 107, 0.35);
   }
 
-  /* 狀態3：串流真正成功出聲後的按鈕色（莫蘭迪霧霾藍） */
   button.ch-btn.playing {
     background: #5B7A8C;
     border: 2px solid #B4C8D4;
@@ -309,7 +306,6 @@
     box-shadow: 0 4px 16px rgba(91, 122, 140, 0.4);
   }
 
-  /* 長按 1 秒拖曳排序來源按鈕 */
   button.ch-btn.dragging {
     transform: scale(1.04);
     background: #6E655F;
@@ -318,7 +314,6 @@
     z-index: 20;
   }
 
-  /* 拖曳目標落點預覽 */
   button.ch-btn.drag-over {
     transform: scale(0.96);
     background: #485750;
@@ -342,10 +337,10 @@
 
   <!-- 5個加大字體色塊 EQ 按鈕 + 展開微調面板按鈕 -->
   <div class="eq-bar" id="eqBar">
-    <button class="eq-btn" data-eq="flat" onclick="setEQ('flat')">原音</button>
-    <button class="eq-btn" data-eq="voice" onclick="setEQ('voice')">人聲</button>
-    <button class="eq-btn" data-eq="bass" onclick="setEQ('bass')">重低音</button>
-    <button class="eq-btn" data-eq="classical" onclick="setEQ('classical')">古典</button>
+    <button class="eq-btn" data-eq="flat" onclick="setEQ('flat', true)">原音</button>
+    <button class="eq-btn" data-eq="voice" onclick="setEQ('voice', true)">人聲</button>
+    <button class="eq-btn" data-eq="bass" onclick="setEQ('bass', true)">重低音</button>
+    <button class="eq-btn" data-eq="classical" onclick="setEQ('classical', true)">古典</button>
     <button class="eq-btn" data-eq="custom" onclick="selectCustomEQ()">自訂</button>
     <button class="eq-tune-toggle" id="tuneToggleBtn" onclick="toggleEQPanel()" title="展開EQ推桿">🎛️</button>
   </div>
@@ -438,8 +433,9 @@
 
   const playerEQ = document.getElementById('playerEQ');
   const playerDirect = document.getElementById('playerDirect');
-  let activePlayer = playerEQ;
-  let isDirectMode = false;
+  let activePlayer = playerDirect;
+  let isDirectMode = true;
+  let isAutoDirectFallback = false; // 標記目前是否為自動開啟時的直通狀態
   let hlsInstance = null;
   let switchToken = 0;
 
@@ -452,7 +448,6 @@
   let currentChannelId = localStorage.getItem('lastRadioChannelId') || channels[0].id;
   let currentIndex = Math.max(0, channels.findIndex(c => c.id === currentChannelId));
   let currentEQ = localStorage.getItem('lastRadioEQ') || 'flat';
-  // 狀態機：'idle' (未播放) | 'selected' (已確定選台、等待串流成功) | 'playing' (串流成功出聲)
   let currentPlayState = 'idle';
 
   let audioCtx = null;
@@ -684,6 +679,15 @@
     filterNodes.forEach((f, i) => { f.gain.value = gains[i]; });
   }
 
+  // 當使用者手動點擊 EQ 按鈕或拉動推桿，且目前正處於自動直通模式時，無縫切換至 10 段 EQ 通道
+  function upgradeToEQOnUserGesture() {
+    if (isAutoDirectFallback && currentPlayState === 'playing') {
+      isAutoDirectFallback = false;
+      currentPlayState = 'idle';
+      playByIndex(currentIndex, true);
+    }
+  }
+
   function fadeOutCurrentAudio(callback) {
     if (activePlayer.paused) {
       callback();
@@ -754,6 +758,7 @@
       audioCtx.resume();
     }
     updateStatusEQText();
+    upgradeToEQOnUserGesture();
   }
 
   function syncPreampUI(db) {
@@ -784,7 +789,7 @@
     return eqBands.map((_, i) => parseInt(document.getElementById(`eqSlider_${i}`).value, 10));
   }
 
-  function setEQ(presetKey) {
+  function setEQ(presetKey, isUserGesture = false) {
     currentEQ = presetKey;
     localStorage.setItem('lastRadioEQ', presetKey);
 
@@ -795,13 +800,18 @@
     applyEQGains(presetKey);
     if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
     updateStatusEQText();
+
+    if (isUserGesture) {
+      upgradeToEQOnUserGesture();
+    }
   }
 
   function selectCustomEQ() {
     if (currentEQ === 'custom') {
       toggleEQPanel();
+      upgradeToEQOnUserGesture();
     } else {
-      setEQ('custom');
+      setEQ('custom', true);
       const panel = document.getElementById('eqPanel');
       if (!panel.classList.contains('show')) {
         toggleEQPanel();
@@ -829,12 +839,13 @@
       btn.classList.toggle('active', btn.dataset.eq === 'custom');
     });
     updateStatusEQText();
+    upgradeToEQOnUserGesture();
   }
 
   function overwritePreset(targetKey) {
     eqPresets[targetKey].gains = getCurrentSliderGains();
     localStorage.setItem('customRadioEQ10Presets_v2', JSON.stringify(eqPresets));
-    setEQ(targetKey);
+    setEQ(targetKey, true);
     statusSub.innerText = `✅ 已覆蓋至「${eqPresets[targetKey].label}」`;
   }
 
@@ -848,7 +859,7 @@
     refreshChannelSubTags();
     if (preampNode) preampNode.gain.value = 1;
 
-    setEQ(currentEQ);
+    setEQ(currentEQ, true);
     statusSub.innerText = '🔄 已還原 EQ 曲線與各台前級歸零';
   }
 
@@ -870,7 +881,9 @@
     }
     const ch = channels[currentIndex];
     const db = getChannelPreampDb(currentIndex);
-    if (isDirectMode) {
+    if (isAutoDirectFallback) {
+      statusSub.innerText = `自動直通播音 (點擊任一按鈕啟用EQ) • ${ch.sub}`;
+    } else if (isDirectMode) {
       statusSub.innerText = `直通原音 (此電台不支援EQ) • ${ch.sub}`;
     } else {
       const eqLabel = eqPresets[currentEQ]?.label || '原音';
@@ -898,7 +911,6 @@
     }
   }
 
-  // 只有在真正觸發 onplaying（串流解碼出聲）時才呼叫 onStreamConfirmed
   function attachAndPlay(targetPlayer, url, token, onStreamConfirmed, onFail) {
     const isM3u8 = url.includes('.m3u8') || url.includes('sonnykuo.appspot.com');
     let confirmed = false;
@@ -951,11 +963,12 @@
     const ch = channels[idx];
     const myToken = ++switchToken;
 
-    // 若點擊正在選取或播放中的同一台 -> 0.3秒淡出後停止並回到未選取色
+    // 若點擊目前正在播放或選取中的電台 -> 0.3秒淡出後停止
     if (currentPlayState !== 'idle' && currentIndex === idx) {
       fadeOutCurrentAudio(() => {
         if (myToken !== switchToken) return;
         stopAllPlayersImmediately();
+        isAutoDirectFallback = false;
         updateUIState(idx, 'idle', '已暫停');
       });
       return;
@@ -966,12 +979,38 @@
     localStorage.setItem('lastRadioChannelId', ch.id);
     applyCurrentChannelPreamp();
 
-    // 1. 按下按鈕瞬間：立即鎖定「已選台按鈕色 (selected)」，保持此色直到真正串流成功出聲
+    // 按下按鈕或自動啟動當下，鎖定「已選台色 (selected)」直到真正串流成功出聲
     updateUIState(idx, 'selected', '已選台，串流連線緩衝中...');
 
-    if (isUserClick) initAudioEQ();
+    // 核心策略：
+    // 1. 如果是捷徑自動開啟 (isUserClick === false)：優先使用不受 AudioContext 手勢限制的 playerDirect 直接出聲
+    // 2. 如果是使用者手動點擊 (isUserClick === true)：直接啟用 playerEQ（10段 EQ ＋ 獨立前級）
+    if (!isUserClick) {
+      stopAllPlayersImmediately();
+      attachAndPlay(
+        playerDirect,
+        ch.url,
+        myToken,
+        () => {
+          activePlayer = playerDirect;
+          isDirectMode = true;
+          isAutoDirectFallback = true;
+          fadeInTargetAudio(true);
+          updateUIState(idx, 'playing', '');
+          updateStatusEQText();
+          setupMediaSession(ch);
+        },
+        () => {
+          updateUIState(idx, 'selected', '已選台 • 點擊螢幕任一處啟動聲音');
+        }
+      );
+      return;
+    }
 
-    // 2. 舊台 0.3 秒平滑淡出，同時按鈕維持「已選台按鈕色」
+    // 手動點擊模式：啟用 10 段 EQ 引擎
+    isAutoDirectFallback = false;
+    initAudioEQ();
+
     fadeOutCurrentAudio(() => {
       if (myToken !== switchToken) return;
       stopAllPlayersImmediately();
@@ -981,7 +1020,6 @@
         ch.url,
         myToken,
         () => {
-          // 3A. EQ 通道真正出聲 -> 0.3秒淡入並轉為「串流成功按鈕色 (playing)」
           activePlayer = playerEQ;
           isDirectMode = false;
           initAudioEQ();
@@ -991,14 +1029,12 @@
           setupMediaSession(ch);
         },
         () => {
-          // 若 CORS 失敗，改由直通通道連線（期間按鈕依然保持「已選台按鈕色」）
           if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
           attachAndPlay(
             playerDirect,
             ch.url,
             myToken,
             () => {
-              // 3B. 直通通道真正出聲 -> 0.3秒淡入並轉為「串流成功按鈕色 (playing)」
               activePlayer = playerDirect;
               isDirectMode = true;
               fadeInTargetAudio(true);
@@ -1007,7 +1043,6 @@
               setupMediaSession(ch);
             },
             () => {
-              // 若自動載入被瀏覽器擋下或串流中斷，維持「已選台按鈕色」並提示點擊啟動
               updateUIState(idx, 'selected', '已選台 • 點擊上方「▶ 播放」或此鈕啟動聲音');
             }
           );
@@ -1018,7 +1053,6 @@
 
   function toggleMasterPlay() {
     if (currentPlayState === 'idle' || activePlayer.paused) {
-      // 若目前處於 selected 但暫停狀態，先歸為 idle 再重新觸發完整連線
       currentPlayState = 'idle';
       playByIndex(currentIndex, true);
     } else {
@@ -1026,12 +1060,12 @@
       fadeOutCurrentAudio(() => {
         if (myToken !== switchToken) return;
         stopAllPlayersImmediately();
+        isAutoDirectFallback = false;
         updateUIState(currentIndex, 'idle', '已暫停');
       });
     }
   }
 
-  // 三階段按鈕色彩狀態：'idle' (待機灰) | 'selected' (已確定選台暖棕) | 'playing' (串流成功霧藍)
   function updateUIState(activeIdx, state, subMsg) {
     currentPlayState = state;
     const ch = channels[activeIdx];
@@ -1074,6 +1108,7 @@
         fadeOutCurrentAudio(() => {
           if (myToken !== switchToken) return;
           stopAllPlayersImmediately();
+          isAutoDirectFallback = false;
           updateUIState(currentIndex, 'idle', '已暫停');
         });
       });
@@ -1081,6 +1116,13 @@
       navigator.mediaSession.setActionHandler('nexttrack', () => playByIndex(currentIndex + 1, true));
     }
   }
+
+  // 全域首次觸控偵測：若還在自動直通模式，觸碰螢幕任意空白處也能順便解鎖 10 段 EQ
+  document.addEventListener('pointerdown', (e) => {
+    if (isAutoDirectFallback && currentPlayState === 'playing' && !e.target.closest('button') && !e.target.closest('input')) {
+      upgradeToEQOnUserGesture();
+    }
+  }, { passive: true });
 
   document.addEventListener('touchmove', (e) => {
     if (!e.target.closest('input[type=range]')) {
@@ -1091,7 +1133,7 @@
   window.addEventListener('load', () => {
     renderChannelButtons();
     applyCurrentChannelPreamp();
-    setEQ(currentEQ);
+    setEQ(currentEQ, false);
     playByIndex(currentIndex, false);
   });
 </script>
