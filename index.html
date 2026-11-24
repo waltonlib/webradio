@@ -16,7 +16,7 @@
     display: flex;
     flex-direction: column;
     height: 100dvh;
-    padding: env(safe-area-inset-top, 14px) 14px env(safe-area-inset-bottom, 14px) 14px;
+    padding: env(safe-area-inset-top, 14px) 12px env(safe-area-inset-bottom, 14px) 12px;
     gap: 10px;
   }
   .header {
@@ -57,8 +57,8 @@
   /* EQ 音效切換列 */
   .eq-bar {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
+    grid-template-columns: repeat(4, 1fr) auto;
+    gap: 6px;
     background: #2A2D31;
     padding: 6px;
     border-radius: 14px;
@@ -68,7 +68,7 @@
     background: transparent;
     border: 1px solid transparent;
     color: #9EA3A8;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     padding: 8px 4px;
     border-radius: 10px;
@@ -79,6 +79,150 @@
     color: #FAF8F5;
     border-color: #9EB3A8;
   }
+  .eq-tune-toggle {
+    background: #3A3E44;
+    border: 1px solid #52575F;
+    color: #D6CFC7;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 10px;
+    border-radius: 10px;
+  }
+  .eq-tune-toggle.open {
+    background: #8C7A6B; /* 莫蘭迪暖奶茶棕 */
+    color: #FAF8F5;
+    border-color: #B8A696;
+  }
+
+  /* 10段垂直圖形等化器面板 */
+  .eq-panel {
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+    background: #2B2E33;
+    border: 1px solid #484D54;
+    border-radius: 16px;
+    padding: 12px 10px;
+  }
+  .eq-panel.show { display: flex; }
+
+  .graphic-eq-container {
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+    gap: 2px;
+    padding: 4px 0;
+  }
+  /* 左側 dB 刻度欄 */
+  .db-scale {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 20px 4px 20px 0;
+    font-size: 10px;
+    color: #8C9298;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    user-select: none;
+  }
+  /* 單一頻段垂直滑桿欄 */
+  .band-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+  }
+  .band-freq {
+    font-size: 10px;
+    font-weight: 700;
+    color: #D6CFC7;
+    letter-spacing: -0.3px;
+  }
+  .band-val {
+    font-size: 10px;
+    font-variant-numeric: tabular-nums;
+    color: #9BB7C7;
+    height: 12px;
+  }
+  /* 垂直滑桿軌道容器與背景刻度線 */
+  .v-slider-wrap {
+    position: relative;
+    width: 100%;
+    height: 130px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-image: linear-gradient(
+      to bottom,
+      transparent 0%,
+      transparent calc(10% - 1px), rgba(255,255,255,0.12) 10%, transparent calc(10% + 1px),
+      transparent calc(30% - 1px), rgba(255,255,255,0.08) 30%, transparent calc(30% + 1px),
+      transparent calc(50% - 1px), rgba(155,183,199,0.35) 50%, transparent calc(50% + 1px),
+      transparent calc(70% - 1px), rgba(255,255,255,0.08) 70%, transparent calc(70% + 1px),
+      transparent calc(90% - 1px), rgba(255,255,255,0.12) 90%, transparent calc(90% + 1px)
+    );
+  }
+  /* 將標準 range 旋轉為垂直圖形推桿 */
+  input[type=range].v-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 118px;
+    height: 24px;
+    background: transparent;
+    transform: rotate(-90deg);
+    margin: 0;
+    cursor: pointer;
+  }
+  input[type=range].v-slider::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 6px;
+    background: #181A1D;
+    border-radius: 3px;
+    border: 1px solid #45494F;
+  }
+  input[type=range].v-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 22px;
+    border-radius: 4px;
+    background: #5B7A8C; /* 莫蘭迪霧霾藍推桿帽 */
+    border: 1.5px solid #D6CFC7;
+    margin-top: -9px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+  }
+  input[type=range].v-slider:active::-webkit-slider-thumb {
+    background: #7D9B8C;
+    border-color: #FFFFFF;
+  }
+
+  .save-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr) auto;
+    gap: 6px;
+    margin-top: 2px;
+  }
+  .save-target-btn {
+    background: #455661;
+    border: 1px solid #677E8C;
+    color: #FAF8F5;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 8px 4px;
+    border-radius: 10px;
+  }
+  .save-target-btn:active { background: #5B7A8C; }
+  .reset-eq-btn {
+    background: #3A3D42;
+    border: 1px solid #555961;
+    color: #9EA3A8;
+    font-size: 12px;
+    padding: 8px 8px;
+    border-radius: 10px;
+  }
+
   .btn-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -127,6 +271,27 @@
     <button class="eq-btn" data-eq="voice" onclick="setEQ('voice')">人聲清晰</button>
     <button class="eq-btn" data-eq="bass" onclick="setEQ('bass')">重低音</button>
     <button class="eq-btn" data-eq="classical" onclick="setEQ('classical')">古典劇院</button>
+    <button class="eq-tune-toggle" id="tuneToggleBtn" onclick="toggleEQPanel()">🎛️ 自訂</button>
+  </div>
+
+  <!-- 10段垂直推桿 EQ 面板 -->
+  <div class="eq-panel" id="eqPanel">
+    <div class="graphic-eq-container" id="graphicEqContainer">
+      <div class="db-scale">
+        <span>+12</span>
+        <span>+6</span>
+        <span>0</span>
+        <span>-6</span>
+        <span>-12</span>
+      </div>
+      <!-- 10個頻段推桿由 JS 動態生成 -->
+    </div>
+    <div class="save-row">
+      <button class="save-target-btn" onclick="overwritePreset('voice')">覆蓋「人聲」</button>
+      <button class="save-target-btn" onclick="overwritePreset('bass')">覆蓋「重低音」</button>
+      <button class="save-target-btn" onclick="overwritePreset('classical')">覆蓋「古典」</button>
+      <button class="reset-eq-btn" onclick="resetDefaultPresets()">還原預設</button>
+    </div>
   </div>
 
   <div class="btn-grid" id="btnContainer"></div>
@@ -144,31 +309,58 @@
     { id: 'ch8', name: 'News98', sub: 'FM 98.1', url: 'https://stream.rcs.revma.com/pntx1639ntzuv.m4a' }
   ];
 
-  // EQ 頻段增益設定 [低音 100Hz, 中頻 1200Hz, 高音 6000Hz] (單位 dB)
-  const eqPresets = {
-    flat:      { label: '原音',     gains: [0, 0, 0] },
-    voice:     { label: '人聲清晰', gains: [-4, 5, 3] },
-    bass:      { label: '重低音',   gains: [7, -1, 3] },
-    classical: { label: '古典劇院', gains: [3, 0, 5] }
+  // 標準 10 頻段定義（對應附圖 31.25 ~ 16K）
+  const eqBands = [
+    { label: '31.25', freq: 31.25, type: 'lowshelf' },
+    { label: '62.5',  freq: 62.5,  type: 'peaking' },
+    { label: '125',   freq: 125,   type: 'peaking' },
+    { label: '250',   freq: 250,   type: 'peaking' },
+    { label: '500',   freq: 500,   type: 'peaking' },
+    { label: '1K',    freq: 1000,  type: 'peaking' },
+    { label: '2K',    freq: 2000,  type: 'peaking' },
+    { label: '4K',    freq: 4000,  type: 'peaking' },
+    { label: '8K',    freq: 8000,  type: 'peaking' },
+    { label: '16K',   freq: 16000, type: 'highshelf' }
+  ];
+
+  // 10段預設 EQ 曲線
+  const defaultPresets = {
+    flat:      { label: '原音',     gains: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+    voice:     { label: '人聲清晰', gains: [-6, -5, -3, -1, 2, 5, 6, 4, 1, -2] },
+    bass:      { label: '重低音',   gains: [0, 4, 9, 8, 0, 0, 4, 7, 4, 0] },
+    classical: { label: '古典劇院', gains: [4, 3, 2, 0, -1, 0, 2, 4, 5, 4] }
   };
+
+  let eqPresets = JSON.parse(localStorage.getItem('customRadioEQ10Presets')) || JSON.parse(JSON.stringify(defaultPresets));
 
   const player = document.getElementById('player');
   const statusMain = document.getElementById('statusMain');
   const statusSub = document.getElementById('statusSub');
   const masterStopBtn = document.getElementById('masterStopBtn');
   const container = document.getElementById('btnContainer');
+  const eqContainer = document.getElementById('graphicEqContainer');
 
   let currentIndex = 0;
   let currentEQ = localStorage.getItem('lastRadioEQ') || 'flat';
   let useCorsBypass = false;
 
-  // Web Audio API 節點變數
   let audioCtx = null;
-  let bassFilter = null;
-  let midFilter = null;
-  let trebleFilter = null;
+  let filterNodes = [];
 
-  // 初始化 Web Audio EQ（需在使用者點擊觸發時建立）
+  // 動態建立 10 根垂直推桿 UI
+  eqBands.forEach((band, i) => {
+    const col = document.createElement('div');
+    col.className = 'band-col';
+    col.innerHTML = `
+      <span class="band-freq">${band.label}</span>
+      <div class="v-slider-wrap">
+        <input type="range" class="v-slider" id="eqSlider_${i}" min="-12" max="12" step="1" value="0" oninput="onSliderChange()">
+      </div>
+      <span class="band-val" id="eqVal_${i}">0</span>
+    `;
+    eqContainer.appendChild(col);
+  });
+
   function initAudioEQ() {
     if (audioCtx) {
       if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -178,34 +370,49 @@
     audioCtx = new AudioContext();
     const source = audioCtx.createMediaElementSource(player);
 
-    bassFilter = audioCtx.createBiquadFilter();
-    bassFilter.type = 'lowshelf';
-    bassFilter.frequency.value = 100;
+    // 串聯 10 個 BiquadFilterNode
+    filterNodes = eqBands.map(band => {
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = band.type;
+      filter.frequency.value = band.freq;
+      filter.Q.value = 1.4;
+      return filter;
+    });
 
-    midFilter = audioCtx.createBiquadFilter();
-    midFilter.type = 'peaking';
-    midFilter.frequency.value = 1200;
-    midFilter.Q.value = 1.0;
+    source.connect(filterNodes[0]);
+    for (let i = 0; i < filterNodes.length - 1; i++) {
+      filterNodes[i].connect(filterNodes[i + 1]);
+    }
+    filterNodes[filterNodes.length - 1].connect(audioCtx.destination);
 
-    trebleFilter = audioCtx.createBiquadFilter();
-    trebleFilter.type = 'highshelf';
-    trebleFilter.frequency.value = 6000;
-
-    source.connect(bassFilter);
-    bassFilter.connect(midFilter);
-    midFilter.connect(trebleFilter);
-    trebleFilter.connect(audioCtx.destination);
-
-    applyEQGains(currentEQ);
+    if (currentEQ === 'custom') {
+      onSliderChange();
+    } else {
+      applyEQGains(currentEQ);
+    }
   }
 
   function applyEQGains(presetKey) {
     const preset = eqPresets[presetKey] || eqPresets.flat;
-    if (bassFilter && midFilter && trebleFilter) {
-      bassFilter.gain.value = preset.gains[0];
-      midFilter.gain.value = preset.gains[1];
-      trebleFilter.gain.value = preset.gains[2];
+    syncSlidersUI(preset.gains);
+    if (filterNodes.length === 10) {
+      preset.gains.forEach((g, i) => {
+        filterNodes[i].gain.value = g;
+      });
     }
+  }
+
+  function syncSlidersUI(gains) {
+    gains.forEach((g, i) => {
+      const slider = document.getElementById(`eqSlider_${i}`);
+      const valText = document.getElementById(`eqVal_${i}`);
+      if (slider) slider.value = g;
+      if (valText) valText.innerText = (g > 0 ? '+' : '') + g;
+    });
+  }
+
+  function getCurrentSliderGains() {
+    return eqBands.map((_, i) => parseInt(document.getElementById(`eqSlider_${i}`).value, 10));
   }
 
   function setEQ(presetKey) {
@@ -216,12 +423,58 @@
       btn.classList.toggle('active', btn.dataset.eq === presetKey);
     });
 
-    if (audioCtx) {
-      applyEQGains(presetKey);
-    }
+    applyEQGains(presetKey);
+    updateStatusEQText();
   }
 
-  // 產生電台按鈕
+  function onSliderChange() {
+    const gains = getCurrentSliderGains();
+    syncSlidersUI(gains);
+
+    if (!audioCtx && !player.paused) {
+      initAudioEQ();
+    }
+    if (filterNodes.length === 10) {
+      gains.forEach((g, i) => {
+        filterNodes[i].gain.value = g;
+      });
+    }
+
+    currentEQ = 'custom';
+    document.querySelectorAll('.eq-btn').forEach(btn => btn.classList.remove('active'));
+    updateStatusEQText();
+  }
+
+  function overwritePreset(targetKey) {
+    eqPresets[targetKey].gains = getCurrentSliderGains();
+    localStorage.setItem('customRadioEQ10Presets', JSON.stringify(eqPresets));
+
+    setEQ(targetKey);
+    statusSub.innerText = `✅ 已將 10 段曲線覆蓋至「${eqPresets[targetKey].label}」`;
+  }
+
+  function resetDefaultPresets() {
+    eqPresets = JSON.parse(JSON.stringify(defaultPresets));
+    localStorage.removeItem('customRadioEQ10Presets');
+    setEQ(currentEQ === 'custom' ? 'flat' : currentEQ);
+    statusSub.innerText = '🔄 已還原為預設 10 段 EQ 曲線';
+  }
+
+  function toggleEQPanel() {
+    const panel = document.getElementById('eqPanel');
+    const toggleBtn = document.getElementById('tuneToggleBtn');
+    const isOpen = panel.classList.toggle('show');
+    toggleBtn.classList.toggle('open', isOpen);
+  }
+
+  function updateStatusEQText() {
+    if (player.paused) return;
+    const ch = channels[currentIndex];
+    const eqLabel = currentEQ === 'custom' ? '自訂10段' : (eqPresets[currentEQ]?.label || '原音');
+    const modeText = useCorsBypass ? '直通原音' : `EQ:${eqLabel}`;
+    statusSub.innerText = `${modeText} • ${ch.sub}`;
+  }
+
   channels.forEach((ch, idx) => {
     const btn = document.createElement('button');
     btn.className = 'ch-btn';
@@ -234,7 +487,6 @@
     container.appendChild(btn);
   });
 
-  // 智慧 CORS 容錯：若電台伺服器拒絕跨網域 EQ 處理，自動切換為直通模式確保有聲音
   player.addEventListener('error', () => {
     if (!useCorsBypass && player.hasAttribute('crossorigin')) {
       useCorsBypass = true;
@@ -267,7 +519,6 @@
     currentIndex = idx;
     localStorage.setItem('lastRadioIndex', idx);
 
-    // 每次換台預設先嘗試開啟 CORS 以支援 EQ
     if (!useCorsBypass && !player.hasAttribute('crossorigin')) {
       player.setAttribute('crossorigin', 'anonymous');
     }
@@ -278,8 +529,8 @@
 
     player.play().then(() => {
       initAudioEQ();
-      const eqName = eqPresets[currentEQ].label;
-      const modeText = useCorsBypass ? '直通原音' : `EQ:${eqName}`;
+      const eqLabel = currentEQ === 'custom' ? '自訂10段' : (eqPresets[currentEQ]?.label || '原音');
+      const modeText = useCorsBypass ? '直通原音' : `EQ:${eqLabel}`;
       updateUI(idx, true, `${modeText} • ${ch.sub}`);
       setupMediaSession(ch);
     }).catch(() => {
@@ -330,7 +581,9 @@
 
       navigator.mediaSession.setActionHandler('play', () => {
         player.play();
-        updateUI(currentIndex, true, `EQ:${eqPresets[currentEQ].label} • ${ch.sub}`);
+        updateStatusEQText();
+        masterStopBtn.innerText = '⏸ 暫停';
+        masterStopBtn.classList.add('active');
       });
       navigator.mediaSession.setActionHandler('pause', () => {
         player.pause();
@@ -348,7 +601,7 @@
   }
 
   window.addEventListener('load', () => {
-    setEQ(currentEQ);
+    setEQ(currentEQ === 'custom' ? 'flat' : currentEQ);
     const savedIdx = parseInt(localStorage.getItem('lastRadioIndex'), 10);
     currentIndex = (!isNaN(savedIdx) && savedIdx >= 0 && savedIdx < channels.length) ? savedIdx : 0;
     playByIndex(currentIndex);
