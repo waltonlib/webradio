@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>台灣車用電台</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0; background: #0d1117; color: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    display: flex; flex-direction: column; height: 100dvh;
+    padding: env(safe-area-inset-top, 16px) 14px env(safe-area-inset-bottom, 16px) 14px;
+    gap: 10px;
+  }
+  .header {
+    background: #161b22; border: 1px solid #30363d; border-radius: 16px;
+    padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;
+  }
+  .status-box { display: flex; flex-direction: column; gap: 4px; overflow: hidden; }
+  .status-label { font-size: 13px; color: #8b949e; }
+  .status-title { font-size: 20px; font-weight: 700; color: #58a6ff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .stop-btn {
+    background: #30363d; color: #fff; border: none; border-radius: 12px;
+    padding: 12px 18px; font-size: 18px; font-weight: 700; flex-shrink: 0;
+  }
+  .stop-btn.active { background: #da3633; }
+  .btn-grid {
+    display: grid; grid-template-columns: 1fr 1fr; flex: 1; gap: 10px;
+  }
+  button.ch-btn {
+    font-size: 21px; font-weight: 700;
+    border: 2px solid #30363d; border-radius: 18px;
+    background: #161b22; color: #f0f6fc;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 8px; text-align: center; line-height: 1.3;
+    transition: transform 0.1s, background 0.15s;
+  }
+  button.ch-btn:active { transform: scale(0.96); }
+  button.ch-btn.playing {
+    background: #1f6feb; border-color: #79c0ff; color: #ffffff;
+    box-shadow: 0 0 15px rgba(31, 111, 235, 0.5);
+  }
+  .sub-tag { font-size: 13px; font-weight: 400; color: #8b949e; margin-top: 4px; }
+  button.ch-btn.playing .sub-tag { color: #dbeafe; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <div class="status-box">
+      <span class="status-label" id="statusSub">準備就緒（支援方向盤上下首切台）</span>
+      <span class="status-title" id="statusMain">點擊任一電台開始播放</span>
+    </div>
+    <button class="stop-btn" id="masterStopBtn" onclick="toggleMasterPlay()">▶ 播放</button>
+  </div>
+
+  <div class="btn-grid" id="btnContainer"></div>
+  <audio id="player" preload="none" playsinline></audio>
+
+<script>
+  // 8大常用電台清單（已針對 HTTPS 安全連線優化協定）
+  const channels = [
+    { id: 'ch1', name: '中廣音樂網', sub: 'iRadio', url: 'https://sonnykuo.appspot.com/bcc/?id=中廣音樂網' },
+    { id: 'ch2', name: '中廣新聞網', sub: 'News', url: 'https://sonnykuo.appspot.com/bcc/?id=中廣新聞網' },
+    { id: 'ch3', name: '古典 97.7', sub: 'FM 97.7', url: 'https://onair.family977.com.tw:8977/live.mp3' },
+    { id: 'ch4', name: 'Bravo 91.3', sub: 'FM 91.3', url: 'https://onair.family977.com.tw:8977/live.mp3' },
+    { id: 'ch5', name: '城市廣播', sub: 'FM 90.1', url: 'https://fm901.cityfm.tw:8080/901.mp3', fallback: 'http://fm901.cityfm.tw:8080/901.mp3' },
+    { id: 'ch6', name: '飛碟聯播網', sub: 'FM 92.1', url: 'https://stream.rcs.revma.com/em90w4aeewzuv.m4a' },
+    { id: 'ch7', name: '全國廣播', sub: 'FM 106.1', url: 'https://stream.rcs.revma.com/044q61ha7a0uv' },
+    { id: 'ch8', name: '台北愛樂', sub: 'FM 99.7', url: 'https://202.39.43.67:1935/live/RA000018/chunklist.m3u8', fallback: 'http://202.39.43.67:1935/live/RA000018/chunklist.m3u8' }
+  ];
+
+  const player = document.getElementById('player');
+  const statusMain = document.getElementById('statusMain');
+  const statusSub = document.getElementById('statusSub');
+  const masterStopBtn = document.getElementById('masterStopBtn');
+  const container = document.getElementById('btnContainer');
+
+  let currentIndex = 0;
+
+  // 產生 2x4 滿版大按鈕
+  channels.forEach((ch, idx) => {
+    const btn = document.createElement('button');
+    btn.className = 'ch-btn';
+    btn.id = ch.id;
+    btn.innerHTML = `<span>${ch.name}</span><span class="sub-tag">${ch.sub}</span>`;
+    btn.onclick = () => playByIndex(idx);
+    container.appendChild(btn);
+  });
+
+  function playByIndex(idx) {
+    // 循環索引處理（支援方向盤無限上下切台）
+    if (idx < 0) idx = channels.length - 1;
+    if (idx >= channels.length) idx = 0;
+
+    const ch = channels[idx];
+
+    // 如果點擊正在播放的同一台，則暫停
+    if (!player.paused && currentIndex === idx && player.src) {
+      player.pause();
+      updateUI(idx, false, '已暫停');
+      return;
+    }
+
+    currentIndex = idx;
+    localStorage.setItem('lastRadioIndex', idx); // 記憶最後收聽電台
+
+    updateUI(idx, false, '連線緩衝中...');
+    player.src = ch.url;
+    player.load();
+
+    player.play().then(() => {
+      updateUI(idx, true, '正在播放 • ' + ch.sub);
+      setupMediaSession(ch);
+    }).catch(err => {
+      // 若瀏覽器阻擋自動播放或憑證失敗，提示點擊啟動
+      updateUI(idx, false, '請點擊螢幕任一按鈕啟動聲音');
+    });
+  }
+
+  function toggleMasterPlay() {
+    if (player.paused) {
+      playByIndex(currentIndex);
+    } else {
+      player.pause();
+      updateUI(currentIndex, false, '已暫停');
+    }
+  }
+
+  function updateUI(activeIdx, isPlaying, subMsg) {
+    const ch = channels[activeIdx];
+    statusMain.innerText = ch.name;
+    statusSub.innerText = subMsg;
+
+    if (isPlaying) {
+      masterStopBtn.innerText = '⏸ 暫停';
+      masterStopBtn.classList.add('active');
+    } else {
+      masterStopBtn.innerText = '▶ 播放';
+      masterStopBtn.classList.remove('active');
+    }
+
+    channels.forEach((item, i) => {
+      const btn = document.getElementById(item.id);
+      if (i === activeIdx && isPlaying) {
+        btn.classList.add('playing');
+      } else {
+        btn.classList.remove('playing');
+      }
+    });
+  }
+
+  // 設定車機藍牙 / CarPlay / iPhone 鎖定畫面資訊與方向盤按鍵
+  function setupMediaSession(ch) {
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: ch.name,
+        artist: ch.sub + ' • 台灣廣播',
+        album: 'CAR MULTIMEDIA'
+      });
+
+      navigator.mediaSession.setActionHandler('play', () => {
+        player.play();
+        updateUI(currentIndex, true, '正在播放 • ' + ch.sub);
+      });
+      navigator.mediaSession.setActionHandler('pause', () => {
+        player.pause();
+        updateUI(currentIndex, false, '已暫停');
+      });
+      navigator.mediaSession.setActionHandler('previoustrack', () => {
+        playByIndex(currentIndex - 1);
+      });
+      navigator.mediaSession.setActionHandler('nexttrack', () => {
+        playByIndex(currentIndex + 1);
+      });
+    }
+  }
+
+  // 網頁開啟時讀取上次收聽紀錄並嘗試自動播放
+  window.addEventListener('load', () => {
+    const savedIdx = parseInt(localStorage.getItem('lastRadioIndex'), 10);
+    currentIndex = (!isNaN(savedIdx) && savedIdx >= 0 && savedIdx < channels.length) ? savedIdx : 0;
+    playByIndex(currentIndex);
+  });
+</script>
+</body>
+</html>
