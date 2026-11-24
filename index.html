@@ -36,14 +36,22 @@
     background: #2D3034;
     border: 1px solid #45494F;
     border-radius: 18px;
-    padding: 12px 16px;
+    padding: 12px 14px;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 8px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     flex-shrink: 0;
   }
-  .status-box { display: flex; flex-direction: column; gap: 3px; overflow: hidden; }
+  .status-box {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    overflow: hidden;
+    flex: 1;
+    min-width: 0;
+  }
   .status-label { font-size: 12px; color: #9EA3A8; letter-spacing: 0.5px; }
   .status-title {
     font-size: 19px;
@@ -53,13 +61,31 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
+  .header-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 5px;
+    flex-shrink: 0;
+  }
+  .version-badge {
+    font-size: 10px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: #8E99A2;
+    background: #23262A;
+    border: 1px solid #3C4148;
+    border-radius: 6px;
+    padding: 1px 6px;
+    letter-spacing: 0.3px;
+  }
   .stop-btn {
     background: #4A4E54;
     color: #E2DFD7;
     border: 1px solid #636870;
     border-radius: 14px;
-    padding: 10px 16px;
-    font-size: 17px;
+    padding: 8px 14px;
+    font-size: 16px;
     font-weight: 700;
     flex-shrink: 0;
     cursor: pointer;
@@ -479,7 +505,6 @@
     border-radius: 8px;
     cursor: pointer;
   }
-  /* 原地展開的編輯表單 */
   .edit-inline-box {
     display: flex;
     flex-direction: column;
@@ -656,7 +681,10 @@
       <span class="status-label" id="statusSub">walton電台 • 長按 1 秒可調整順序</span>
       <span class="status-title" id="statusMain">點擊任一電台開始播放</span>
     </div>
-    <button class="stop-btn" id="masterStopBtn" onclick="toggleMasterPlay()">▶ 播放</button>
+    <div class="header-right">
+      <span class="version-badge" id="versionBadge">20261124_v01</span>
+      <button class="stop-btn" id="masterStopBtn" onclick="toggleMasterPlay()">▶ 播放</button>
+    </div>
   </div>
 
   <!-- 5個加大字體色塊 EQ 按鈕 + 展開微調面板按鈕 -->
@@ -748,6 +776,9 @@
   <audio id="playerDirect" preload="none" playsinline></audio>
 
 <script>
+  // 版本命名規則：西元年月日_v01（每日編輯重置為當天日期，同日遞增 v02, v03...，隔日歸為 v01）
+  const APP_VERSION = '20261124_v01';
+
   const defaultChannels = [
     { id: 'ch1',  name: '中廣音樂網', sub: 'iRadio',   url: 'https://sonnykuo.appspot.com/bcc/?id=中廣音樂網' },
     { id: 'ch2',  name: '中廣新聞網', sub: 'News',     url: 'https://sonnykuo.appspot.com/bcc/?id=中廣新聞網' },
@@ -784,7 +815,6 @@
   let channels = loadChannelsData();
   let trashChannels = JSON.parse(localStorage.getItem('waltonTrashChannelsList')) || [];
 
-  // 管理彈窗暫存工作副本與初始快照（用於偵測是否有變更）
   let draftChannels = [];
   let draftTrashChannels = [];
   let initialSnapshotStr = '';
@@ -992,7 +1022,6 @@
 
   // ==================== 電台管理彈窗（支援編輯、暫存、取消變更偵測） ====================
   function openChannelManager() {
-    // 建立深度拷貝暫存複本
     draftChannels = JSON.parse(JSON.stringify(channels));
     draftTrashChannels = JSON.parse(JSON.stringify(trashChannels));
     editingChannelId = null;
@@ -1007,7 +1036,6 @@
   }
 
   function hasUnsavedChanges() {
-    // 檢查上方新增欄位是否有未按新增的文字，或列表/垃圾桶是否與初始快照不同
     const pendingName = document.getElementById('newChName').value.trim();
     const pendingUrl = document.getElementById('newChUrl').value.trim();
     if (pendingName || pendingUrl) return true;
@@ -1016,7 +1044,6 @@
     return currentSnapshotStr !== initialSnapshotStr;
   }
 
-  // 點擊右上角「✕」取消按鈕
   function attemptCloseChannelManager() {
     if (hasUnsavedChanges()) {
       document.getElementById('unsavedConfirmModal').classList.add('show');
@@ -1030,7 +1057,6 @@
   }
 
   function confirmDiscardAndClose() {
-    // 放棄所有暫存變更，直接關閉所有彈窗
     editingChannelId = null;
     document.getElementById('unsavedConfirmModal').classList.remove('show');
     document.getElementById('channelModal').classList.remove('show');
@@ -1041,9 +1067,7 @@
     commitChannelManagerChanges();
   }
 
-  // 正式儲存所有變更並更新主畫面
   function commitChannelManagerChanges() {
-    // 若使用者在新增表單填了完整名稱與網址卻忘了按「＋新增」，貼心一併幫他加入
     const pendingName = document.getElementById('newChName').value.trim();
     const pendingSub = document.getElementById('newChSub').value.trim() || '網路電台';
     const pendingUrl = document.getElementById('newChUrl').value.trim();
@@ -1058,7 +1082,6 @@
     const prevPlayingCh = channels[currentIndex];
     const prevUrl = prevPlayingCh ? prevPlayingCh.url : '';
 
-    // 清理被永久刪除電台的前級設定
     const allRemainingIds = new Set([
       ...draftChannels.map(c => c.id),
       ...draftTrashChannels.map(c => c.id)
@@ -1068,12 +1091,10 @@
     });
     localStorage.setItem('perChannelPreampMap', JSON.stringify(perChannelPreamp));
 
-    // 套用暫存至正式資料
     channels = draftChannels;
     trashChannels = draftTrashChannels;
     saveChannelsData();
 
-    // 檢查目前播放電台是否仍在清單中或網址已更新
     const newIdx = channels.findIndex(c => c.id === currentChannelId);
     if (newIdx === -1) {
       currentIndex = 0;
@@ -1081,7 +1102,6 @@
       localStorage.setItem('lastRadioChannelId', currentChannelId);
     } else {
       currentIndex = newIdx;
-      // 若正在播放該電台且使用者剛修改了它的串流網址，自動重新連線新網址
       if (currentPlayState !== 'idle' && channels[currentIndex].url !== prevUrl) {
         currentPlayState = 'idle';
         playByIndex(currentIndex, true);
@@ -1108,7 +1128,6 @@
       item.className = 'ch-manage-item';
 
       if (editingChannelId === ch.id) {
-        // 原地展開編輯表單
         item.innerHTML = `
           <div class="edit-inline-box">
             <div class="add-form-row">
@@ -1879,6 +1898,7 @@
   }, { passive: false });
 
   window.addEventListener('load', () => {
+    document.getElementById('versionBadge').innerText = APP_VERSION;
     renderChannelButtons();
     applyCurrentChannelPreamp();
     setEQ(currentEQ, false);
