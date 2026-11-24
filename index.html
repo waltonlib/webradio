@@ -64,9 +64,9 @@
     cursor: pointer;
     transition: background 0.25s, border-color 0.25s;
   }
-  .stop-btn.loading {
+  .stop-btn.selected {
     background: #8C7A6B;
-    border-color: #B8A696;
+    border-color: #D9C3B0;
     color: #FAF8F5;
   }
   .stop-btn.active {
@@ -87,10 +87,10 @@
     flex-shrink: 0;
   }
   .eq-btn {
-    background: #363A40;       /* 未選取時也具備清晰莫蘭迪色塊底色 */
+    background: #363A40;
     border: 1.5px solid #4A4F57;
     color: #D6CFC7;
-    font-size: 16px;           /* 加大字體 */
+    font-size: 16px;
     font-weight: 700;
     padding: 10px 2px;
     border-radius: 12px;
@@ -100,12 +100,11 @@
   }
   .eq-btn:active { transform: scale(0.95); }
   .eq-btn.active {
-    background: #6B7E74;       /* 啟用時莫蘭迪鼠尾草綠高亮色塊 */
+    background: #6B7E74;
     color: #FAF8F5;
     border-color: #A8BEB3;
     box-shadow: 0 2px 10px rgba(107, 126, 116, 0.4);
   }
-  /* 自訂模式按鈕在啟用時給溫暖奶茶棕區隔 */
   .eq-btn[data-eq="custom"].active {
     background: #8C7A6B;
     border-color: #C9B6A6;
@@ -280,7 +279,7 @@
     font-weight: 700;
     border: 1.5px solid #484C52;
     border-radius: 18px;
-    background: #32353A;
+    background: #32353A; /* 狀態1：未選取待機色（莫蘭迪岩灰） */
     color: #E2DFD7;
     display: flex;
     flex-direction: column;
@@ -294,37 +293,41 @@
     transition: transform 0.15s ease, background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
   }
 
-  @keyframes pulseBuffer {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.78; }
-  }
-  button.ch-btn.loading {
+  /* 狀態2：已確定選台、等待串流連線出聲的專屬按鈕色（莫蘭迪暖奶茶棕） */
+  button.ch-btn.selected {
     background: #8C7A6B;
-    border-color: #D9C3B0;
+    border: 2px solid #E6C7AD;
     color: #FAF8F5;
-    animation: pulseBuffer 1.2s infinite ease-in-out;
+    box-shadow: 0 4px 14px rgba(140, 122, 107, 0.35);
   }
 
+  /* 狀態3：串流真正成功出聲後的按鈕色（莫蘭迪霧霾藍） */
   button.ch-btn.playing {
     background: #5B7A8C;
-    border-color: #B4C8D4;
+    border: 2px solid #B4C8D4;
     color: #FAF8F5;
-    box-shadow: 0 4px 16px rgba(91, 122, 140, 0.35);
-    animation: none;
+    box-shadow: 0 4px 16px rgba(91, 122, 140, 0.4);
   }
 
+  /* 長按 1 秒拖曳排序來源按鈕 */
   button.ch-btn.dragging {
-    transform: scale(1.05);
+    transform: scale(1.04);
     background: #6E655F;
-    border: 2px dashed #E6C7AD;
+    border: 2.5px dashed #E6C7AD;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
     z-index: 20;
-    animation: none;
+  }
+
+  /* 拖曳目標落點預覽 */
+  button.ch-btn.drag-over {
+    transform: scale(0.96);
+    background: #485750;
+    border: 2.5px dashed #A8BEB3;
   }
 
   .sub-tag { font-size: 12px; font-weight: 400; color: #9EA3A8; margin-top: 3px; pointer-events: none; }
   button.ch-btn span { pointer-events: none; }
-  button.ch-btn.loading .sub-tag { color: #EFE5DC; }
+  button.ch-btn.selected .sub-tag { color: #EFE5DC; }
   button.ch-btn.playing .sub-tag { color: #DCE6EC; }
 </style>
 </head>
@@ -419,7 +422,6 @@
     { label: '16K',   freq: 16000, type: 'highshelf' }
   ];
 
-  // 包含獨立儲存的「自訂 (custom)」10段曲線
   const defaultPresets = {
     flat:      { label: '原音',   gains: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
     voice:     { label: '人聲',   gains: [-6, -5, -3, -1, 2, 5, 6, 4, 1, -2] },
@@ -450,6 +452,7 @@
   let currentChannelId = localStorage.getItem('lastRadioChannelId') || channels[0].id;
   let currentIndex = Math.max(0, channels.findIndex(c => c.id === currentChannelId));
   let currentEQ = localStorage.getItem('lastRadioEQ') || 'flat';
+  // 狀態機：'idle' (未播放) | 'selected' (已確定選台、等待串流成功) | 'playing' (串流成功出聲)
   let currentPlayState = 'idle';
 
   let audioCtx = null;
@@ -464,6 +467,7 @@
   let longPressTimer = null;
   let isDraggingMode = false;
   let draggedChannelId = null;
+  let dropTargetChannelId = null;
   let startX = 0;
   let startY = 0;
 
@@ -476,11 +480,8 @@
       btn.dataset.id = ch.id;
 
       if (idx === currentIndex) {
-        if (currentPlayState === 'loading') btn.classList.add('loading');
+        if (currentPlayState === 'selected') btn.classList.add('selected');
         if (currentPlayState === 'playing') btn.classList.add('playing');
-      }
-      if (isDraggingMode && ch.id === draggedChannelId) {
-        btn.classList.add('dragging');
       }
 
       const db = getChannelPreampDb(idx);
@@ -493,56 +494,86 @@
         startY = e.clientY;
         isDraggingMode = false;
         draggedChannelId = ch.id;
+        dropTargetChannelId = null;
 
         clearTimeout(longPressTimer);
         longPressTimer = setTimeout(() => {
           isDraggingMode = true;
           btn.classList.add('dragging');
+          try { btn.setPointerCapture(e.pointerId); } catch (_) {}
           if (navigator.vibrate) navigator.vibrate(40);
-          statusSub.innerText = '🔀 拖曳至目標位置交換順序，放開即儲存';
+          statusSub.innerText = `🔀 拖曳【${ch.name}】至目標格，放開即完成交換`;
         }, 1000);
       });
 
       btn.addEventListener('pointermove', (e) => {
-        if (!draggedChannelId) return;
+        if (draggedChannelId !== ch.id) return;
 
         if (!isDraggingMode) {
           const dist = Math.hypot(e.clientX - startX, e.clientY - startY);
-          if (dist > 10) {
+          if (dist > 12) {
             clearTimeout(longPressTimer);
             draggedChannelId = null;
           }
           return;
         }
 
-        btn.style.pointerEvents = 'none';
+        btn.style.visibility = 'hidden';
         const elemBelow = document.elementFromPoint(e.clientX, e.clientY);
-        btn.style.pointerEvents = 'auto';
+        btn.style.visibility = 'visible';
 
         const targetBtn = elemBelow ? elemBelow.closest('.ch-btn') : null;
-        if (targetBtn && targetBtn.dataset.id && targetBtn.dataset.id !== draggedChannelId) {
-          const fromIdx = channels.findIndex(c => c.id === draggedChannelId);
-          const toIdx = channels.findIndex(c => c.id === targetBtn.dataset.id);
-          if (fromIdx !== -1 && toIdx !== -1) {
-            const [movedItem] = channels.splice(fromIdx, 1);
-            channels.splice(toIdx, 0, movedItem);
-            currentIndex = Math.max(0, channels.findIndex(c => c.id === currentChannelId));
-            renderChannelButtons();
+        const newTargetId = (targetBtn && targetBtn.dataset.id !== draggedChannelId) ? targetBtn.dataset.id : null;
+
+        if (newTargetId !== dropTargetChannelId) {
+          document.querySelectorAll('.ch-btn.drag-over').forEach(el => el.classList.remove('drag-over'));
+          dropTargetChannelId = newTargetId;
+
+          if (dropTargetChannelId && targetBtn) {
+            targetBtn.classList.add('drag-over');
+            const targetCh = channels.find(c => c.id === dropTargetChannelId);
+            if (targetCh) {
+              statusSub.innerText = `🔀 放開即可與【${targetCh.name}】交換位置`;
+            }
+          } else {
+            statusSub.innerText = `🔀 拖曳【${ch.name}】至目標格，放開即完成交換`;
           }
         }
       });
 
-      const finishPointer = () => {
+      const finishPointer = (e) => {
         clearTimeout(longPressTimer);
+        if (draggedChannelId !== ch.id) return;
+
+        try {
+          if (btn.hasPointerCapture(e.pointerId)) btn.releasePointerCapture(e.pointerId);
+        } catch (_) {}
+
         if (isDraggingMode) {
+          const fromIdx = channels.findIndex(c => c.id === draggedChannelId);
+          const toIdx = dropTargetChannelId ? channels.findIndex(c => c.id === dropTargetChannelId) : -1;
+
           isDraggingMode = false;
           draggedChannelId = null;
-          localStorage.setItem('customChannelOrderIds', JSON.stringify(channels.map(c => c.id)));
-          renderChannelButtons();
-          statusSub.innerText = '✅ 已儲存新的電台排列順序';
+          dropTargetChannelId = null;
+
+          if (fromIdx !== -1 && toIdx !== -1 && fromIdx !== toIdx) {
+            const temp = channels[fromIdx];
+            channels[fromIdx] = channels[toIdx];
+            channels[toIdx] = temp;
+
+            currentIndex = Math.max(0, channels.findIndex(c => c.id === currentChannelId));
+            localStorage.setItem('customChannelOrderIds', JSON.stringify(channels.map(c => c.id)));
+            renderChannelButtons();
+            statusSub.innerText = '✅ 已完成交換並儲存順序';
+          } else {
+            renderChannelButtons();
+            statusSub.innerText = '已取消移動';
+          }
           setTimeout(() => updateStatusEQText(), 1500);
-        } else if (draggedChannelId === ch.id) {
+        } else {
           draggedChannelId = null;
+          dropTargetChannelId = null;
           const targetIdx = channels.findIndex(c => c.id === ch.id);
           if (targetIdx !== -1) playByIndex(targetIdx, true);
         }
@@ -551,12 +582,13 @@
       btn.addEventListener('pointerup', finishPointer);
       btn.addEventListener('pointercancel', () => {
         clearTimeout(longPressTimer);
-        if (isDraggingMode) {
+        if (draggedChannelId === ch.id) {
           isDraggingMode = false;
           draggedChannelId = null;
+          dropTargetChannelId = null;
           renderChannelButtons();
+          updateStatusEQText();
         }
-        draggedChannelId = null;
       });
 
       btn.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -765,7 +797,6 @@
     updateStatusEQText();
   }
 
-  // 點擊「自訂」按鈕：套用獨立記憶的自訂曲線；若已在自訂模式再點一次則自動展開/收合推桿面板
   function selectCustomEQ() {
     if (currentEQ === 'custom') {
       toggleEQPanel();
@@ -778,7 +809,6 @@
     }
   }
 
-  // 拖動任一推桿時，即時更新並自動存入「自訂 (custom)」曲線
   function onSliderChange() {
     const gains = getCurrentSliderGains();
     syncSlidersUI(gains);
@@ -830,8 +860,12 @@
   }
 
   function updateStatusEQText() {
-    if (activePlayer.paused) {
+    if (currentPlayState === 'idle') {
       statusSub.innerText = '長按電台 1 秒可滑動調整順序';
+      return;
+    }
+    if (currentPlayState === 'selected') {
+      statusSub.innerText = '已選台，串流連線緩衝中...';
       return;
     }
     const ch = channels[currentIndex];
@@ -846,10 +880,14 @@
   }
 
   function stopAllPlayersImmediately() {
+    playerEQ.onplaying = null;
+    playerEQ.onerror = null;
     playerEQ.pause();
     playerEQ.removeAttribute('src');
     playerEQ.load();
 
+    playerDirect.onplaying = null;
+    playerDirect.onerror = null;
     playerDirect.pause();
     playerDirect.removeAttribute('src');
     playerDirect.load();
@@ -860,8 +898,10 @@
     }
   }
 
-  function attachAndPlay(targetPlayer, url, token, onSuccess, onFail) {
+  // 只有在真正觸發 onplaying（串流解碼出聲）時才呼叫 onStreamConfirmed
+  function attachAndPlay(targetPlayer, url, token, onStreamConfirmed, onFail) {
     const isM3u8 = url.includes('.m3u8') || url.includes('sonnykuo.appspot.com');
+    let confirmed = false;
 
     if (targetPlayer === playerEQ && fadeGainNode && audioCtx) {
       fadeGainNode.gain.setValueAtTime(0.0001, audioCtx.currentTime);
@@ -869,31 +909,37 @@
       targetPlayer.volume = 0;
     }
 
+    targetPlayer.onplaying = () => {
+      if (token === switchToken && !confirmed) {
+        confirmed = true;
+        onStreamConfirmed();
+      }
+    };
+
+    targetPlayer.onerror = () => {
+      if (token === switchToken && !confirmed) {
+        onFail();
+      }
+    };
+
     if (isM3u8 && !targetPlayer.canPlayType('application/vnd.apple.mpegurl') && window.Hls && Hls.isSupported()) {
       hlsInstance = new Hls();
       hlsInstance.loadSource(url);
       hlsInstance.attachMedia(targetPlayer);
       hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
         if (token !== switchToken) return;
-        targetPlayer.play().then(() => {
-          if (token === switchToken) onSuccess();
-        }).catch(() => {
-          if (token === switchToken) onFail();
+        targetPlayer.play().catch(() => {
+          if (token === switchToken && !confirmed) onFail();
         });
       });
       hlsInstance.on(Hls.Events.ERROR, (event, data) => {
-        if (data.fatal && token === switchToken) onFail();
+        if (data.fatal && token === switchToken && !confirmed) onFail();
       });
     } else {
       targetPlayer.src = url;
       targetPlayer.load();
-      targetPlayer.onerror = () => {
-        if (token === switchToken) onFail();
-      };
-      targetPlayer.play().then(() => {
-        if (token === switchToken) onSuccess();
-      }).catch(() => {
-        if (token === switchToken) onFail();
+      targetPlayer.play().catch(() => {
+        if (token === switchToken && !confirmed) onFail();
       });
     }
   }
@@ -905,7 +951,8 @@
     const ch = channels[idx];
     const myToken = ++switchToken;
 
-    if (!activePlayer.paused && currentIndex === idx) {
+    // 若點擊正在選取或播放中的同一台 -> 0.3秒淡出後停止並回到未選取色
+    if (currentPlayState !== 'idle' && currentIndex === idx) {
       fadeOutCurrentAudio(() => {
         if (myToken !== switchToken) return;
         stopAllPlayersImmediately();
@@ -919,10 +966,12 @@
     localStorage.setItem('lastRadioChannelId', ch.id);
     applyCurrentChannelPreamp();
 
-    updateUIState(idx, 'loading', '切換緩衝中...');
+    // 1. 按下按鈕瞬間：立即鎖定「已選台按鈕色 (selected)」，保持此色直到真正串流成功出聲
+    updateUIState(idx, 'selected', '已選台，串流連線緩衝中...');
 
     if (isUserClick) initAudioEQ();
 
+    // 2. 舊台 0.3 秒平滑淡出，同時按鈕維持「已選台按鈕色」
     fadeOutCurrentAudio(() => {
       if (myToken !== switchToken) return;
       stopAllPlayersImmediately();
@@ -932,6 +981,7 @@
         ch.url,
         myToken,
         () => {
+          // 3A. EQ 通道真正出聲 -> 0.3秒淡入並轉為「串流成功按鈕色 (playing)」
           activePlayer = playerEQ;
           isDirectMode = false;
           initAudioEQ();
@@ -941,12 +991,14 @@
           setupMediaSession(ch);
         },
         () => {
+          // 若 CORS 失敗，改由直通通道連線（期間按鈕依然保持「已選台按鈕色」）
           if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
           attachAndPlay(
             playerDirect,
             ch.url,
             myToken,
             () => {
+              // 3B. 直通通道真正出聲 -> 0.3秒淡入並轉為「串流成功按鈕色 (playing)」
               activePlayer = playerDirect;
               isDirectMode = true;
               fadeInTargetAudio(true);
@@ -955,7 +1007,8 @@
               setupMediaSession(ch);
             },
             () => {
-              updateUIState(idx, 'idle', '點擊任一按鈕啟動播放（或此台暫無訊號）');
+              // 若自動載入被瀏覽器擋下或串流中斷，維持「已選台按鈕色」並提示點擊啟動
+              updateUIState(idx, 'selected', '已選台 • 點擊上方「▶ 播放」或此鈕啟動聲音');
             }
           );
         }
@@ -964,7 +1017,9 @@
   }
 
   function toggleMasterPlay() {
-    if (activePlayer.paused) {
+    if (currentPlayState === 'idle' || activePlayer.paused) {
+      // 若目前處於 selected 但暫停狀態，先歸為 idle 再重新觸發完整連線
+      currentPlayState = 'idle';
       playByIndex(currentIndex, true);
     } else {
       const myToken = ++switchToken;
@@ -976,19 +1031,20 @@
     }
   }
 
+  // 三階段按鈕色彩狀態：'idle' (待機灰) | 'selected' (已確定選台暖棕) | 'playing' (串流成功霧藍)
   function updateUIState(activeIdx, state, subMsg) {
     currentPlayState = state;
     const ch = channels[activeIdx];
     statusMain.innerText = ch.name;
     if (subMsg) statusSub.innerText = subMsg;
 
-    masterStopBtn.classList.remove('loading', 'active');
+    masterStopBtn.classList.remove('selected', 'active');
     if (state === 'playing') {
       masterStopBtn.innerText = '⏸ 暫停';
       masterStopBtn.classList.add('active');
-    } else if (state === 'loading') {
-      masterStopBtn.innerText = '⏳ 緩衝';
-      masterStopBtn.classList.add('loading');
+    } else if (state === 'selected') {
+      masterStopBtn.innerText = '⏳ 連線中';
+      masterStopBtn.classList.add('selected');
     } else {
       masterStopBtn.innerText = '▶ 播放';
     }
@@ -996,9 +1052,9 @@
     channels.forEach((item, i) => {
       const btn = document.getElementById(item.id);
       if (!btn) return;
-      btn.classList.remove('loading', 'playing');
+      btn.classList.remove('selected', 'playing');
       if (i === activeIdx) {
-        if (state === 'loading') btn.classList.add('loading');
+        if (state === 'selected') btn.classList.add('selected');
         if (state === 'playing') btn.classList.add('playing');
       }
     });
