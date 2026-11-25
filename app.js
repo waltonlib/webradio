@@ -115,7 +115,6 @@ if (!eqPresets || typeof eqPresets !== 'object') eqPresets = JSON.parse(JSON.str
 if (!eqPresets.custom) eqPresets.custom = JSON.parse(JSON.stringify(defaultPresets.custom));
 let perChannelPreamp = safeParseJSON('perChannelPreampMap', {}) || {};
 
-// 靜默模式設定（預設 20 秒，可選 關閉 / 10 / 20 / 30 / 60 / 120）
 const validSilentDelays = [0, 10, 20, 30, 60, 120];
 const defaultSilentConfig = {
   delaySec: 20,
@@ -139,7 +138,6 @@ let silentClockTimer = null;
 let silentDriftTimer = null;
 let isSilentModeActive = false;
 
-// 車用偏好設定：預設緩衝/斷線重連秒數改為 16 秒
 let themeMode = localStorage.getItem('waltonThemeMode') || 'night';
 const reconnectOptions = [4.5, 8, 16, 25];
 let reconnectDelaySec = parseFloat(localStorage.getItem('waltonReconnectSec')) || 16;
@@ -148,12 +146,12 @@ if (!reconnectOptions.includes(reconnectDelaySec)) {
   localStorage.setItem('waltonReconnectSec', reconnectDelaySec);
 }
 
-// EQ 推桿三段高度模式：'normal' | 'tall' | 'compact'
 const eqHeightModes = ['normal', 'tall', 'compact'];
 let eqHeightMode = localStorage.getItem('waltonEqHeightMode') || 'normal';
 if (!eqHeightModes.includes(eqHeightMode)) eqHeightMode = 'normal';
 
-let wakeLockEnabled = false;
+// 預設開啟螢幕常亮（首次點擊螢幕手勢後自動申請系統 Wake Lock）
+let wakeLockEnabled = true;
 let wakeLockSentinel = null;
 let gridCols = parseInt(localStorage.getItem('waltonGridCols'), 10) === 3 ? 3 : 2;
 let isAttMuted = false;
@@ -270,6 +268,9 @@ function enterSilentMode(forcePreview = false) {
   if (silentConfig.ratio === 'half') overlay.classList.add('ratio-half');
   if (silentConfig.ratio === 'full') overlay.classList.add('ratio-full');
 
+  const infoZone = document.getElementById('silentInfoZone');
+  if (infoZone) infoZone.style.transform = 'translateY(0px)';
+
   renderSilentContent();
   overlay.classList.add('visible');
   requestAnimationFrame(() => overlay.classList.add('fade-in'));
@@ -302,7 +303,9 @@ function exitSilentMode() {
     if (!isSilentModeActive) {
       overlay.classList.remove('visible');
       const inner = document.getElementById('silentInnerContent');
+      const infoZone = document.getElementById('silentInfoZone');
       if (inner) inner.style.transform = 'translate(0, 0)';
+      if (infoZone) infoZone.style.transform = 'translateY(0px)';
     }
   }, 300);
 
@@ -366,21 +369,62 @@ function renderSilentContent() {
   }
 }
 
+// 靜默模式防誤觸手勢：單點觸屏忽略、上滑（Swipe Up）解鎖、左右滑切台
 const silentOverlayEl = document.getElementById('silentOverlay');
 let silentTouchStartX = 0;
 let silentTouchStartY = 0;
+let silentTracking = false;
 
 silentOverlayEl.addEventListener('pointerdown', (e) => {
   if (e.target.closest('button')) return;
   silentTouchStartX = e.clientX;
   silentTouchStartY = e.clientY;
+  silentTracking = true;
 }, { passive: true });
 
-silentOverlayEl.addEventListener('pointerup', (e) => {
-  if (!isSilentModeActive || e.target.closest('button')) return;
+silentOverlayEl.addEventListener('pointermove', (e) => {
+  if (!isSilentModeActive || !silentTracking) return;
+  const dy = e.clientY - silentTouchStartY;
+  const infoZone = document.getElementById('silentInfoZone');
+  const wakeHint = document.getElementById('silentWakeHint');
+  // 手指往上拖曳時給予即時微幅跟手回饋
+  if (dy < 0) {
+    const lift = Math.max(-42, dy * 0.45);
+    if (infoZone) infoZone.style.transform = `translateY(${lift}px)`;
+    if (wakeHint) {
+      wakeHint.style.color = dy < -60 ? '#8FA8B8' : '#4A545C';
+      wakeHint.innerText = dy < -60 ? '⌃ 放開立即解鎖' : '⌃ 上滑解鎖 • 左右滑動切台';
+    }
+  }
+}, { passive: true });
+
+const handleSilentPointerEnd = (e) => {
+  if (!isSilentModeActive || !silentTracking) return;
+  silentTracking = false;
+
+  const infoZone = document.getElementById('silentInfoZone');
+  const wakeHint = document.getElementById('silentWakeHint');
+  if (infoZone) infoZone.style.transform = 'translateY(0px)';
+  if (wakeHint) {
+    wakeHint.style.color = '#2B3136';
+    wakeHint.innerText = '⌃ 上滑解鎖 • 左右滑動切台';
+  }
+
+  if (e.target.closest('button')) return;
+
   const dx = e.clientX - silentTouchStartX;
   const dy = e.clientY - silentTouchStartY;
 
+  // 1. 往上滑動超過 60px 且垂直位移大於水平位移 1.4 倍 -> 解鎖喚醒
+  if (dy < -60 && Math.abs(dy) > Math.abs(dx) * 1.4) {
+    if (navigator.vibrate) navigator.vibrate(25);
+    e.preventDefault();
+    e.stopPropagation();
+    exitSilentMode();
+    return;
+  }
+
+  // 2. 左右滑動超過 65px -> 靜默盲操切上一台 / 下一台
   if (Math.abs(dx) > 65 && Math.abs(dx) > Math.abs(dy) * 1.5) {
     if (navigator.vibrate) navigator.vibrate(25);
     if (dx < 0) stepChannelByScanRule(1);
@@ -389,9 +433,16 @@ silentOverlayEl.addEventListener('pointerup', (e) => {
     return;
   }
 
+  // 3. 單點觸屏或小幅度誤碰 -> 完全忽略不做反應（並阻斷穿透誤觸背後按鈕）
   e.preventDefault();
   e.stopPropagation();
-  exitSilentMode();
+};
+
+silentOverlayEl.addEventListener('pointerup', handleSilentPointerEnd);
+silentOverlayEl.addEventListener('pointercancel', () => {
+  silentTracking = false;
+  const infoZone = document.getElementById('silentInfoZone');
+  if (infoZone) infoZone.style.transform = 'translateY(0px)';
 });
 
 function openSilentSettings() {
@@ -576,7 +627,7 @@ function stepChannelByScanRule(direction) {
   else playByIndex(favIndices[(posInFav + direction + favIndices.length) % favIndices.length], true);
 }
 
-// ==================== 斷線重連秒數（預設 16 秒） / 螢幕常亮 / 睡眠定時 / 網格欄數 ====================
+// ==================== 斷線重連秒數 / 螢幕常亮（預設長亮） / 睡眠定時 / 網格欄數 ====================
 function updateReconnectBtnUI() {
   document.getElementById('reconnectSecBtn').innerText = `🔄 重連${reconnectDelaySec}s`;
 }
@@ -588,8 +639,20 @@ function cycleReconnectSec() {
   updateReconnectBtnUI();
 }
 
+function updateWakeLockBtnUI() {
+  const btn = document.getElementById('wakeLockBtn');
+  if (!btn) return;
+  if (wakeLockEnabled) {
+    btn.innerText = '🔆 常亮';
+    btn.classList.add('on');
+  } else {
+    btn.innerText = '💤 鎖屏省電';
+    btn.classList.remove('on');
+  }
+}
+
 async function requestWakeLockIfNeeded() {
-  if (!wakeLockEnabled) return;
+  if (!wakeLockEnabled || wakeLockSentinel) return;
   if ('wakeLock' in navigator) {
     try {
       wakeLockSentinel = await navigator.wakeLock.request('screen');
@@ -599,20 +662,16 @@ async function requestWakeLockIfNeeded() {
 }
 
 async function toggleWakeLock() {
-  const btn = document.getElementById('wakeLockBtn');
   if (!('wakeLock' in navigator)) {
     alert('目前瀏覽器不支援螢幕常亮鎖定，可透過 iPhone「設定 ＞ 螢幕顯示與亮度 ＞ 自動鎖定」調整。');
     return;
   }
   wakeLockEnabled = !wakeLockEnabled;
+  updateWakeLockBtnUI();
   if (wakeLockEnabled) {
     await requestWakeLockIfNeeded();
-    btn.innerText = '🔆 常亮';
-    btn.classList.add('on');
   } else {
     if (wakeLockSentinel) { try { await wakeLockSentinel.release(); } catch (_) {} wakeLockSentinel = null; }
-    btn.innerText = '💤 鎖屏省電';
-    btn.classList.remove('on');
   }
 }
 
@@ -1630,6 +1689,7 @@ function playByIndex(idx, isUserClick = false, isAutoReconnect = false) {
   }
 
   isAwaitingFirstTap = false;
+  requestWakeLockIfNeeded();
   const loadingMsg = isAutoReconnect ? `🔄 訊號中斷(${reconnectDelaySec}s)，自動重連中 (${reconnectRetryCount})...` : '已選台，串流連線緩衝中...';
   updateUIState(idx, 'selected', loadingMsg);
   initAudioEQ();
@@ -1680,6 +1740,7 @@ function playByIndex(idx, isUserClick = false, isAutoReconnect = false) {
 
 function toggleMasterPlay() {
   isAwaitingFirstTap = false;
+  requestWakeLockIfNeeded();
   if (currentPlayState !== 'playing' || activePlayer.paused) {
     currentPlayState = 'idle';
     playByIndex(currentIndex, true);
@@ -1759,6 +1820,7 @@ window.addEventListener('online', () => {
 });
 
 document.addEventListener('pointerdown', (e) => {
+  requestWakeLockIfNeeded();
   if (!isSilentModeActive) resetSilentIdleTimer();
   if (e.target.closest('#channelModal') || e.target.closest('#unsavedConfirmModal') || e.target.closest('#silentModal') || e.target.closest('#factoryResetConfirmModal')) return;
   if (isAwaitingFirstTap && !e.target.closest('.ch-btn') && !e.target.closest('button')) {
@@ -1789,6 +1851,7 @@ window.addEventListener('load', () => {
   applyTheme();
   applyDriveMode();
   applyEqHeightMode();
+  updateWakeLockBtnUI();
   updateReconnectBtnUI();
   updateSleepTimerUI();
   updateFavOnlyUI();
