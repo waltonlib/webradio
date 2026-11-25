@@ -115,7 +115,6 @@ if (!eqPresets || typeof eqPresets !== 'object') eqPresets = JSON.parse(JSON.str
 if (!eqPresets.custom) eqPresets.custom = JSON.parse(JSON.stringify(defaultPresets.custom));
 let perChannelPreamp = safeParseJSON('perChannelPreampMap', {}) || {};
 
-// ==================== 靜默模式設定（預設 10 秒，可選 10 / 20 / 30 / 60 / 120） ====================
 const validSilentDelays = [0, 10, 20, 30, 60, 120];
 const defaultSilentConfig = {
   delaySec: 10,
@@ -139,7 +138,6 @@ let silentClockTimer = null;
 let silentDriftTimer = null;
 let isSilentModeActive = false;
 
-// ==================== 車用偏好設定 ====================
 let themeMode = localStorage.getItem('waltonThemeMode') || 'night';
 const reconnectOptions = [2, 4.5, 8, 15];
 let reconnectDelaySec = parseFloat(localStorage.getItem('waltonReconnectSec')) || 4.5;
@@ -149,7 +147,7 @@ let wakeLockEnabled = false;
 let wakeLockSentinel = null;
 let gridCols = parseInt(localStorage.getItem('waltonGridCols'), 10) === 3 ? 3 : 2;
 let isAttMuted = false;
-let isDriveMode = localStorage.getItem('waltonDriveMode') === 'true';
+let isDriveMode = false; // 預設開啟完整介面，確保 EQ 調整與電台編輯隨時可見
 let favOnlyScan = localStorage.getItem('waltonFavOnlyScan') === 'true';
 
 const sleepTimerOptions = [0, 10, 15, 30, 45, 60, 90];
@@ -424,7 +422,7 @@ function previewSilentModeNow() {
   enterSilentMode();
 }
 
-// ==================== 主題 / 駕駛模式（播放中開啟直接 0.3s 進靜默） ====================
+// ==================== 主題 / 駕駛模式 ====================
 function applyTheme() {
   const btn = document.getElementById('themeToggleBtn');
   const prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
@@ -467,10 +465,8 @@ function applyDriveMode() {
 
 function toggleDriveMode() {
   isDriveMode = !isDriveMode;
-  localStorage.setItem('waltonDriveMode', isDriveMode);
   applyDriveMode();
 
-  // 當正常播放時開啟極簡大字駕駛模式，直接 0.3 秒平滑轉換至純黑靜默模式
   if (isDriveMode && currentPlayState === 'playing') {
     enterSilentMode();
   }
@@ -1628,7 +1624,6 @@ function updateUIState(activeIdx, state, subMsg) {
     if (isSilentModeActive) {
       renderSilentContent();
     } else if (isDriveMode) {
-      // 極簡駕駛模式下，正常播音直接以 0.3 秒緩慢轉換至靜默
       enterSilentMode();
     } else {
       resetSilentIdleTimer();
@@ -1645,7 +1640,6 @@ function updateUIState(activeIdx, state, subMsg) {
     exitSilentMode();
   }
 
-  // 重新渲染電台按鈕狀態，確保串流緩衝中即時顯示「電台名稱 • 串流中」
   renderChannelButtons();
 }
 
@@ -1704,6 +1698,7 @@ document.addEventListener('touchmove', (e) => {
 }, { passive: false });
 
 window.addEventListener('load', () => {
+  localStorage.removeItem('waltonDriveMode');
   document.getElementById('versionBadge').innerText = APP_VERSION;
   applyTheme();
   applyDriveMode();
