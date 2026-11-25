@@ -12,11 +12,11 @@
 </head>
 <body>
   <div class="app-shell">
-    <!-- 左欄：雙排狀態儀表、EQ 模式快捷列、電台盲操大按鈕網格 -->
-    <div class="left-pane">
+    <!-- 頂部狀態儀表與主控制列 -->
+    <div class="top-area">
       <div class="header">
         <div class="header-meta-row">
-          <span class="version-badge" id="versionBadge">20261125_v04</span>
+          <span class="version-badge" id="versionBadge">20261125_v05</span>
           <span class="status-label" id="statusSub">點擊畫面任一處或電台按鈕開始播放</span>
           <button class="refresh-mini-btn" onclick="forceReloadPage()" title="重新整理最新網頁">🔄 刷新</button>
         </div>
@@ -48,12 +48,10 @@
         <button class="eq-btn" data-eq="custom" onclick="selectCustomEQ()">自訂</button>
         <button class="eq-tune-toggle" id="tuneToggleBtn" onclick="toggleEQPanel()" title="展開EQ推桿與車用設定">🎛️</button>
       </div>
-
-      <div class="btn-grid" id="btnContainer"></div>
     </div>
 
-    <!-- 右欄（直向時可收合；橫向寬螢幕時自動常駐顯示） -->
-    <div class="right-pane">
+    <!-- 展開面板：直向時順勢在 EQ 列正下方往下展開；橫向寬螢幕時自動移至右側常駐 -->
+    <div class="panel-area">
       <div class="eq-panel" id="eqPanel">
         <div class="car-quick-row">
           <button class="quick-chip-btn" id="themeToggleBtn" onclick="cycleThemeMode()">🌙 夜間</button>
@@ -64,7 +62,7 @@
           <button class="quick-chip-btn" id="gridColsBtn" onclick="toggleGridCols()">田 2欄</button>
         </div>
 
-        <div class="eq-hint-bar">💡 雙擊推桿歸零 (0dB) • 聆聽 2 分鐘自動進入純黑靜默</div>
+        <div class="eq-hint-bar">💡 雙擊推桿歸零 (0dB) • 聆聽 10 秒自動進入純黑靜默</div>
         <div class="graphic-eq-container" id="graphicEqContainer">
           <div class="db-scale">
             <span>+12</span>
@@ -82,14 +80,19 @@
           </div>
         </div>
         <div class="save-row">
-          <button class="save-target-btn" onclick="overwritePreset('voice')">覆蓋「人聲」</button>
-          <button class="save-target-btn" onclick="overwritePreset('bass')">覆蓋「重低音」</button>
-          <button class="save-target-btn" onclick="overwritePreset('classical')">覆蓋「古典」</button>
-          <button class="reset-eq-btn" onclick="resetDefaultPresets()">還原EQ</button>
+          <button class="save-target-btn" onclick="overwritePreset('voice')">覆蓋人聲</button>
+          <button class="save-target-btn" onclick="overwritePreset('bass')">覆蓋低音</button>
+          <button class="save-target-btn" onclick="overwritePreset('classical')">覆蓋古典</button>
+          <button class="reset-eq-btn" onclick="resetDefaultPresets()">還原</button>
           <button class="silent-cfg-btn" onclick="openSilentSettings()">🌑 靜默</button>
           <button class="manage-ch-btn" onclick="openChannelManager()">📻 電台</button>
         </div>
       </div>
+    </div>
+
+    <!-- 電台大按鈕網格區 -->
+    <div class="grid-area">
+      <div class="btn-grid" id="btnContainer"></div>
     </div>
   </div>
 
