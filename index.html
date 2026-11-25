@@ -181,7 +181,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: 6px;
     min-width: 0;
   }
   .status-label {
@@ -203,6 +203,20 @@
     border-radius: 6px;
     padding: 1px 6px;
     flex-shrink: 0;
+  }
+  .refresh-mini-btn {
+    background: var(--bg-badge);
+    border: 1px solid var(--border-badge);
+    color: var(--title-accent);
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: 6px;
+    padding: 1px 7px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .refresh-mini-btn:active {
+    transform: scale(0.92);
   }
   .header-main-row {
     display: flex;
@@ -232,18 +246,18 @@
   .viz-bars {
     display: flex;
     align-items: flex-end;
-    gap: 2px;
-    height: 15px;
+    gap: 2.5px;
+    height: 16px;
     padding-bottom: 2px;
     flex-shrink: 0;
-    opacity: 0.35;
+    opacity: 0.3;
     transition: opacity 0.25s;
   }
   .viz-bars.active {
     opacity: 1;
   }
   .viz-bar {
-    width: 2.5px;
+    width: 3px;
     height: 3px;
     border-radius: 2px;
     background: var(--viz-bar);
@@ -731,7 +745,17 @@
   .modal-header-actions {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
+  }
+  .init-all-btn {
+    background: #6E3E3E;
+    border: 1px solid #A66E6E;
+    color: #FAF8F5;
+    font-size: 12.5px;
+    font-weight: 700;
+    padding: 6px 10px;
+    border-radius: 10px;
+    cursor: pointer;
   }
   .save-modal-btn {
     background: #5B7A8C;
@@ -749,7 +773,7 @@
     color: #E2DFD7;
     font-size: 15px;
     font-weight: 700;
-    padding: 6px 12px;
+    padding: 6px 11px;
     border-radius: 10px;
     cursor: pointer;
   }
@@ -1075,7 +1099,7 @@
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.8);
+    background: rgba(0, 0, 0, 0.82);
     z-index: 200;
     align-items: center;
     justify-content: center;
@@ -1229,8 +1253,9 @@
     <div class="left-pane">
       <div class="header">
         <div class="header-meta-row">
-          <span class="version-badge" id="versionBadge">20261125_v02</span>
+          <span class="version-badge" id="versionBadge">20261125_v03</span>
           <span class="status-label" id="statusSub">walton電台 • 長按 1 秒排序 | 左右滑切台</span>
+          <button class="refresh-mini-btn" onclick="forceReloadPage()" title="重新整理最新網頁">🔄 刷新</button>
         </div>
         <div class="header-main-row">
           <div class="title-viz-row">
@@ -1297,7 +1322,7 @@
           <button class="save-target-btn" onclick="overwritePreset('voice')">覆蓋「人聲」</button>
           <button class="save-target-btn" onclick="overwritePreset('bass')">覆蓋「重低音」</button>
           <button class="save-target-btn" onclick="overwritePreset('classical')">覆蓋「古典」</button>
-          <button class="reset-eq-btn" onclick="resetDefaultPresets()">還原</button>
+          <button class="reset-eq-btn" onclick="resetDefaultPresets()">還原EQ</button>
           <button class="silent-cfg-btn" onclick="openSilentSettings()">🌑 靜默</button>
           <button class="manage-ch-btn" onclick="openChannelManager()">📻 電台</button>
         </div>
@@ -1358,12 +1383,13 @@
     </div>
   </div>
 
-  <!-- 電台清單編輯、最愛星號、垃圾桶與備份管理彈窗 -->
+  <!-- 電台清單編輯、最愛星號、初始化、垃圾桶與備份管理彈窗 -->
   <div class="modal-backdrop" id="channelModal">
     <div class="modal-card">
       <div class="modal-header">
         <span>📻 walton電台管理</span>
         <div class="modal-header-actions">
+          <button class="init-all-btn" onclick="openFactoryResetConfirm()" title="還原出廠預設值">⚠️ 初始化</button>
           <button class="save-modal-btn" onclick="commitChannelManagerChanges()">儲存</button>
           <button class="cancel-modal-btn" onclick="attemptCloseChannelManager()" title="取消">✕</button>
         </div>
@@ -1417,12 +1443,24 @@
     </div>
   </div>
 
+  <!-- 全部初始化雙重確認對話框 -->
+  <div class="confirm-backdrop" id="factoryResetConfirmModal">
+    <div class="confirm-card">
+      <div class="confirm-title">⚠️ 確定要執行全部初始化？</div>
+      <div class="confirm-desc">這將清除所有自訂電台清單、垃圾桶、排序、各台前級增益、10 段 EQ 曲線與靜默設定，並還原為出廠預設狀態。</div>
+      <div class="confirm-btns">
+        <button class="confirm-discard-btn" onclick="executeFactoryReset()">確定初始化並重整</button>
+        <button class="confirm-back-btn" onclick="closeFactoryResetConfirm()">取消</button>
+      </div>
+    </div>
+  </div>
+
   <audio id="playerEQ" preload="none" playsinline crossorigin="anonymous"></audio>
   <audio id="playerDirect" preload="none" playsinline></audio>
 
 <script>
   // 版本命名規則：西元年月日_v01（每日編輯重置為當天日期，同日遞增 v02, v03...，隔日歸為 v01）
-  const APP_VERSION = '20261125_v02';
+  const APP_VERSION = '20261125_v03';
 
   const IC_VOICE_REVMA_URL = 'https://stream.rcs.revma.com/7mnq8rt7k5zuv';
 
@@ -1508,6 +1546,42 @@
     localStorage.setItem('waltonTrashChannelsList', JSON.stringify(trashChannels));
   }
 
+  // ==================== 強制刷新整理 & 全部初始化（含雙重確認） ====================
+  function forceReloadPage() {
+    stopAllPlayersImmediately();
+    const baseUrl = window.location.href.split('?')[0].split('#')[0];
+    window.location.replace(`${baseUrl}?v=${Date.now()}`);
+  }
+
+  function openFactoryResetConfirm() {
+    document.getElementById('factoryResetConfirmModal').classList.add('show');
+  }
+
+  function closeFactoryResetConfirm() {
+    document.getElementById('factoryResetConfirmModal').classList.remove('show');
+  }
+
+  function executeFactoryReset() {
+    stopAllPlayersImmediately();
+    const keysToRemove = [
+      'waltonCustomChannelsList',
+      'customChannelOrderIds',
+      'waltonTrashChannelsList',
+      'customRadioEQ10Presets_v2',
+      'perChannelPreampMap',
+      'lastRadioChannelId',
+      'lastRadioEQ',
+      'waltonSilentConfig',
+      'waltonThemeMode',
+      'waltonReconnectSec',
+      'waltonGridCols',
+      'waltonDriveMode',
+      'waltonFavOnlyScan'
+    ];
+    keysToRemove.forEach(k => localStorage.removeItem(k));
+    forceReloadPage();
+  }
+
   const eqBands = [
     { label: '31.25', freq: 31.25, type: 'lowshelf' },
     { label: '62.5',  freq: 62.5,  type: 'peaking' },
@@ -1540,7 +1614,7 @@
 
   // ==================== 靜默模式（OLED 純黑減光）使用者自訂設定 ====================
   const defaultSilentConfig = {
-    delaySec: 15,
+    delaySec: 120,
     ratio: 'third',
     layout: 'center',
     showStation: true,
@@ -2164,7 +2238,7 @@
     updateStatusEQText();
   }
 
-  // ==================== 6. 5 柱莫蘭迪動態音波指示器 ====================
+  // ==================== 6. 全電台統一動態音波指示器（修復 EQ 模式下不動的問題） ====================
   function startVisualizerLoop() {
     stopVisualizerLoop();
     const vizBox = document.getElementById('vizBars');
@@ -2187,31 +2261,45 @@
         document.getElementById('svbar4')
       ];
 
+      // 只要暫停、尚未解除靜音預緩衝、或按下靜音/降音，音波條立即靜止歸零
       if (currentPlayState !== 'playing' || isMutedPrebuffered || isAttMuted) {
         bars.forEach(b => { if (b) b.style.height = '3px'; });
         sbars.forEach(b => { if (b) b.style.height = '3px'; });
         vizBox.classList.remove('active');
+        vizAnimFrame = requestAnimationFrame(renderFrame);
         return;
       }
+
       vizBox.classList.add('active');
+      let hasRealEnergy = false;
 
       if (!isDirectMode && analyserNode && analyserData) {
         analyserNode.getByteFrequencyData(analyserData);
-        const bins = [2, 5, 10, 18, 28];
-        bins.forEach((binIdx, i) => {
-          const val = analyserData[binIdx] || 0;
-          const h = Math.max(3, Math.min(15, Math.round((val / 255) * 15)));
-          if (bars[i]) bars[i].style.height = h + 'px';
-          if (sbars[i]) sbars[i].style.height = h + 'px';
-        });
-      } else {
-        phase += 0.14;
+        // 讀取低中頻有效分格（0, 1, 2, 3, 5）
+        const bins = [0, 1, 2, 3, 5];
+        const sum = bins.reduce((acc, idx) => acc + (analyserData[idx] || 0), 0);
+        if (sum > 10) {
+          hasRealEnergy = true;
+          bins.forEach((binIdx, i) => {
+            const val = analyserData[binIdx] || 0;
+            const h = Math.max(4, Math.min(16, Math.round((val / 255) * 16)));
+            if (bars[i]) bars[i].style.height = h + 'px';
+            if (sbars[i]) sbars[i].style.height = h + 'px';
+          });
+        }
+      }
+
+      // 若為直通模式，或 iOS WebKit 因跨網域安全機制回傳全零頻譜，使用流暢律動波紋（確保所有正常播音電台皆有跳動）
+      if (!hasRealEnergy) {
+        phase += 0.16;
         bars.forEach((b, i) => {
-          const h = Math.max(4, Math.round(7 + Math.sin(phase + i * 1.1) * 4.5));
+          const wave = Math.sin(phase + i * 1.15) * 0.5 + 0.5;
+          const h = Math.max(4, Math.round(4 + wave * 11));
           if (b) b.style.height = h + 'px';
           if (sbars[i]) sbars[i].style.height = h + 'px';
         });
       }
+
       vizAnimFrame = requestAnimationFrame(renderFrame);
     };
     vizAnimFrame = requestAnimationFrame(renderFrame);
@@ -2873,52 +2961,21 @@
     stallWatchdogTimer = null;
   }
 
+  // 修復重點：按「🔊 出聲」解鎖預緩衝時，直接保持已連線成功的串流穩定出聲，不再做背景二次熱重連導致斷音
   function unlockPrebufferedStream() {
     if (!isMutedPrebuffered) return;
     isMutedPrebuffered = false;
 
     const ch = channels[currentIndex];
     playerDirect.muted = isAttMuted;
+    if (playerDirect.paused) {
+      playerDirect.play().catch(() => {});
+    }
     fadeInTargetAudio(true);
     updateUIState(currentIndex, 'playing', '');
+    updateAttButtonUI();
+    updateStatusEQText();
     setupMediaSession(ch);
-
-    initAudioEQ();
-    const myToken = ++switchToken;
-    const tempHls = hlsInstance;
-
-    setTimeout(() => {
-      if (myToken !== switchToken || playerDirect.paused) return;
-      const oldDirect = playerDirect;
-      attachAndPlay(
-        playerEQ,
-        ch.url,
-        myToken,
-        false,
-        () => {
-          oldDirect.pause();
-          oldDirect.removeAttribute('src');
-          oldDirect.load();
-          if (tempHls) { try { tempHls.destroy(); } catch (_) {} }
-          activePlayer = playerEQ;
-          isDirectMode = false;
-          isAutoDirectFallback = false;
-          initAudioEQ();
-          fadeInTargetAudio(false);
-          updateUIState(currentIndex, 'playing', '');
-          updateAttButtonUI();
-          updateStatusEQText();
-          setupMediaSession(ch);
-        },
-        () => {
-          isAutoDirectFallback = false;
-          isDirectMode = true;
-          playerDirect.muted = isAttMuted;
-          updateAttButtonUI();
-          updateStatusEQText();
-        }
-      );
-    }, 150);
   }
 
   function upgradeToEQOnUserGesture() {
@@ -3457,7 +3514,7 @@
     if (!isSilentModeActive) {
       resetSilentIdleTimer();
     }
-    if (e.target.closest('#channelModal') || e.target.closest('#unsavedConfirmModal') || e.target.closest('#silentModal')) return;
+    if (e.target.closest('#channelModal') || e.target.closest('#unsavedConfirmModal') || e.target.closest('#silentModal') || e.target.closest('#factoryResetConfirmModal')) return;
     if (isMutedPrebuffered && !e.target.closest('.ch-btn')) {
       unlockPrebufferedStream();
     } else if (isAutoDirectFallback && currentPlayState === 'playing' && !e.target.closest('button') && !e.target.closest('input')) {
