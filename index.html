@@ -165,12 +165,12 @@
     font-size: 12.5px;
   }
 
-  /* 雙排頂部狀態卡片（徹底避免直向螢幕截斷文字） */
+  /* 雙排頂部狀態卡片 */
   .header {
     background: var(--bg-card);
     border: 1px solid var(--border-card);
     border-radius: 16px;
-    padding: 8px 12px;
+    padding: 8px 11px;
     display: flex;
     flex-direction: column;
     gap: 5px;
@@ -208,18 +208,18 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: 6px;
     min-width: 0;
   }
   .title-viz-row {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     min-width: 0;
     flex: 1;
   }
   .status-title {
-    font-size: 20px;
+    font-size: 18.5px;
     font-weight: 700;
     color: var(--title-accent);
     white-space: nowrap;
@@ -232,8 +232,8 @@
   .viz-bars {
     display: flex;
     align-items: flex-end;
-    gap: 2.5px;
-    height: 16px;
+    gap: 2px;
+    height: 15px;
     padding-bottom: 2px;
     flex-shrink: 0;
     opacity: 0.35;
@@ -243,7 +243,7 @@
     opacity: 1;
   }
   .viz-bar {
-    width: 3px;
+    width: 2.5px;
     height: 3px;
     border-radius: 2px;
     background: var(--viz-bar);
@@ -253,16 +253,16 @@
   .header-controls {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
     flex-shrink: 0;
   }
   .drive-btn {
     background: var(--bg-eq-btn);
     color: var(--text-eq-btn);
     border: 1.5px solid var(--border-eq-btn);
-    border-radius: 11px;
-    padding: 7px 9px;
-    font-size: 14px;
+    border-radius: 10px;
+    padding: 6px 8px;
+    font-size: 13.5px;
     font-weight: 700;
     cursor: pointer;
     transition: all 0.2s;
@@ -277,8 +277,8 @@
     background: var(--bg-eq-btn);
     color: var(--text-eq-btn);
     border: 1.5px solid var(--border-eq-btn);
-    border-radius: 11px;
-    padding: 7px 9px;
+    border-radius: 10px;
+    padding: 6px 8px;
     font-size: 13.5px;
     font-weight: 700;
     cursor: pointer;
@@ -294,9 +294,9 @@
     background: #4A4E54;
     color: #FAF8F5;
     border: 1px solid #636870;
-    border-radius: 11px;
-    padding: 7px 12px;
-    font-size: 14.5px;
+    border-radius: 10px;
+    padding: 6px 10px;
+    font-size: 14px;
     font-weight: 700;
     cursor: pointer;
     transition: background 0.25s, border-color 0.25s;
@@ -509,7 +509,6 @@
     border-color: #FFFFFF;
   }
 
-  /* 底部操作列：3個覆蓋 + 還原 + 靜默設定 + 電台管理 */
   .save-row {
     display: grid;
     grid-template-columns: repeat(3, 1fr) auto auto auto;
@@ -557,7 +556,7 @@
     cursor: pointer;
   }
 
-  /* ==================== OLED 靜默模式全螢幕黑化遮罩（純黑 #000000 ＋ 莫蘭迪低亮度柔光字） ==================== */
+  /* ==================== OLED 靜默模式全螢幕黑化遮罩 ==================== */
   .silent-overlay {
     display: none;
     position: fixed;
@@ -575,7 +574,6 @@
   .silent-overlay.fade-in {
     opacity: 1;
   }
-  /* 上方資訊展示區（可依自訂比例調整：1/3、1/2 或 全螢幕） */
   .silent-info-zone {
     width: 100%;
     height: 33.33dvh;
@@ -602,12 +600,10 @@
     margin: 0 auto;
     transition: transform 1s ease;
   }
-  /* 配置 A：經典居中 */
   .silent-inner-content.layout-center {
     align-items: center;
     text-align: center;
   }
-  /* 配置 B：左右 HUD 儀表板 */
   .silent-inner-content.layout-hud {
     flex-direction: row;
     align-items: center;
@@ -629,7 +625,7 @@
     font-size: 38px;
     font-weight: 300;
     font-variant-numeric: tabular-nums;
-    color: #6B7B85; /* 低亮度莫蘭迪柔光灰藍 */
+    color: #6B7B85;
     letter-spacing: 1px;
     line-height: 1.05;
   }
@@ -641,7 +637,7 @@
   .silent-station {
     font-size: 26px;
     font-weight: 700;
-    color: #8A9CA6; /* 低亮度柔光標題 */
+    color: #8A9CA6;
     letter-spacing: 0.5px;
   }
   .silent-meta {
@@ -681,7 +677,6 @@
     border-radius: 10px;
     cursor: pointer;
   }
-  /* 下方 2/3 純黑喚醒與左右滑動切台區 */
   .silent-black-zone {
     flex: 1;
     width: 100%;
@@ -759,7 +754,6 @@
     cursor: pointer;
   }
 
-  /* 靜默設定表單樣式 */
   .cfg-group {
     display: flex;
     flex-direction: column;
@@ -1146,7 +1140,7 @@
     cursor: pointer;
   }
 
-  /* 電台大按鈕網格：嚴格鎖定在剩餘高度內等分，展開 EQ 面板時自動縮小絕不重疊 */
+  /* 電台大按鈕網格 */
   .btn-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -1235,7 +1229,7 @@
     <div class="left-pane">
       <div class="header">
         <div class="header-meta-row">
-          <span class="version-badge" id="versionBadge">20261125_v01</span>
+          <span class="version-badge" id="versionBadge">20261125_v02</span>
           <span class="status-label" id="statusSub">walton電台 • 長按 1 秒排序 | 左右滑切台</span>
         </div>
         <div class="header-main-row">
@@ -1332,25 +1326,21 @@
       </div>
 
       <div class="modal-scroll-area">
-        <!-- 1. 觸發時間 -->
         <div class="cfg-group">
           <span class="cfg-group-title">1. 正常聆聽無操作多久後進入靜默</span>
           <div class="cfg-pill-row" id="silentDelayPills"></div>
         </div>
 
-        <!-- 2. 上下比例 -->
         <div class="cfg-group">
           <span class="cfg-group-title">2. 畫面上下黑化比例</span>
           <div class="cfg-pill-row" id="silentRatioPills"></div>
         </div>
 
-        <!-- 3. 版面配置 -->
         <div class="cfg-group">
           <span class="cfg-group-title">3. 上方資訊區版面配置</span>
           <div class="cfg-pill-row" id="silentLayoutPills"></div>
         </div>
 
-        <!-- 4. 顯示內容勾選 -->
         <div class="cfg-group">
           <span class="cfg-group-title">4. 保留顯示的必要訊息項目</span>
           <div class="cfg-check-grid">
@@ -1432,7 +1422,7 @@
 
 <script>
   // 版本命名規則：西元年月日_v01（每日編輯重置為當天日期，同日遞增 v02, v03...，隔日歸為 v01）
-  const APP_VERSION = '20261125_v01';
+  const APP_VERSION = '20261125_v02';
 
   const IC_VOICE_REVMA_URL = 'https://stream.rcs.revma.com/7mnq8rt7k5zuv';
 
@@ -1451,27 +1441,44 @@
     { id: 'ch12', name: '警察廣播',   sub: '全國治安', url: 'https://stream.pbs.gov.tw/live/TPS/playlist.m3u8', fav: false }
   ];
 
-  function loadChannelsData() {
-    const savedCustomList = JSON.parse(localStorage.getItem('waltonCustomChannelsList'));
-    if (Array.isArray(savedCustomList) && savedCustomList.length > 0) {
-      let migrated = false;
-      savedCustomList.forEach(item => {
-        if (item.id === 'ch11' && item.url.includes('78898857a0uv')) {
-          item.url = IC_VOICE_REVMA_URL;
-          migrated = true;
-        }
-        if (typeof item.fav !== 'boolean') {
-          const def = defaultChannels.find(d => d.id === item.id);
-          item.fav = def ? !!def.fav : false;
-          migrated = true;
-        }
-      });
-      if (migrated) {
-        localStorage.setItem('waltonCustomChannelsList', JSON.stringify(savedCustomList));
-      }
-      return savedCustomList;
+  function safeParseJSON(key, fallback) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) return fallback;
+      const parsed = JSON.parse(raw);
+      return parsed !== null && parsed !== undefined ? parsed : fallback;
+    } catch (_) {
+      return fallback;
     }
-    const savedOrder = JSON.parse(localStorage.getItem('customChannelOrderIds'));
+  }
+
+  function sanitizeChannelItem(item, fallbackIdx) {
+    if (!item || typeof item !== 'object') return null;
+    const defMatch = defaultChannels.find(d => d.id === item.id);
+    const name = (typeof item.name === 'string' && item.name.trim()) ? item.name.trim() : (defMatch ? defMatch.name : `電台 ${fallbackIdx + 1}`);
+    const sub = (typeof item.sub === 'string' && item.sub.trim()) ? item.sub.trim() : (defMatch ? defMatch.sub : '網路電台');
+    let url = (typeof item.url === 'string' && item.url.trim()) ? item.url.trim() : (defMatch ? defMatch.url : '');
+    if (!url) return null;
+    if (item.id === 'ch11' && url.includes('78898857a0uv')) {
+      url = IC_VOICE_REVMA_URL;
+    }
+    const fav = typeof item.fav === 'boolean' ? item.fav : (defMatch ? !!defMatch.fav : false);
+    const id = (typeof item.id === 'string' && item.id) ? item.id : `ch_fix_${fallbackIdx}_${Date.now()}`;
+    return { id, name, sub, url, fav };
+  }
+
+  function loadChannelsData() {
+    const savedCustomList = safeParseJSON('waltonCustomChannelsList', null);
+    if (Array.isArray(savedCustomList) && savedCustomList.length > 0) {
+      const cleaned = savedCustomList
+        .map((item, idx) => sanitizeChannelItem(item, idx))
+        .filter(Boolean);
+      if (cleaned.length > 0) {
+        localStorage.setItem('waltonCustomChannelsList', JSON.stringify(cleaned));
+        return cleaned;
+      }
+    }
+    const savedOrder = safeParseJSON('customChannelOrderIds', null);
     if (!Array.isArray(savedOrder)) return JSON.parse(JSON.stringify(defaultChannels));
     const ordered = [];
     savedOrder.forEach(id => {
@@ -1485,7 +1492,9 @@
   }
 
   let channels = loadChannelsData();
-  let trashChannels = JSON.parse(localStorage.getItem('waltonTrashChannelsList')) || [];
+  let trashChannels = (safeParseJSON('waltonTrashChannelsList', []) || [])
+    .map((item, idx) => sanitizeChannelItem(item, idx))
+    .filter(Boolean);
 
   let draftChannels = [];
   let draftTrashChannels = [];
@@ -1520,17 +1529,20 @@
     custom:    { label: '自訂',   gains: [0, 2, 4, 2, 0, 2, 4, 3, 2, 0] }
   };
 
-  let eqPresets = JSON.parse(localStorage.getItem('customRadioEQ10Presets_v2')) || JSON.parse(JSON.stringify(defaultPresets));
+  let eqPresets = safeParseJSON('customRadioEQ10Presets_v2', null) || JSON.parse(JSON.stringify(defaultPresets));
+  if (!eqPresets || typeof eqPresets !== 'object') {
+    eqPresets = JSON.parse(JSON.stringify(defaultPresets));
+  }
   if (!eqPresets.custom) {
     eqPresets.custom = JSON.parse(JSON.stringify(defaultPresets.custom));
   }
-  let perChannelPreamp = JSON.parse(localStorage.getItem('perChannelPreampMap')) || {};
+  let perChannelPreamp = safeParseJSON('perChannelPreampMap', {}) || {};
 
   // ==================== 靜默模式（OLED 純黑減光）使用者自訂設定 ====================
   const defaultSilentConfig = {
-    delaySec: 120,        // 0=關閉, 30, 60, 120(預設2分鐘), 300, 600
-    ratio: 'third',       // 'third'(上1/3+下2/3黑化) | 'half'(上1/2+下1/2黑化) | 'full'(全黑極簡)
-    layout: 'center',     // 'center'(經典居中) | 'hud'(左右儀表) | 'drift'(防烙印微漂移)
+    delaySec: 120,
+    ratio: 'third',
+    layout: 'center',
     showStation: true,
     showClock: true,
     showMeta: true,
@@ -1538,7 +1550,7 @@
     showSleep: true,
     showBtns: false
   };
-  let silentConfig = Object.assign({}, defaultSilentConfig, JSON.parse(localStorage.getItem('waltonSilentConfig')) || {});
+  let silentConfig = Object.assign({}, defaultSilentConfig, safeParseJSON('waltonSilentConfig', {}));
   let silentIdleTimer = null;
   let silentClockTimer = null;
   let silentDriftTimer = null;
@@ -1612,7 +1624,6 @@
     if (isSilentModeActive) return;
     if (!silentConfig.delaySec || silentConfig.delaySec <= 0) return;
     if (currentPlayState !== 'playing' || isMutedPrebuffered) return;
-    // 若管理彈窗開啟中則暫不觸發黑化
     if (document.getElementById('channelModal').classList.contains('show') ||
         document.getElementById('silentModal').classList.contains('show')) {
       return;
@@ -1641,7 +1652,6 @@
       overlay.classList.add('fade-in');
     });
 
-    // 啟動每分鐘時鐘更新與防烙印微漂移
     clearInterval(silentClockTimer);
     silentClockTimer = setInterval(renderSilentContent, 15000);
 
@@ -1736,7 +1746,6 @@
     }
   }
 
-  // 靜默黑化區的觸控喚醒與左右滑動切台
   const silentOverlayEl = document.getElementById('silentOverlay');
   let silentTouchStartX = 0;
   let silentTouchStartY = 0;
@@ -1752,7 +1761,6 @@
     const dx = e.clientX - silentTouchStartX;
     const dy = e.clientY - silentTouchStartY;
 
-    // 若左右滑動超過 65px，直接在靜默模式下切換上一台／下一台而不喚醒刺眼畫面
     if (Math.abs(dx) > 65 && Math.abs(dx) > Math.abs(dy) * 1.5) {
       if (navigator.vibrate) navigator.vibrate(25);
       if (dx < 0) stepChannelByScanRule(1);
@@ -1761,13 +1769,11 @@
       return;
     }
 
-    // 輕點一下立即喚醒恢復完整電台介面（阻擋穿透誤觸背後按鈕）
     e.preventDefault();
     e.stopPropagation();
     exitSilentMode();
   });
 
-  // 靜默模式設定彈窗渲染與儲存
   function openSilentSettings() {
     clearTimeout(silentIdleTimer);
     renderSilentSettingsModal();
@@ -1783,8 +1789,7 @@
       { val: 300, label: '5分鐘' },
       { val: 600, label: '10分鐘' }
     ];
-    const delayBox = document.getElementById('silentDelayPills');
-    delayBox.innerHTML = delayOpts.map(opt =>
+    document.getElementById('silentDelayPills').innerHTML = delayOpts.map(opt =>
       `<button class="cfg-pill ${silentConfig.delaySec === opt.val ? 'active' : ''}" onclick="setSilentField('delaySec', ${opt.val})">${opt.label}</button>`
     ).join('');
 
@@ -1793,8 +1798,7 @@
       { val: 'half',  label: '上 1/2 資訊 ＋ 下 1/2 黑化' },
       { val: 'full',  label: '全螢幕純黑極簡' }
     ];
-    const ratioBox = document.getElementById('silentRatioPills');
-    ratioBox.innerHTML = ratioOpts.map(opt =>
+    document.getElementById('silentRatioPills').innerHTML = ratioOpts.map(opt =>
       `<button class="cfg-pill ${silentConfig.ratio === opt.val ? 'active' : ''}" onclick="setSilentField('ratio', '${opt.val}')">${opt.label}</button>`
     ).join('');
 
@@ -1803,8 +1807,7 @@
       { val: 'hud',    label: '配置 B：左右 HUD 儀表' },
       { val: 'drift',  label: '配置 C：防烙印微漂移' }
     ];
-    const layoutBox = document.getElementById('silentLayoutPills');
-    layoutBox.innerHTML = layoutOpts.map(opt =>
+    document.getElementById('silentLayoutPills').innerHTML = layoutOpts.map(opt =>
       `<button class="cfg-pill ${silentConfig.layout === opt.val ? 'active' : ''}" onclick="setSilentField('layout', '${opt.val}')">${opt.label}</button>`
     ).join('');
 
@@ -2126,11 +2129,7 @@
   function updateAttButtonUI() {
     const btn = document.getElementById('attBtn');
     btn.classList.toggle('active', isAttMuted);
-    if (!isAttMuted) {
-      btn.innerText = '🔉';
-    } else {
-      btn.innerText = '🔇';
-    }
+    btn.innerText = isAttMuted ? '🔇' : '🔉';
   }
 
   function toggleAttMute() {
@@ -2165,7 +2164,7 @@
     updateStatusEQText();
   }
 
-  // ==================== 6. 5 柱莫蘭迪動態音波指示器（同步驅動主畫面與靜默模式） ====================
+  // ==================== 6. 5 柱莫蘭迪動態音波指示器 ====================
   function startVisualizerLoop() {
     stopVisualizerLoop();
     const vizBox = document.getElementById('vizBars');
@@ -2201,7 +2200,7 @@
         const bins = [2, 5, 10, 18, 28];
         bins.forEach((binIdx, i) => {
           const val = analyserData[binIdx] || 0;
-          const h = Math.max(3, Math.min(16, Math.round((val / 255) * 16)));
+          const h = Math.max(3, Math.min(15, Math.round((val / 255) * 15)));
           if (bars[i]) bars[i].style.height = h + 'px';
           if (sbars[i]) sbars[i].style.height = h + 'px';
         });
@@ -2234,6 +2233,7 @@
   }
 
   function attachDoubleTapReset(sliderEl, resetCallback) {
+    if (!sliderEl) return;
     let lastTapTime = 0;
     sliderEl.addEventListener('pointerup', (e) => {
       const now = Date.now();
@@ -2269,7 +2269,7 @@
       const db = getChannelPreampDb(idx);
       const dbBadge = db !== 0 ? ` (${db > 0 ? '+' : ''}${db}dB)` : '';
       const starBadge = ch.fav ? `<span class="fav-star-badge">★</span>` : '';
-      btn.innerHTML = `${starBadge}<span>${ch.name}</span><span class="sub-tag">${ch.sub}${dbBadge}</span>`;
+      btn.innerHTML = `${starBadge}<span>${escapeHtml(ch.name)}</span><span class="sub-tag">${escapeHtml(ch.sub)}${dbBadge}</span>`;
 
       btn.addEventListener('pointerdown', (e) => {
         if (e.button !== 0 && e.pointerType === 'mouse') return;
@@ -2542,8 +2542,13 @@
       if (!Array.isArray(parsed.channels) || parsed.channels.length === 0) {
         throw new Error('缺少有效的電台清單');
       }
-      draftChannels = parsed.channels;
-      draftTrashChannels = Array.isArray(parsed.trashChannels) ? parsed.trashChannels : [];
+      const cleaned = parsed.channels.map((item, idx) => sanitizeChannelItem(item, idx)).filter(Boolean);
+      if (cleaned.length === 0) throw new Error('無有效電台資料');
+
+      draftChannels = cleaned;
+      draftTrashChannels = Array.isArray(parsed.trashChannels)
+        ? parsed.trashChannels.map((item, idx) => sanitizeChannelItem(item, idx)).filter(Boolean)
+        : [];
       if (parsed.perChannelPreamp && typeof parsed.perChannelPreamp === 'object') {
         draftPreampMap = parsed.perChannelPreamp;
       }
@@ -2660,7 +2665,7 @@
   }
 
   function escapeHtml(str) {
-    return String(str)
+    return String(str || '')
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
@@ -2771,7 +2776,8 @@
       if (!btn) return;
       const db = getChannelPreampDb(idx);
       const dbBadge = db !== 0 ? ` (${db > 0 ? '+' : ''}${db}dB)` : '';
-      btn.querySelector('.sub-tag').innerText = ch.sub + dbBadge;
+      const subEl = btn.querySelector('.sub-tag');
+      if (subEl) subEl.innerText = ch.sub + dbBadge;
     });
   }
 
@@ -2874,4 +2880,622 @@
     const ch = channels[currentIndex];
     playerDirect.muted = isAttMuted;
     fadeInTargetAudio(true);
-    updateUI
+    updateUIState(currentIndex, 'playing', '');
+    setupMediaSession(ch);
+
+    initAudioEQ();
+    const myToken = ++switchToken;
+    const tempHls = hlsInstance;
+
+    setTimeout(() => {
+      if (myToken !== switchToken || playerDirect.paused) return;
+      const oldDirect = playerDirect;
+      attachAndPlay(
+        playerEQ,
+        ch.url,
+        myToken,
+        false,
+        () => {
+          oldDirect.pause();
+          oldDirect.removeAttribute('src');
+          oldDirect.load();
+          if (tempHls) { try { tempHls.destroy(); } catch (_) {} }
+          activePlayer = playerEQ;
+          isDirectMode = false;
+          isAutoDirectFallback = false;
+          initAudioEQ();
+          fadeInTargetAudio(false);
+          updateUIState(currentIndex, 'playing', '');
+          updateAttButtonUI();
+          updateStatusEQText();
+          setupMediaSession(ch);
+        },
+        () => {
+          isAutoDirectFallback = false;
+          isDirectMode = true;
+          playerDirect.muted = isAttMuted;
+          updateAttButtonUI();
+          updateStatusEQText();
+        }
+      );
+    }, 150);
+  }
+
+  function upgradeToEQOnUserGesture() {
+    if (isMutedPrebuffered) {
+      unlockPrebufferedStream();
+      return;
+    }
+    if (isAutoDirectFallback && currentPlayState === 'playing') {
+      isAutoDirectFallback = false;
+      currentPlayState = 'idle';
+      playByIndex(currentIndex, true);
+    }
+  }
+
+  function fadeOutCurrentAudio(callback, durationSec = FADE_DURATION) {
+    if (activePlayer.paused || activePlayer.muted) {
+      callback();
+      return;
+    }
+
+    if (!isDirectMode && fadeGainNode && audioCtx) {
+      const now = audioCtx.currentTime;
+      fadeGainNode.gain.cancelScheduledValues(now);
+      fadeGainNode.gain.setValueAtTime(fadeGainNode.gain.value, now);
+      fadeGainNode.gain.linearRampToValueAtTime(0.0001, now + durationSec);
+      setTimeout(callback, durationSec * 1000);
+    } else {
+      if (directFadeTimer) clearInterval(directFadeTimer);
+      const startVol = playerDirect.volume;
+      const steps = Math.max(15, Math.round(durationSec * 25));
+      const stepTime = (durationSec * 1000) / steps;
+      let currentStep = 0;
+      directFadeTimer = setInterval(() => {
+        currentStep++;
+        const nextVol = Math.max(0, startVol * (1 - currentStep / steps));
+        playerDirect.volume = nextVol;
+        if (currentStep >= steps) {
+          clearInterval(directFadeTimer);
+          directFadeTimer = null;
+          callback();
+        }
+      }, stepTime);
+    }
+  }
+
+  function fadeInTargetAudio(isDirect) {
+    const targetGain = getTargetOutputGain();
+    if (!isDirect && fadeGainNode && audioCtx) {
+      const now = audioCtx.currentTime;
+      fadeGainNode.gain.cancelScheduledValues(now);
+      fadeGainNode.gain.setValueAtTime(0.0001, now);
+      fadeGainNode.gain.linearRampToValueAtTime(targetGain, now + FADE_DURATION);
+    } else {
+      if (directFadeTimer) clearInterval(directFadeTimer);
+      playerDirect.volume = 0;
+      const steps = 15;
+      const stepTime = (FADE_DURATION * 1000) / steps;
+      let currentStep = 0;
+      directFadeTimer = setInterval(() => {
+        currentStep++;
+        playerDirect.volume = Math.min(targetGain, (currentStep / steps) * targetGain);
+        if (currentStep >= steps) {
+          clearInterval(directFadeTimer);
+          directFadeTimer = null;
+        }
+      }, stepTime);
+    }
+  }
+
+  function onPreampChange() {
+    const db = parseInt(document.getElementById('preampSlider').value, 10);
+    const chId = channels[currentIndex].id;
+    perChannelPreamp[chId] = db;
+    localStorage.setItem('perChannelPreampMap', JSON.stringify(perChannelPreamp));
+
+    syncPreampUI(db);
+    refreshChannelSubTags();
+
+    if (preampNode) {
+      preampNode.gain.value = dbToLinearGain(db);
+    }
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+    updateStatusEQText();
+    upgradeToEQOnUserGesture();
+  }
+
+  function syncPreampUI(db) {
+    const slider = document.getElementById('preampSlider');
+    const valText = document.getElementById('preampVal');
+    if (slider) slider.value = db;
+    if (valText) valText.innerText = (db > 0 ? '+' : '') + db;
+  }
+
+  function applyEQGains(presetKey) {
+    const preset = eqPresets[presetKey] || eqPresets.flat;
+    syncSlidersUI(preset.gains);
+    if (filterNodes.length === 10) {
+      preset.gains.forEach((g, i) => { filterNodes[i].gain.value = g; });
+    }
+  }
+
+  function syncSlidersUI(gains) {
+    if (!Array.isArray(gains)) return;
+    gains.forEach((g, i) => {
+      const slider = document.getElementById(`eqSlider_${i}`);
+      const valText = document.getElementById(`eqVal_${i}`);
+      if (slider) slider.value = g;
+      if (valText) valText.innerText = (g > 0 ? '+' : '') + g;
+    });
+  }
+
+  function getCurrentSliderGains() {
+    return eqBands.map((_, i) => parseInt(document.getElementById(`eqSlider_${i}`).value, 10) || 0);
+  }
+
+  function setEQ(presetKey, isUserGesture = false) {
+    currentEQ = presetKey;
+    localStorage.setItem('lastRadioEQ', presetKey);
+
+    document.querySelectorAll('.eq-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.eq === presetKey);
+    });
+
+    applyEQGains(presetKey);
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    updateStatusEQText();
+
+    if (isUserGesture) {
+      upgradeToEQOnUserGesture();
+    }
+  }
+
+  function selectCustomEQ() {
+    if (currentEQ === 'custom') {
+      toggleEQPanel();
+      upgradeToEQOnUserGesture();
+    } else {
+      setEQ('custom', true);
+      const panel = document.getElementById('eqPanel');
+      if (!panel.classList.contains('show')) {
+        toggleEQPanel();
+      }
+    }
+  }
+
+  function onSliderChange() {
+    const gains = getCurrentSliderGains();
+    syncSlidersUI(gains);
+
+    if (filterNodes.length === 10) {
+      gains.forEach((g, i) => { filterNodes[i].gain.value = g; });
+    }
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+
+    eqPresets.custom.gains = gains;
+    localStorage.setItem('customRadioEQ10Presets_v2', JSON.stringify(eqPresets));
+
+    currentEQ = 'custom';
+    localStorage.setItem('lastRadioEQ', 'custom');
+    document.querySelectorAll('.eq-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.eq === 'custom');
+    });
+    updateStatusEQText();
+    upgradeToEQOnUserGesture();
+  }
+
+  function overwritePreset(targetKey) {
+    eqPresets[targetKey].gains = getCurrentSliderGains();
+    localStorage.setItem('customRadioEQ10Presets_v2', JSON.stringify(eqPresets));
+    setEQ(targetKey, true);
+    statusSub.innerText = `✅ 已覆蓋至「${eqPresets[targetKey].label}」`;
+  }
+
+  function resetDefaultPresets() {
+    eqPresets = JSON.parse(JSON.stringify(defaultPresets));
+    localStorage.removeItem('customRadioEQ10Presets_v2');
+
+    perChannelPreamp = {};
+    localStorage.removeItem('perChannelPreampMap');
+    syncPreampUI(0);
+    refreshChannelSubTags();
+    if (preampNode) preampNode.gain.value = 1;
+
+    setEQ(currentEQ, true);
+    statusSub.innerText = '🔄 已還原 EQ 曲線與各台前級歸零';
+  }
+
+  function toggleEQPanel() {
+    const panel = document.getElementById('eqPanel');
+    const toggleBtn = document.getElementById('tuneToggleBtn');
+    const isOpen = panel.classList.toggle('show');
+    toggleBtn.classList.toggle('open', isOpen);
+  }
+
+  function updateStatusEQText() {
+    if (isSleepFadingOut) return;
+    const sleepTag = sleepTimerMinutes > 0 ? ` | ⏰${getRemainingSleepMinutes()}m` : '';
+
+    if (isMutedPrebuffered) {
+      statusSub.innerText = `🟢 已緩衝就緒 • 點擊任意處出聲${sleepTag}`;
+      return;
+    }
+    if (currentPlayState === 'idle') {
+      statusSub.innerText = `walton電台 • 長按1秒排序 | 左右滑切台${sleepTag}`;
+      return;
+    }
+    if (currentPlayState === 'selected') {
+      statusSub.innerText = `已選台，串流連線緩衝中...${sleepTag}`;
+      return;
+    }
+    const ch = channels[currentIndex];
+    const db = getChannelPreampDb(currentIndex);
+    const attTag = isAttMuted ? (isDirectMode ? '🔇靜音保活 | ' : '🔇降音-20dB | ') : '';
+    if (isAutoDirectFallback) {
+      statusSub.innerText = `${attTag}自動直通 • ${ch.sub}${sleepTag}`;
+    } else if (isDirectMode) {
+      statusSub.innerText = `${attTag}直通原音 • ${ch.sub}${sleepTag}`;
+    } else {
+      const eqLabel = eqPresets[currentEQ]?.label || '原音';
+      const preampStr = db !== 0 ? ` | 前級${db > 0 ? '+' : ''}${db}dB` : '';
+      statusSub.innerText = `${attTag}EQ:${eqLabel}${preampStr} • ${ch.sub}${sleepTag}`;
+    }
+  }
+
+  function stopAllPlayersImmediately() {
+    clearStallWatchdog();
+    stopVisualizerLoop();
+    if (directFadeTimer) {
+      clearInterval(directFadeTimer);
+      directFadeTimer = null;
+    }
+    isMutedPrebuffered = false;
+    playerEQ.onplaying = null;
+    playerEQ.onstalled = null;
+    playerEQ.onwaiting = null;
+    playerEQ.onerror = null;
+    playerEQ.pause();
+    playerEQ.removeAttribute('src');
+    playerEQ.load();
+
+    playerDirect.onplaying = null;
+    playerDirect.onstalled = null;
+    playerDirect.onwaiting = null;
+    playerDirect.onerror = null;
+    playerDirect.muted = false;
+    playerDirect.pause();
+    playerDirect.removeAttribute('src');
+    playerDirect.load();
+
+    if (hlsInstance) {
+      hlsInstance.destroy();
+      hlsInstance = null;
+    }
+  }
+
+  function attachAndPlay(targetPlayer, url, token, startMuted, onStreamConfirmed, onFail) {
+    if (!url || typeof url !== 'string') {
+      onFail();
+      return;
+    }
+    const isM3u8 = url.includes('.m3u8') || url.includes('sonnykuo.appspot.com');
+    let confirmed = false;
+
+    targetPlayer.muted = startMuted;
+
+    if (targetPlayer === playerEQ && fadeGainNode && audioCtx) {
+      fadeGainNode.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+    } else if (targetPlayer === playerDirect) {
+      targetPlayer.volume = startMuted ? getTargetOutputGain() : 0;
+    }
+
+    targetPlayer.onplaying = () => {
+      if (token === switchToken) {
+        clearStallWatchdog();
+        reconnectRetryCount = 0;
+        if (!confirmed) {
+          confirmed = true;
+          onStreamConfirmed();
+        } else {
+          updateStatusEQText();
+        }
+      }
+    };
+
+    targetPlayer.onstalled = () => {
+      if (token === switchToken && confirmed) startStallWatchdog(targetPlayer, token);
+    };
+    targetPlayer.onwaiting = () => {
+      if (token === switchToken && confirmed) startStallWatchdog(targetPlayer, token);
+    };
+
+    targetPlayer.onerror = () => {
+      if (token === switchToken) {
+        if (!confirmed) {
+          onFail();
+        } else {
+          startStallWatchdog(targetPlayer, token);
+        }
+      }
+    };
+
+    if (isM3u8 && !targetPlayer.canPlayType('application/vnd.apple.mpegurl') && window.Hls && Hls.isSupported()) {
+      hlsInstance = new Hls();
+      hlsInstance.loadSource(url);
+      hlsInstance.attachMedia(targetPlayer);
+      hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+        if (token !== switchToken) return;
+        targetPlayer.play().catch(() => {
+          if (token === switchToken && !confirmed) onFail();
+        });
+      });
+      hlsInstance.on(Hls.Events.ERROR, (event, data) => {
+        if (data.fatal && token === switchToken) {
+          if (!confirmed) onFail();
+          else startStallWatchdog(targetPlayer, token);
+        }
+      });
+    } else {
+      targetPlayer.src = url;
+      targetPlayer.load();
+      targetPlayer.play().catch(() => {
+        if (token === switchToken && !confirmed) onFail();
+      });
+    }
+  }
+
+  function playByIndex(idx, isUserClick = false, isAutoReconnect = false) {
+    if (idx < 0) idx = channels.length - 1;
+    if (idx >= channels.length) idx = 0;
+
+    const ch = channels[idx];
+    const myToken = ++switchToken;
+
+    if (!isAutoReconnect && currentPlayState !== 'idle' && currentIndex === idx && !isMutedPrebuffered) {
+      cancelSleepTimer();
+      fadeOutCurrentAudio(() => {
+        if (myToken !== switchToken) return;
+        stopAllPlayersImmediately();
+        isAutoDirectFallback = false;
+        updateUIState(idx, 'idle', '已暫停');
+      });
+      return;
+    }
+
+    currentIndex = idx;
+    currentChannelId = ch.id;
+    localStorage.setItem('lastRadioChannelId', ch.id);
+    applyCurrentChannelPreamp();
+
+    const loadingMsg = isAutoReconnect ? `🔄 訊號中斷(${reconnectDelaySec}s)，自動重連中 (${reconnectRetryCount})...` : '已選台，串流連線緩衝中...';
+    updateUIState(idx, 'selected', loadingMsg);
+
+    if (!isUserClick) {
+      stopAllPlayersImmediately();
+      attachAndPlay(
+        playerDirect,
+        ch.url,
+        myToken,
+        isAttMuted,
+        () => {
+          activePlayer = playerDirect;
+          isDirectMode = true;
+          isAutoDirectFallback = true;
+          isMutedPrebuffered = false;
+          fadeInTargetAudio(true);
+          updateUIState(idx, 'playing', '');
+          updateAttButtonUI();
+          updateStatusEQText();
+          setupMediaSession(ch);
+        },
+        () => {
+          if (myToken !== switchToken) return;
+          if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
+          attachAndPlay(
+            playerDirect,
+            ch.url,
+            myToken,
+            true,
+            () => {
+              activePlayer = playerDirect;
+              isDirectMode = true;
+              isAutoDirectFallback = true;
+              isMutedPrebuffered = true;
+              updateUIState(idx, 'selected', '🟢 已緩衝就緒 • 點擊畫面任意處零延遲出聲');
+            },
+            () => {
+              updateUIState(idx, 'selected', '已選台 • 點擊螢幕任一處啟動聲音');
+            }
+          );
+        }
+      );
+      return;
+    }
+
+    isAutoDirectFallback = false;
+    isMutedPrebuffered = false;
+    initAudioEQ();
+
+    fadeOutCurrentAudio(() => {
+      if (myToken !== switchToken) return;
+      stopAllPlayersImmediately();
+
+      attachAndPlay(
+        playerEQ,
+        ch.url,
+        myToken,
+        false,
+        () => {
+          activePlayer = playerEQ;
+          isDirectMode = false;
+          initAudioEQ();
+          fadeInTargetAudio(false);
+          updateUIState(idx, 'playing', '');
+          updateAttButtonUI();
+          updateStatusEQText();
+          setupMediaSession(ch);
+        },
+        () => {
+          if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
+          attachAndPlay(
+            playerDirect,
+            ch.url,
+            myToken,
+            isAttMuted,
+            () => {
+              activePlayer = playerDirect;
+              isDirectMode = true;
+              fadeInTargetAudio(true);
+              updateUIState(idx, 'playing', '');
+              updateAttButtonUI();
+              updateStatusEQText();
+              setupMediaSession(ch);
+            },
+            () => {
+              updateUIState(idx, 'selected', '已選台 • 點擊上方「▶ 播放」或此鈕啟動聲音');
+            }
+          );
+        }
+      );
+    });
+  }
+
+  function toggleMasterPlay() {
+    if (isMutedPrebuffered) {
+      unlockPrebufferedStream();
+      return;
+    }
+    if (currentPlayState === 'idle' || activePlayer.paused) {
+      currentPlayState = 'idle';
+      playByIndex(currentIndex, true);
+    } else {
+      cancelSleepTimer();
+      const myToken = ++switchToken;
+      fadeOutCurrentAudio(() => {
+        if (myToken !== switchToken) return;
+        stopAllPlayersImmediately();
+        isAutoDirectFallback = false;
+        updateUIState(currentIndex, 'idle', '已暫停');
+      });
+    }
+  }
+
+  function updateUIState(activeIdx, state, subMsg) {
+    currentPlayState = state;
+    const ch = channels[activeIdx] || channels[0];
+    statusMain.innerText = ch.name;
+    if (subMsg) statusSub.innerText = subMsg;
+
+    masterStopBtn.classList.remove('selected', 'active');
+    if (state === 'playing') {
+      masterStopBtn.innerText = '⏸ 暫停';
+      masterStopBtn.classList.add('active');
+      startVisualizerLoop();
+      if (isSilentModeActive) renderSilentContent();
+      else resetSilentIdleTimer();
+    } else if (state === 'selected') {
+      masterStopBtn.innerText = isMutedPrebuffered ? '🔊 出聲' : '⏳ 連線';
+      masterStopBtn.classList.add('selected');
+      stopVisualizerLoop();
+      clearTimeout(silentIdleTimer);
+    } else {
+      masterStopBtn.innerText = '▶ 播放';
+      stopVisualizerLoop();
+      clearTimeout(silentIdleTimer);
+      exitSilentMode();
+    }
+
+    channels.forEach((item, i) => {
+      const btn = document.getElementById(item.id);
+      if (!btn) return;
+      btn.classList.remove('selected', 'playing');
+      if (i === activeIdx) {
+        if (state === 'selected') btn.classList.add('selected');
+        if (state === 'playing') btn.classList.add('playing');
+      }
+    });
+  }
+
+  function setupMediaSession(ch) {
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: ch.name,
+        artist: ch.sub + ' • walton電台',
+        album: 'CAR MULTIMEDIA'
+      });
+
+      navigator.mediaSession.setActionHandler('play', () => playByIndex(currentIndex, true));
+      navigator.mediaSession.setActionHandler('pause', () => {
+        cancelSleepTimer();
+        const myToken = ++switchToken;
+        fadeOutCurrentAudio(() => {
+          if (myToken !== switchToken) return;
+          stopAllPlayersImmediately();
+          isAutoDirectFallback = false;
+          updateUIState(currentIndex, 'idle', '已暫停');
+        });
+      });
+      navigator.mediaSession.setActionHandler('previoustrack', () => stepChannelByScanRule(-1));
+      navigator.mediaSession.setActionHandler('nexttrack', () => stepChannelByScanRule(1));
+    }
+  }
+
+  window.addEventListener('online', () => {
+    if (currentPlayState === 'playing' || reconnectRetryCount > 0) {
+      const useEQ = !isAutoDirectFallback;
+      currentPlayState = 'idle';
+      playByIndex(currentIndex, useEQ, true);
+    }
+  });
+
+  document.addEventListener('pointerdown', (e) => {
+    if (!isSilentModeActive) {
+      resetSilentIdleTimer();
+    }
+    if (e.target.closest('#channelModal') || e.target.closest('#unsavedConfirmModal') || e.target.closest('#silentModal')) return;
+    if (isMutedPrebuffered && !e.target.closest('.ch-btn')) {
+      unlockPrebufferedStream();
+    } else if (isAutoDirectFallback && currentPlayState === 'playing' && !e.target.closest('button') && !e.target.closest('input')) {
+      upgradeToEQOnUserGesture();
+    }
+  }, { passive: true });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    if (isSilentModeActive) {
+      exitSilentMode();
+      return;
+    }
+    resetSilentIdleTimer();
+    if (isMutedPrebuffered) {
+      unlockPrebufferedStream();
+    }
+  });
+
+  document.addEventListener('touchmove', (e) => {
+    if (!e.target.closest('input[type=range]') && !e.target.closest('.modal-scroll-area') && !e.target.closest('textarea')) {
+      e.preventDefault();
+    }
+  }, { passive: false });
+
+  window.addEventListener('load', () => {
+    document.getElementById('versionBadge').innerText = APP_VERSION;
+    applyTheme();
+    applyDriveMode();
+    updateReconnectBtnUI();
+    updateSleepTimerUI();
+    updateFavOnlyUI();
+    applyGridCols();
+    renderChannelButtons();
+    applyCurrentChannelPreamp();
+    setEQ(currentEQ, false);
+    playByIndex(currentIndex, false);
+  });
+</script>
+</body>
+</html>
