@@ -83,7 +83,7 @@ function executeFactoryReset() {
     'waltonCustomChannelsList', 'customChannelOrderIds', 'waltonTrashChannelsList',
     'customRadioEQ10Presets_v2', 'perChannelPreampMap', 'lastRadioChannelId',
     'lastRadioEQ', 'waltonSilentConfig', 'waltonThemeMode', 'waltonReconnectSec',
-    'waltonGridCols', 'waltonDriveMode', 'waltonFavOnlyScan'
+    'waltonGridCols', 'waltonDriveMode', 'waltonFavOnlyScan', 'waltonEqHeightMode'
   ];
   keysToRemove.forEach(k => localStorage.removeItem(k));
   forceReloadPage();
@@ -129,7 +129,7 @@ const defaultSilentConfig = {
   showBtns: false
 };
 let silentConfig = Object.assign({}, defaultSilentConfig, safeParseJSON('waltonSilentConfig', {}));
-if (!validSilentDelays.includes(silentConfig.delaySec) || silentConfig.delaySec === 10) {
+if (!validSilentDelays.includes(silentConfig.delaySec)) {
   silentConfig.delaySec = 20;
   localStorage.setItem('waltonSilentConfig', JSON.stringify(silentConfig));
 }
@@ -139,11 +139,19 @@ let silentClockTimer = null;
 let silentDriftTimer = null;
 let isSilentModeActive = false;
 
-// 車用偏好設定（預設不進入螢幕保護 / 預設不啟用常亮鎖定）
+// 車用偏好設定：預設緩衝/斷線重連秒數改為 16 秒
 let themeMode = localStorage.getItem('waltonThemeMode') || 'night';
-const reconnectOptions = [2, 4.5, 8, 15];
-let reconnectDelaySec = parseFloat(localStorage.getItem('waltonReconnectSec')) || 4.5;
-if (!reconnectOptions.includes(reconnectDelaySec)) reconnectDelaySec = 4.5;
+const reconnectOptions = [4.5, 8, 16, 25];
+let reconnectDelaySec = parseFloat(localStorage.getItem('waltonReconnectSec')) || 16;
+if (!reconnectOptions.includes(reconnectDelaySec)) {
+  reconnectDelaySec = 16;
+  localStorage.setItem('waltonReconnectSec', reconnectDelaySec);
+}
+
+// EQ 推桿三段高度模式：'normal' | 'tall' | 'compact'
+const eqHeightModes = ['normal', 'tall', 'compact'];
+let eqHeightMode = localStorage.getItem('waltonEqHeightMode') || 'normal';
+if (!eqHeightModes.includes(eqHeightMode)) eqHeightMode = 'normal';
 
 let wakeLockEnabled = false;
 let wakeLockSentinel = null;
@@ -163,7 +171,7 @@ const playerDirect = document.getElementById('playerDirect');
 let activePlayer = playerDirect;
 let isDirectMode = true;
 let isAwaitingFirstTap = true;
-let isStreamConfirmedPlaying = false; // 嚴格標記：串流是否已真正成功解碼出聲
+let isStreamConfirmedPlaying = false;
 let hlsInstance = null;
 let switchToken = 0;
 
@@ -201,6 +209,30 @@ let dropTargetChannelId = null;
 let startX = 0;
 let startY = 0;
 
+// ==================== EQ 推桿三段高度動態調整 ====================
+function applyEqHeightMode() {
+  document.body.classList.remove('eq-h-compact', 'eq-h-normal', 'eq-h-tall');
+  document.body.classList.add(`eq-h-${eqHeightMode}`);
+  const btn = document.getElementById('eqHeightBtn');
+  if (!btn) return;
+  if (eqHeightMode === 'tall') {
+    btn.innerText = '↕️ 推桿:加高';
+    btn.classList.add('on');
+  } else if (eqHeightMode === 'compact') {
+    btn.innerText = '↕️ 推桿:矮版';
+    btn.classList.add('on');
+  } else {
+    btn.innerText = '↕️ 推桿:標準';
+    btn.classList.remove('on');
+  }
+}
+
+function cycleEqHeight() {
+  eqHeightMode = eqHeightModes[(eqHeightModes.indexOf(eqHeightMode) + 1) % eqHeightModes.length];
+  localStorage.setItem('waltonEqHeightMode', eqHeightMode);
+  applyEqHeightMode();
+}
+
 // ==================== 串流成功驗證與靜默模式核心控制 ====================
 function isAudioActuallyStreaming() {
   if (currentPlayState !== 'playing' || !isStreamConfirmedPlaying) return false;
@@ -213,7 +245,6 @@ function resetSilentIdleTimer() {
   clearTimeout(silentIdleTimer);
   if (isSilentModeActive) return;
   if (!silentConfig.delaySec || silentConfig.delaySec <= 0) return;
-  // 沒有串流成功出聲時，絕不啟動靜默倒數
   if (!isAudioActuallyStreaming()) return;
   if (document.getElementById('channelModal').classList.contains('show') ||
       document.getElementById('silentModal').classList.contains('show')) {
@@ -229,7 +260,6 @@ function resetSilentIdleTimer() {
 
 function enterSilentMode(forcePreview = false) {
   if (isSilentModeActive) return;
-  // 非手動預覽模式下，若沒有串流成功則拒絕進入靜默
   if (!forcePreview && !isAudioActuallyStreaming()) return;
 
   isSilentModeActive = true;
@@ -427,6 +457,7 @@ function collectSilentCheckboxes() {
 function saveSilentSettings() {
   collectSilentCheckboxes();
   document.getElementById('silentModal').classList.remove('show');
+  updateEqHintText();
   resetSilentIdleTimer();
 }
 
@@ -434,6 +465,13 @@ function previewSilentModeNow() {
   collectSilentCheckboxes();
   document.getElementById('silentModal').classList.remove('show');
   enterSilentMode(true);
+}
+
+function updateEqHintText() {
+  const hintEl = document.getElementById('eqHintBar');
+  if (!hintEl) return;
+  const silentStr = silentConfig.delaySec > 0 ? `串流成功後 ${silentConfig.delaySec} 秒進純黑靜默` : '自動靜默已關閉';
+  hintEl.innerText = `💡 雙擊推桿歸零 • ${silentStr}`;
 }
 
 // ==================== 主題 / 駕駛模式 ====================
@@ -474,14 +512,13 @@ function applyDriveMode() {
   const btn = document.getElementById('driveModeBtn');
   document.body.classList.toggle('drive-mode', isDriveMode);
   btn.classList.toggle('active', isDriveMode);
-  btn.innerText = isDriveMode ? '🚗 駕駛中' : '🚗';
+  btn.innerText = isDriveMode ? '🚗 駕駛' : '🚗';
 }
 
 function toggleDriveMode() {
   isDriveMode = !isDriveMode;
   applyDriveMode();
 
-  // 僅在串流已真正成功播放時，開啟駕駛模式才直接 0.3s 進入靜默
   if (isDriveMode && isAudioActuallyStreaming()) {
     enterSilentMode();
   }
@@ -539,7 +576,7 @@ function stepChannelByScanRule(direction) {
   else playByIndex(favIndices[(posInFav + direction + favIndices.length) % favIndices.length], true);
 }
 
-// ==================== 斷線重連秒數 / 螢幕常亮（預設關閉不進入螢幕保護） / 睡眠定時 / 網格欄數 ====================
+// ==================== 斷線重連秒數（預設 16 秒） / 螢幕常亮 / 睡眠定時 / 網格欄數 ====================
 function updateReconnectBtnUI() {
   document.getElementById('reconnectSecBtn').innerText = `🔄 重連${reconnectDelaySec}s`;
 }
@@ -660,8 +697,10 @@ function triggerSleepFadeOutStop() {
 function applyGridCols() {
   const btn = document.getElementById('gridColsBtn');
   container.classList.toggle('cols-3', gridCols === 3);
-  btn.innerText = gridCols === 3 ? '田 3欄' : '田 2欄';
-  btn.classList.toggle('on', gridCols === 3);
+  if (btn) {
+    btn.innerText = gridCols === 3 ? '3欄' : '2欄';
+    btn.classList.toggle('on', gridCols === 3);
+  }
 }
 
 function toggleGridCols() {
@@ -1017,7 +1056,8 @@ function exportBackupToClipboard() {
     app: 'walton電台', version: APP_VERSION, exportedAt: new Date().toISOString(),
     channels: draftChannels, trashChannels: draftTrashChannels, perChannelPreamp: draftPreampMap,
     eqPresets: eqPresets, lastRadioEQ: currentEQ, themeMode: themeMode,
-    reconnectDelaySec: reconnectDelaySec, gridCols: gridCols, favOnlyScan: favOnlyScan, silentConfig: silentConfig
+    reconnectDelaySec: reconnectDelaySec, gridCols: gridCols, eqHeightMode: eqHeightMode,
+    favOnlyScan: favOnlyScan, silentConfig: silentConfig
   };
   const jsonStr = JSON.stringify(backupPayload);
   if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -1049,6 +1089,7 @@ function applyImportedBackup() {
     if (parsed.themeMode) { themeMode = parsed.themeMode; localStorage.setItem('waltonThemeMode', themeMode); applyTheme(); }
     if (parsed.reconnectDelaySec) { reconnectDelaySec = parsed.reconnectDelaySec; localStorage.setItem('waltonReconnectSec', reconnectDelaySec); updateReconnectBtnUI(); }
     if (parsed.gridCols) { gridCols = parsed.gridCols === 3 ? 3 : 2; localStorage.setItem('waltonGridCols', gridCols); applyGridCols(); }
+    if (parsed.eqHeightMode && eqHeightModes.includes(parsed.eqHeightMode)) { eqHeightMode = parsed.eqHeightMode; localStorage.setItem('waltonEqHeightMode', eqHeightMode); applyEqHeightMode(); }
     if (typeof parsed.favOnlyScan === 'boolean') { favOnlyScan = parsed.favOnlyScan; localStorage.setItem('waltonFavOnlyScan', favOnlyScan); updateFavOnlyUI(); }
     if (parsed.silentConfig && typeof parsed.silentConfig === 'object') {
       silentConfig = Object.assign({}, defaultSilentConfig, parsed.silentConfig);
@@ -1269,7 +1310,6 @@ function initAudioEQ() {
 
 function startStallWatchdog(targetPlayer, token) {
   clearTimeout(stallWatchdogTimer);
-  // 串流中斷停滯時，立即標記尚未正常播音並停止靜默倒數
   isStreamConfirmedPlaying = false;
   clearTimeout(silentIdleTimer);
   if (currentPlayState !== 'playing') return;
@@ -1424,6 +1464,7 @@ function toggleEQPanel() {
   const toggleBtn = document.getElementById('tuneToggleBtn');
   const isOpen = panel.classList.toggle('show');
   toggleBtn.classList.toggle('open', isOpen);
+  document.body.classList.toggle('eq-expanded', isOpen);
 }
 
 function updateStatusEQText() {
@@ -1496,7 +1537,6 @@ function attachAndPlay(targetPlayer, url, token, onStreamConfirmed, onFail) {
   };
 
   targetPlayer.onplaying = confirmPlaybackActive;
-  // 確保時間軸實際前進（currentTime > 0）才認定真正串流成功
   targetPlayer.ontimeupdate = () => {
     if (token === switchToken && !confirmed && targetPlayer.currentTime > 0) {
       confirmPlaybackActive();
@@ -1748,9 +1788,11 @@ window.addEventListener('load', () => {
   document.getElementById('versionBadge').innerText = APP_VERSION;
   applyTheme();
   applyDriveMode();
+  applyEqHeightMode();
   updateReconnectBtnUI();
   updateSleepTimerUI();
   updateFavOnlyUI();
+  updateEqHintText();
   applyGridCols();
   renderChannelButtons();
   applyCurrentChannelPreamp();
