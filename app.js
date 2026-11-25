@@ -115,9 +115,10 @@ if (!eqPresets || typeof eqPresets !== 'object') eqPresets = JSON.parse(JSON.str
 if (!eqPresets.custom) eqPresets.custom = JSON.parse(JSON.stringify(defaultPresets.custom));
 let perChannelPreamp = safeParseJSON('perChannelPreampMap', {}) || {};
 
+// 靜默模式設定（預設 20 秒，可選 關閉 / 10 / 20 / 30 / 60 / 120）
 const validSilentDelays = [0, 10, 20, 30, 60, 120];
 const defaultSilentConfig = {
-  delaySec: 10,
+  delaySec: 20,
   ratio: 'third',
   layout: 'center',
   showStation: true,
@@ -128,8 +129,8 @@ const defaultSilentConfig = {
   showBtns: false
 };
 let silentConfig = Object.assign({}, defaultSilentConfig, safeParseJSON('waltonSilentConfig', {}));
-if (!validSilentDelays.includes(silentConfig.delaySec)) {
-  silentConfig.delaySec = 10;
+if (!validSilentDelays.includes(silentConfig.delaySec) || silentConfig.delaySec === 10) {
+  silentConfig.delaySec = 20;
   localStorage.setItem('waltonSilentConfig', JSON.stringify(silentConfig));
 }
 
@@ -138,6 +139,7 @@ let silentClockTimer = null;
 let silentDriftTimer = null;
 let isSilentModeActive = false;
 
+// 車用偏好設定（預設不進入螢幕保護 / 預設不啟用常亮鎖定）
 let themeMode = localStorage.getItem('waltonThemeMode') || 'night';
 const reconnectOptions = [2, 4.5, 8, 15];
 let reconnectDelaySec = parseFloat(localStorage.getItem('waltonReconnectSec')) || 4.5;
@@ -147,7 +149,7 @@ let wakeLockEnabled = false;
 let wakeLockSentinel = null;
 let gridCols = parseInt(localStorage.getItem('waltonGridCols'), 10) === 3 ? 3 : 2;
 let isAttMuted = false;
-let isDriveMode = false; // 預設開啟完整介面，確保 EQ 調整與電台編輯隨時可見
+let isDriveMode = false;
 let favOnlyScan = localStorage.getItem('waltonFavOnlyScan') === 'true';
 
 const sleepTimerOptions = [0, 10, 15, 30, 45, 60, 90];
@@ -161,6 +163,7 @@ const playerDirect = document.getElementById('playerDirect');
 let activePlayer = playerDirect;
 let isDirectMode = true;
 let isAwaitingFirstTap = true;
+let isStreamConfirmedPlaying = false; // 嚴格標記：串流是否已真正成功解碼出聲
 let hlsInstance = null;
 let switchToken = 0;
 
@@ -198,26 +201,37 @@ let dropTargetChannelId = null;
 let startX = 0;
 let startY = 0;
 
-// ==================== 靜默模式核心控制 ====================
+// ==================== 串流成功驗證與靜默模式核心控制 ====================
+function isAudioActuallyStreaming() {
+  if (currentPlayState !== 'playing' || !isStreamConfirmedPlaying) return false;
+  if (!activePlayer || activePlayer.paused || activePlayer.ended) return false;
+  if (activePlayer.readyState < 2 || activePlayer.currentTime <= 0) return false;
+  return true;
+}
+
 function resetSilentIdleTimer() {
   clearTimeout(silentIdleTimer);
   if (isSilentModeActive) return;
   if (!silentConfig.delaySec || silentConfig.delaySec <= 0) return;
-  if (currentPlayState !== 'playing') return;
+  // 沒有串流成功出聲時，絕不啟動靜默倒數
+  if (!isAudioActuallyStreaming()) return;
   if (document.getElementById('channelModal').classList.contains('show') ||
       document.getElementById('silentModal').classList.contains('show')) {
     return;
   }
 
   silentIdleTimer = setTimeout(() => {
-    if (currentPlayState === 'playing') {
+    if (isAudioActuallyStreaming()) {
       enterSilentMode();
     }
   }, silentConfig.delaySec * 1000);
 }
 
-function enterSilentMode() {
+function enterSilentMode(forcePreview = false) {
   if (isSilentModeActive) return;
+  // 非手動預覽模式下，若沒有串流成功則拒絕進入靜默
+  if (!forcePreview && !isAudioActuallyStreaming()) return;
+
   isSilentModeActive = true;
   clearTimeout(silentIdleTimer);
 
@@ -419,7 +433,7 @@ function saveSilentSettings() {
 function previewSilentModeNow() {
   collectSilentCheckboxes();
   document.getElementById('silentModal').classList.remove('show');
-  enterSilentMode();
+  enterSilentMode(true);
 }
 
 // ==================== 主題 / 駕駛模式 ====================
@@ -467,7 +481,8 @@ function toggleDriveMode() {
   isDriveMode = !isDriveMode;
   applyDriveMode();
 
-  if (isDriveMode && currentPlayState === 'playing') {
+  // 僅在串流已真正成功播放時，開啟駕駛模式才直接 0.3s 進入靜默
+  if (isDriveMode && isAudioActuallyStreaming()) {
     enterSilentMode();
   }
 }
@@ -524,7 +539,7 @@ function stepChannelByScanRule(direction) {
   else playByIndex(favIndices[(posInFav + direction + favIndices.length) % favIndices.length], true);
 }
 
-// ==================== 斷線重連秒數 / 螢幕常亮 / 睡眠定時 / 網格欄數 ====================
+// ==================== 斷線重連秒數 / 螢幕常亮（預設關閉不進入螢幕保護） / 睡眠定時 / 網格欄數 ====================
 function updateReconnectBtnUI() {
   document.getElementById('reconnectSecBtn').innerText = `🔄 重連${reconnectDelaySec}s`;
 }
@@ -701,7 +716,7 @@ function startVisualizerLoop() {
   const renderFrame = () => {
     const sbars = [0, 1, 2, 3, 4].map(i => document.getElementById(`svbar${i}`));
 
-    if (currentPlayState !== 'playing' || isAttMuted) {
+    if (currentPlayState !== 'playing' || !isStreamConfirmedPlaying || isAttMuted) {
       bars.forEach(b => { if (b) b.style.height = '3px'; });
       sbars.forEach(b => { if (b) b.style.height = '3px'; });
       vizBox.classList.remove('active');
@@ -1037,7 +1052,7 @@ function applyImportedBackup() {
     if (typeof parsed.favOnlyScan === 'boolean') { favOnlyScan = parsed.favOnlyScan; localStorage.setItem('waltonFavOnlyScan', favOnlyScan); updateFavOnlyUI(); }
     if (parsed.silentConfig && typeof parsed.silentConfig === 'object') {
       silentConfig = Object.assign({}, defaultSilentConfig, parsed.silentConfig);
-      if (!validSilentDelays.includes(silentConfig.delaySec)) silentConfig.delaySec = 10;
+      if (!validSilentDelays.includes(silentConfig.delaySec)) silentConfig.delaySec = 20;
       localStorage.setItem('waltonSilentConfig', JSON.stringify(silentConfig));
     }
     editingChannelId = null;
@@ -1254,7 +1269,11 @@ function initAudioEQ() {
 
 function startStallWatchdog(targetPlayer, token) {
   clearTimeout(stallWatchdogTimer);
+  // 串流中斷停滯時，立即標記尚未正常播音並停止靜默倒數
+  isStreamConfirmedPlaying = false;
+  clearTimeout(silentIdleTimer);
   if (currentPlayState !== 'playing') return;
+
   stallWatchdogTimer = setTimeout(() => {
     if (token !== switchToken || currentPlayState !== 'playing') return;
     reconnectRetryCount++;
@@ -1436,13 +1455,15 @@ function updateStatusEQText() {
 }
 
 function stopAllPlayersImmediately() {
+  isStreamConfirmedPlaying = false;
+  clearTimeout(silentIdleTimer);
   clearStallWatchdog();
   stopVisualizerLoop();
   if (directFadeTimer) { clearInterval(directFadeTimer); directFadeTimer = null; }
-  playerEQ.onplaying = null; playerEQ.onstalled = null; playerEQ.onwaiting = null; playerEQ.onerror = null;
+  playerEQ.onplaying = null; playerEQ.ontimeupdate = null; playerEQ.onstalled = null; playerEQ.onwaiting = null; playerEQ.onerror = null;
   playerEQ.pause(); playerEQ.removeAttribute('src'); playerEQ.load();
 
-  playerDirect.onplaying = null; playerDirect.onstalled = null; playerDirect.onwaiting = null; playerDirect.onerror = null;
+  playerDirect.onplaying = null; playerDirect.ontimeupdate = null; playerDirect.onstalled = null; playerDirect.onwaiting = null; playerDirect.onerror = null;
   playerDirect.muted = false; playerDirect.pause(); playerDirect.removeAttribute('src'); playerDirect.load();
 
   if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
@@ -1460,18 +1481,34 @@ function attachAndPlay(targetPlayer, url, token, onStreamConfirmed, onFail) {
     targetPlayer.volume = 0;
   }
 
-  targetPlayer.onplaying = () => {
-    if (token === switchToken) {
-      clearStallWatchdog();
-      reconnectRetryCount = 0;
-      if (!confirmed) { confirmed = true; onStreamConfirmed(); }
-      else updateStatusEQText();
+  const confirmPlaybackActive = () => {
+    if (token !== switchToken) return;
+    clearStallWatchdog();
+    reconnectRetryCount = 0;
+    isStreamConfirmedPlaying = true;
+    if (!confirmed) {
+      confirmed = true;
+      onStreamConfirmed();
+    } else {
+      updateStatusEQText();
+      resetSilentIdleTimer();
     }
   };
+
+  targetPlayer.onplaying = confirmPlaybackActive;
+  // 確保時間軸實際前進（currentTime > 0）才認定真正串流成功
+  targetPlayer.ontimeupdate = () => {
+    if (token === switchToken && !confirmed && targetPlayer.currentTime > 0) {
+      confirmPlaybackActive();
+    }
+  };
+
   targetPlayer.onstalled = () => { if (token === switchToken && confirmed) startStallWatchdog(targetPlayer, token); };
   targetPlayer.onwaiting = () => { if (token === switchToken && confirmed) startStallWatchdog(targetPlayer, token); };
   targetPlayer.onerror = () => {
     if (token === switchToken) {
+      isStreamConfirmedPlaying = false;
+      clearTimeout(silentIdleTimer);
       if (!confirmed) onFail();
       else startStallWatchdog(targetPlayer, token);
     }
@@ -1487,6 +1524,8 @@ function attachAndPlay(targetPlayer, url, token, onStreamConfirmed, onFail) {
     });
     hlsInstance.on(Hls.Events.ERROR, (event, data) => {
       if (data.fatal && token === switchToken) {
+        isStreamConfirmedPlaying = false;
+        clearTimeout(silentIdleTimer);
         if (!confirmed) onFail();
         else startStallWatchdog(targetPlayer, token);
       }
@@ -1514,6 +1553,9 @@ function playByIndex(idx, isUserClick = false, isAutoReconnect = false) {
     });
     return;
   }
+
+  isStreamConfirmedPlaying = false;
+  clearTimeout(silentIdleTimer);
 
   currentIndex = idx;
   currentChannelId = ch.id;
@@ -1586,6 +1628,8 @@ function playByIndex(idx, isUserClick = false, isAutoReconnect = false) {
             setupMediaSession(ch);
           },
           () => {
+            isStreamConfirmedPlaying = false;
+            clearTimeout(silentIdleTimer);
             updateUIState(idx, 'idle', '⚠️ 串流連線逾時，請再點一次重試');
           }
         );
@@ -1617,23 +1661,25 @@ function updateUIState(activeIdx, state, subMsg) {
   if (subMsg) statusSub.innerText = subMsg;
 
   masterStopBtn.classList.remove('selected', 'active');
-  if (state === 'playing') {
+  if (state === 'playing' && isStreamConfirmedPlaying) {
     masterStopBtn.innerText = '⏸ 暫停';
     masterStopBtn.classList.add('active');
     startVisualizerLoop();
     if (isSilentModeActive) {
       renderSilentContent();
-    } else if (isDriveMode) {
+    } else if (isDriveMode && isAudioActuallyStreaming()) {
       enterSilentMode();
     } else {
       resetSilentIdleTimer();
     }
   } else if (state === 'selected') {
+    isStreamConfirmedPlaying = false;
     masterStopBtn.innerText = isAwaitingFirstTap ? '▶ 播放' : '⏳ 連線';
     masterStopBtn.classList.add('selected');
     stopVisualizerLoop();
     clearTimeout(silentIdleTimer);
   } else {
+    isStreamConfirmedPlaying = false;
     masterStopBtn.innerText = '▶ 播放';
     stopVisualizerLoop();
     clearTimeout(silentIdleTimer);
