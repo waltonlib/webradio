@@ -86,27 +86,30 @@
     transition: background 0.25s ease, color 0.25s ease;
   }
 
-  /* 主容器 RWD 佈局：直向為單欄堆疊，橫向寬螢幕自動切換為左右雙欄車機儀表板 */
+  /* 主容器 RWD 佈局：直向防溢位堆疊，橫向寬螢幕左右雙欄 */
   .app-shell {
     display: flex;
     flex-direction: column;
     width: 100%;
     height: 100dvh;
-    padding: env(safe-area-inset-top, 12px) 12px env(safe-area-inset-bottom, 12px) 12px;
+    overflow: hidden;
+    padding: env(safe-area-inset-top, 10px) 12px env(safe-area-inset-bottom, 10px) 12px;
     gap: 8px;
   }
   .left-pane {
     display: flex;
     flex-direction: column;
-    flex: 1;
+    flex: 1 1 auto;
     gap: 8px;
     min-height: 0;
     min-width: 0;
+    overflow: hidden;
   }
   .right-pane {
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
+    min-height: 0;
   }
 
   @media (min-width: 768px) and (orientation: landscape) {
@@ -123,18 +126,17 @@
       max-width: 440px;
       justify-content: center;
     }
-    /* 橫向雙欄寬螢幕下，右側調音儀表板常駐顯示 */
     .right-pane .eq-panel {
       display: flex !important;
       height: 100%;
       justify-content: space-between;
-      padding: 14px 12px;
+      padding: 12px;
     }
     .right-pane .v-slider-wrap {
-      height: 150px;
+      height: 140px;
     }
     .right-pane input[type=range].v-slider {
-      width: 136px;
+      width: 126px;
     }
     #tuneToggleBtn {
       display: none;
@@ -144,49 +146,43 @@
     }
   }
 
-  /* 駕駛模式（Drive Mode）：放大字體與按鈕，隱藏微調列降低分心 */
+  /* 駕駛模式（Drive Mode） */
   body.drive-mode .eq-bar,
   body.drive-mode .right-pane {
     display: none !important;
   }
   body.drive-mode .status-title {
-    font-size: 25px;
+    font-size: 24px;
   }
   body.drive-mode button.ch-btn {
-    font-size: 22px;
-    border-radius: 20px;
+    font-size: 21px;
+    border-radius: 18px;
   }
   body.drive-mode .btn-grid.cols-3 button.ch-btn {
-    font-size: 19px;
+    font-size: 18px;
   }
   body.drive-mode .sub-tag {
-    font-size: 13px;
+    font-size: 12.5px;
   }
 
+  /* 雙排頂部狀態卡片（徹底避免直向螢幕截斷文字） */
   .header {
     background: var(--bg-card);
     border: 1px solid var(--border-card);
-    border-radius: 18px;
-    padding: 10px 12px;
+    border-radius: 16px;
+    padding: 8px 12px;
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 6px;
+    flex-direction: column;
+    gap: 5px;
     box-shadow: 0 4px 12px var(--shadow-card);
     flex-shrink: 0;
   }
-  .status-box {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    overflow: hidden;
-    flex: 1;
-    min-width: 0;
-  }
-  .status-top-row {
+  .header-meta-row {
     display: flex;
     align-items: center;
-    gap: 6px;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
   }
   .status-label {
     font-size: 11.5px;
@@ -195,6 +191,7 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    flex: 1;
   }
   .version-badge {
     font-size: 10px;
@@ -204,17 +201,25 @@
     background: var(--bg-badge);
     border: 1px solid var(--border-badge);
     border-radius: 6px;
-    padding: 1px 5px;
+    padding: 1px 6px;
     flex-shrink: 0;
+  }
+  .header-main-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
   }
   .title-viz-row {
     display: flex;
     align-items: center;
     gap: 8px;
     min-width: 0;
+    flex: 1;
   }
   .status-title {
-    font-size: 19px;
+    font-size: 20px;
     font-weight: 700;
     color: var(--title-accent);
     white-space: nowrap;
@@ -248,15 +253,15 @@
   .header-controls {
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 6px;
     flex-shrink: 0;
   }
   .drive-btn {
     background: var(--bg-eq-btn);
     color: var(--text-eq-btn);
     border: 1.5px solid var(--border-eq-btn);
-    border-radius: 12px;
-    padding: 8px 8px;
+    border-radius: 11px;
+    padding: 7px 9px;
     font-size: 14px;
     font-weight: 700;
     cursor: pointer;
@@ -272,8 +277,8 @@
     background: var(--bg-eq-btn);
     color: var(--text-eq-btn);
     border: 1.5px solid var(--border-eq-btn);
-    border-radius: 12px;
-    padding: 8px 9px;
+    border-radius: 11px;
+    padding: 7px 9px;
     font-size: 13.5px;
     font-weight: 700;
     cursor: pointer;
@@ -289,8 +294,8 @@
     background: #4A4E54;
     color: #FAF8F5;
     border: 1px solid #636870;
-    border-radius: 12px;
-    padding: 8px 11px;
+    border-radius: 11px;
+    padding: 7px 12px;
     font-size: 14.5px;
     font-weight: 700;
     cursor: pointer;
@@ -309,11 +314,11 @@
 
   .eq-bar {
     display: grid;
-    grid-template-columns: repeat(5, 1fr) 42px;
-    gap: 6px;
+    grid-template-columns: repeat(5, 1fr) 40px;
+    gap: 5px;
     background: var(--bg-eq-bar);
     padding: 5px;
-    border-radius: 15px;
+    border-radius: 14px;
     border: 1px solid var(--border-card);
     flex-shrink: 0;
   }
@@ -321,10 +326,10 @@
     background: var(--bg-eq-btn);
     border: 1.5px solid var(--border-eq-btn);
     color: var(--text-eq-btn);
-    font-size: 15px;
+    font-size: 14.5px;
     font-weight: 700;
-    padding: 9px 2px;
-    border-radius: 11px;
+    padding: 8px 2px;
+    border-radius: 10px;
     cursor: pointer;
     letter-spacing: 0.4px;
     transition: all 0.2s ease;
@@ -345,9 +350,9 @@
     background: var(--bg-eq-btn);
     border: 1.5px solid var(--border-eq-btn);
     color: var(--text-main);
-    font-size: 18px;
+    font-size: 17px;
     padding: 0;
-    border-radius: 11px;
+    border-radius: 10px;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -363,29 +368,28 @@
   .eq-panel {
     display: none;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
     background: var(--bg-panel);
     border: 1px solid var(--border-panel);
-    border-radius: 16px;
-    padding: 10px 8px;
+    border-radius: 15px;
+    padding: 8px 8px;
     flex-shrink: 0;
   }
   .eq-panel.show { display: flex; }
 
-  /* 車用快捷設定列：2排 3欄，按鈕更寬好按 */
   .car-quick-row {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 5px;
+    gap: 4px;
   }
   .quick-chip-btn {
     background: var(--bg-chip);
     border: 1px solid var(--border-chip);
     color: var(--text-chip);
-    font-size: 11.5px;
+    font-size: 11px;
     font-weight: 700;
-    padding: 7px 4px;
-    border-radius: 9px;
+    padding: 6px 3px;
+    border-radius: 8px;
     cursor: pointer;
     text-align: center;
     white-space: nowrap;
@@ -400,7 +404,7 @@
   }
 
   .eq-hint-bar {
-    font-size: 11px;
+    font-size: 10.5px;
     color: var(--text-sub);
     text-align: center;
   }
@@ -416,8 +420,8 @@
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    padding: 18px 3px 18px 0;
-    font-size: 9px;
+    padding: 16px 3px 16px 0;
+    font-size: 8.5px;
     color: var(--text-sub);
     font-variant-numeric: tabular-nums;
     text-align: right;
@@ -427,7 +431,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 5px;
+    gap: 4px;
     min-width: 0;
   }
   .band-col.preamp-col {
@@ -438,22 +442,22 @@
   .band-col.preamp-col .band-freq { color: #9C7858; }
   .band-col.preamp-col .band-val { color: #A87C56; font-weight: 700; }
   .band-freq {
-    font-size: 9.5px;
+    font-size: 9px;
     font-weight: 700;
     color: var(--text-main);
     letter-spacing: -0.4px;
     white-space: nowrap;
   }
   .band-val {
-    font-size: 9.5px;
+    font-size: 9px;
     font-variant-numeric: tabular-nums;
     color: var(--title-accent);
-    height: 12px;
+    height: 11px;
   }
   .v-slider-wrap {
     position: relative;
     width: 100%;
-    height: 104px;
+    height: 84px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -470,8 +474,8 @@
   input[type=range].v-slider {
     -webkit-appearance: none;
     appearance: none;
-    width: 94px;
-    height: 22px;
+    width: 76px;
+    height: 20px;
     background: transparent;
     transform: rotate(-90deg);
     margin: 0;
@@ -480,7 +484,7 @@
   }
   input[type=range].v-slider::-webkit-slider-runnable-track {
     width: 100%;
-    height: 6px;
+    height: 5px;
     background: var(--bg-track);
     border-radius: 3px;
     border: 1px solid var(--border-card);
@@ -488,12 +492,12 @@
   input[type=range].v-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 15px;
-    height: 20px;
+    width: 14px;
+    height: 18px;
     border-radius: 4px;
     background: #5B7A8C;
     border: 1.5px solid #FAF8F5;
-    margin-top: -8px;
+    margin-top: -7px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.35);
   }
   input[type=range].v-slider.preamp-slider::-webkit-slider-thumb {
@@ -505,20 +509,21 @@
     border-color: #FFFFFF;
   }
 
+  /* 底部操作列：3個覆蓋 + 還原 + 靜默設定 + 電台管理 */
   .save-row {
     display: grid;
-    grid-template-columns: repeat(3, 1fr) auto auto;
-    gap: 5px;
+    grid-template-columns: repeat(3, 1fr) auto auto auto;
+    gap: 4px;
     margin-top: 2px;
   }
   .save-target-btn {
     background: #455661;
     border: 1px solid #677E8C;
     color: #FAF8F5;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
-    padding: 8px 3px;
-    border-radius: 10px;
+    padding: 7px 2px;
+    border-radius: 9px;
     cursor: pointer;
   }
   .save-target-btn:active { background: #5B7A8C; }
@@ -526,29 +531,179 @@
     background: #4A4E54;
     border: 1px solid #636870;
     color: #E2DFD7;
-    font-size: 12px;
-    padding: 8px 8px;
-    border-radius: 10px;
+    font-size: 11px;
+    padding: 7px 6px;
+    border-radius: 9px;
+    cursor: pointer;
+  }
+  .silent-cfg-btn {
+    background: #3B464F;
+    border: 1px solid #647887;
+    color: #D2E1EB;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 7px 6px;
+    border-radius: 9px;
     cursor: pointer;
   }
   .manage-ch-btn {
     background: #6E5D50;
     border: 1px solid #9C8675;
     color: #FAF8F5;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
-    padding: 8px 8px;
-    border-radius: 10px;
+    padding: 7px 7px;
+    border-radius: 9px;
     cursor: pointer;
   }
 
-  /* 電台管理彈窗 */
+  /* ==================== OLED 靜默模式全螢幕黑化遮罩（純黑 #000000 ＋ 莫蘭迪低亮度柔光字） ==================== */
+  .silent-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    background: #000000;
+    flex-direction: column;
+    opacity: 0;
+    transition: opacity 0.6s ease;
+    touch-action: none;
+  }
+  .silent-overlay.visible {
+    display: flex;
+  }
+  .silent-overlay.fade-in {
+    opacity: 1;
+  }
+  /* 上方資訊展示區（可依自訂比例調整：1/3、1/2 或 全螢幕） */
+  .silent-info-zone {
+    width: 100%;
+    height: 33.33dvh;
+    background: #000000;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: env(safe-area-inset-top, 16px) 22px 12px 22px;
+    position: relative;
+    transition: height 0.3s ease, transform 0.8s ease;
+  }
+  .silent-overlay.ratio-half .silent-info-zone {
+    height: 50dvh;
+  }
+  .silent-overlay.ratio-full .silent-info-zone {
+    height: 100dvh;
+  }
+  .silent-inner-content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    max-width: 560px;
+    margin: 0 auto;
+    transition: transform 1s ease;
+  }
+  /* 配置 A：經典居中 */
+  .silent-inner-content.layout-center {
+    align-items: center;
+    text-align: center;
+  }
+  /* 配置 B：左右 HUD 儀表板 */
+  .silent-inner-content.layout-hud {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    text-align: left;
+  }
+  .silent-hud-left {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .silent-hud-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+  }
+  .silent-clock {
+    font-size: 38px;
+    font-weight: 300;
+    font-variant-numeric: tabular-nums;
+    color: #6B7B85; /* 低亮度莫蘭迪柔光灰藍 */
+    letter-spacing: 1px;
+    line-height: 1.05;
+  }
+  .silent-station-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .silent-station {
+    font-size: 26px;
+    font-weight: 700;
+    color: #8A9CA6; /* 低亮度柔光標題 */
+    letter-spacing: 0.5px;
+  }
+  .silent-meta {
+    font-size: 13px;
+    color: #566066;
+    letter-spacing: 0.4px;
+  }
+  .silent-sleep-tag {
+    font-size: 12px;
+    color: #687A70;
+  }
+  .silent-viz-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 16px;
+  }
+  .silent-viz-bar {
+    width: 3px;
+    height: 3px;
+    border-radius: 2px;
+    background: #5B7380;
+    transition: height 0.1s ease-out;
+  }
+  .silent-quick-btns {
+    display: flex;
+    gap: 10px;
+    margin-top: 4px;
+  }
+  .silent-dim-btn {
+    background: #0D0F10;
+    border: 1px solid #22272B;
+    color: #6B7880;
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 6px 14px;
+    border-radius: 10px;
+    cursor: pointer;
+  }
+  /* 下方 2/3 純黑喚醒與左右滑動切台區 */
+  .silent-black-zone {
+    flex: 1;
+    width: 100%;
+    background: #000000;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: env(safe-area-inset-bottom, 18px);
+  }
+  .silent-wake-hint {
+    font-size: 11px;
+    color: #262B2E;
+    letter-spacing: 0.5px;
+  }
+
+  /* ==================== 通用彈窗樣式 ==================== */
   .modal-backdrop {
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.75);
-    z-index: 100;
+    background: rgba(0, 0, 0, 0.78);
+    z-index: 120;
     align-items: center;
     justify-content: center;
     padding: 14px;
@@ -566,7 +721,7 @@
     padding: 16px;
     gap: 10px;
     color: #E2DFD7;
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
   }
   .modal-header {
     display: flex;
@@ -603,6 +758,72 @@
     border-radius: 10px;
     cursor: pointer;
   }
+
+  /* 靜默設定表單樣式 */
+  .cfg-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    background: #232528;
+    padding: 10px 12px;
+    border-radius: 14px;
+    border: 1px solid #3E4248;
+  }
+  .cfg-group-title {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #9BB7C7;
+  }
+  .cfg-pill-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .cfg-pill {
+    background: #32353A;
+    border: 1px solid #4A4F57;
+    color: #D6CFC7;
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 6px 10px;
+    border-radius: 9px;
+    cursor: pointer;
+  }
+  .cfg-pill.active {
+    background: #6B7E74;
+    border-color: #A8BEB3;
+    color: #FAF8F5;
+  }
+  .cfg-check-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .cfg-check-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #E2DFD7;
+    cursor: pointer;
+  }
+  .cfg-check-item input {
+    width: 16px;
+    height: 16px;
+    accent-color: #6B7E74;
+  }
+  .test-silent-btn {
+    background: #141618;
+    border: 1px solid #5B7A8C;
+    color: #9BB7C7;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 10px;
+    border-radius: 12px;
+    cursor: pointer;
+    text-align: center;
+  }
+
   .backup-bar {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -860,7 +1081,7 @@
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.78);
+    background: rgba(0, 0, 0, 0.8);
     z-index: 200;
     align-items: center;
     justify-content: center;
@@ -925,46 +1146,50 @@
     cursor: pointer;
   }
 
+  /* 電台大按鈕網格：嚴格鎖定在剩餘高度內等分，展開 EQ 面板時自動縮小絕不重疊 */
   .btn-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    flex: 1;
-    gap: 8px;
+    grid-auto-rows: minmax(0, 1fr);
+    flex: 1 1 0%;
+    gap: 7px;
     touch-action: none;
     min-height: 0;
+    overflow: hidden;
   }
   .btn-grid.cols-3 {
     grid-template-columns: repeat(3, 1fr);
   }
   button.ch-btn {
     position: relative;
-    font-size: 18px;
+    font-size: 17.5px;
     font-weight: 700;
     border: 1.5px solid var(--border-btn);
-    border-radius: 16px;
+    border-radius: 15px;
     background: var(--bg-btn);
     color: var(--text-btn);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 4px 5px;
+    padding: 2px 5px;
     text-align: center;
-    line-height: 1.2;
+    line-height: 1.15;
     cursor: pointer;
     touch-action: none;
+    min-height: 0;
+    overflow: hidden;
     transition: transform 0.15s ease, background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease, font-size 0.2s ease;
   }
   .btn-grid.cols-3 button.ch-btn {
-    font-size: 16px;
+    font-size: 15.5px;
   }
 
-  /* 最愛小金星徽章 */
   .fav-star-badge {
     position: absolute;
-    top: 6px;
-    right: 8px;
-    font-size: 11px;
+    top: 4px;
+    right: 7px;
+    font-size: 10px;
     color: var(--star-active);
     pointer-events: none;
     opacity: 0.9;
@@ -998,7 +1223,7 @@
     border: 2.5px dashed #A8BEB3;
   }
 
-  .sub-tag { font-size: 11px; font-weight: 400; color: var(--text-sub); margin-top: 2px; pointer-events: none; }
+  .sub-tag { font-size: 10.5px; font-weight: 400; color: var(--text-sub); margin-top: 1px; pointer-events: none; }
   button.ch-btn span { pointer-events: none; }
   button.ch-btn.selected .sub-tag { color: #EFE5DC; }
   button.ch-btn.playing .sub-tag { color: #DCE6EC; }
@@ -1006,17 +1231,16 @@
 </head>
 <body>
   <div class="app-shell">
-    <!-- 左欄：狀態儀表、EQ 模式快捷列、電台盲操大按鈕網格 -->
+    <!-- 左欄：雙排狀態儀表、EQ 模式快捷列、電台盲操大按鈕網格 -->
     <div class="left-pane">
       <div class="header">
-        <div class="status-box">
-          <div class="status-top-row">
-            <span class="version-badge" id="versionBadge">20261124_v06</span>
-            <span class="status-label" id="statusSub">walton電台 • 長按 1 秒調整順序</span>
-          </div>
+        <div class="header-meta-row">
+          <span class="version-badge" id="versionBadge">20261125_v01</span>
+          <span class="status-label" id="statusSub">walton電台 • 長按 1 秒排序 | 左右滑切台</span>
+        </div>
+        <div class="header-main-row">
           <div class="title-viz-row">
             <span class="status-title" id="statusMain">點擊任一電台開始播放</span>
-            <!-- 5 柱莫蘭迪即時動態音波指示 -->
             <div class="viz-bars" id="vizBars" aria-hidden="true">
               <div class="viz-bar" id="vbar0"></div>
               <div class="viz-bar" id="vbar1"></div>
@@ -1025,11 +1249,11 @@
               <div class="viz-bar" id="vbar4"></div>
             </div>
           </div>
-        </div>
-        <div class="header-controls">
-          <button class="drive-btn" id="driveModeBtn" onclick="toggleDriveMode()" title="極簡大字駕駛模式（支援左右滑動切台）">🚗 駕駛</button>
-          <button class="att-btn" id="attBtn" onclick="toggleAttMute()" title="暫時降音 -20dB（不斷線交談模式）">🔉 降音</button>
-          <button class="stop-btn" id="masterStopBtn" onclick="toggleMasterPlay()">▶ 播放</button>
+          <div class="header-controls">
+            <button class="drive-btn" id="driveModeBtn" onclick="toggleDriveMode()" title="極簡大字駕駛模式">🚗</button>
+            <button class="att-btn" id="attBtn" onclick="toggleAttMute()" title="暫時降音 -20dB（不斷線交談模式）">🔉</button>
+            <button class="stop-btn" id="masterStopBtn" onclick="toggleMasterPlay()">▶ 播放</button>
+          </div>
         </div>
       </div>
 
@@ -1049,7 +1273,6 @@
     <!-- 右欄（直向時可收合；橫向寬螢幕時自動常駐顯示） -->
     <div class="right-pane">
       <div class="eq-panel" id="eqPanel">
-        <!-- 6顆車用快捷控制按鈕 -->
         <div class="car-quick-row">
           <button class="quick-chip-btn" id="themeToggleBtn" onclick="cycleThemeMode()">🌙 夜間</button>
           <button class="quick-chip-btn" id="reconnectSecBtn" onclick="cycleReconnectSec()">🔄 重連4.5s</button>
@@ -1059,7 +1282,7 @@
           <button class="quick-chip-btn" id="gridColsBtn" onclick="toggleGridCols()">田 2欄</button>
         </div>
 
-        <div class="eq-hint-bar">💡 雙擊推桿歸零 (0dB) • 駕駛模式支援左右滑動切台</div>
+        <div class="eq-hint-bar">💡 雙擊推桿歸零 (0dB) • 聆聽 2 分鐘自動進入純黑靜默</div>
         <div class="graphic-eq-container" id="graphicEqContainer">
           <div class="db-scale">
             <span>+12</span>
@@ -1080,9 +1303,67 @@
           <button class="save-target-btn" onclick="overwritePreset('voice')">覆蓋「人聲」</button>
           <button class="save-target-btn" onclick="overwritePreset('bass')">覆蓋「重低音」</button>
           <button class="save-target-btn" onclick="overwritePreset('classical')">覆蓋「古典」</button>
-          <button class="reset-eq-btn" onclick="resetDefaultPresets()">還原EQ</button>
+          <button class="reset-eq-btn" onclick="resetDefaultPresets()">還原</button>
+          <button class="silent-cfg-btn" onclick="openSilentSettings()">🌑 靜默</button>
           <button class="manage-ch-btn" onclick="openChannelManager()">📻 電台</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== OLED 靜默模式全螢幕黑化遮罩（純黑 #000000） ==================== -->
+  <div class="silent-overlay" id="silentOverlay">
+    <div class="silent-info-zone" id="silentInfoZone">
+      <div class="silent-inner-content layout-center" id="silentInnerContent"></div>
+    </div>
+    <div class="silent-black-zone" id="silentBlackZone">
+      <span class="silent-wake-hint">輕點喚醒 • 左右滑動切台</span>
+    </div>
+  </div>
+
+  <!-- ==================== 靜默模式自訂設定彈窗 ==================== -->
+  <div class="modal-backdrop" id="silentModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <span>🌑 靜默護眼模式自訂設定</span>
+        <div class="modal-header-actions">
+          <button class="save-modal-btn" onclick="saveSilentSettings()">完成</button>
+        </div>
+      </div>
+
+      <div class="modal-scroll-area">
+        <!-- 1. 觸發時間 -->
+        <div class="cfg-group">
+          <span class="cfg-group-title">1. 正常聆聽無操作多久後進入靜默</span>
+          <div class="cfg-pill-row" id="silentDelayPills"></div>
+        </div>
+
+        <!-- 2. 上下比例 -->
+        <div class="cfg-group">
+          <span class="cfg-group-title">2. 畫面上下黑化比例</span>
+          <div class="cfg-pill-row" id="silentRatioPills"></div>
+        </div>
+
+        <!-- 3. 版面配置 -->
+        <div class="cfg-group">
+          <span class="cfg-group-title">3. 上方資訊區版面配置</span>
+          <div class="cfg-pill-row" id="silentLayoutPills"></div>
+        </div>
+
+        <!-- 4. 顯示內容勾選 -->
+        <div class="cfg-group">
+          <span class="cfg-group-title">4. 保留顯示的必要訊息項目</span>
+          <div class="cfg-check-grid">
+            <label class="cfg-check-item"><input type="checkbox" id="chkSilentStation"> 電台名稱</label>
+            <label class="cfg-check-item"><input type="checkbox" id="chkSilentClock"> 目前時間大時鐘</label>
+            <label class="cfg-check-item"><input type="checkbox" id="chkSilentMeta"> 頻率與 EQ 模式</label>
+            <label class="cfg-check-item"><input type="checkbox" id="chkSilentViz"> 5 柱微光音波條</label>
+            <label class="cfg-check-item"><input type="checkbox" id="chkSilentSleep"> 睡眠定時剩餘時間</label>
+            <label class="cfg-check-item"><input type="checkbox" id="chkSilentBtns"> 快捷「降音/暫停」鈕</label>
+          </div>
+        </div>
+
+        <button class="test-silent-btn" onclick="previewSilentModeNow()">👁️ 立即進入靜默模式預覽效果</button>
       </div>
     </div>
   </div>
@@ -1151,7 +1432,7 @@
 
 <script>
   // 版本命名規則：西元年月日_v01（每日編輯重置為當天日期，同日遞增 v02, v03...，隔日歸為 v01）
-  const APP_VERSION = '20261124_v06';
+  const APP_VERSION = '20261125_v01';
 
   const IC_VOICE_REVMA_URL = 'https://stream.rcs.revma.com/7mnq8rt7k5zuv';
 
@@ -1245,8 +1526,25 @@
   }
   let perChannelPreamp = JSON.parse(localStorage.getItem('perChannelPreampMap')) || {};
 
+  // ==================== 靜默模式（OLED 純黑減光）使用者自訂設定 ====================
+  const defaultSilentConfig = {
+    delaySec: 120,        // 0=關閉, 30, 60, 120(預設2分鐘), 300, 600
+    ratio: 'third',       // 'third'(上1/3+下2/3黑化) | 'half'(上1/2+下1/2黑化) | 'full'(全黑極簡)
+    layout: 'center',     // 'center'(經典居中) | 'hud'(左右儀表) | 'drift'(防烙印微漂移)
+    showStation: true,
+    showClock: true,
+    showMeta: true,
+    showViz: true,
+    showSleep: true,
+    showBtns: false
+  };
+  let silentConfig = Object.assign({}, defaultSilentConfig, JSON.parse(localStorage.getItem('waltonSilentConfig')) || {});
+  let silentIdleTimer = null;
+  let silentClockTimer = null;
+  let silentDriftTimer = null;
+  let isSilentModeActive = false;
+
   // ==================== 車用偏好設定 ====================
-  // themeMode: 'night' | 'day' | 'schedule' (06:30~18:00 日間) | 'system'
   let themeMode = localStorage.getItem('waltonThemeMode') || 'night';
   const reconnectOptions = [2, 4.5, 8, 15];
   let reconnectDelaySec = parseFloat(localStorage.getItem('waltonReconnectSec')) || 4.5;
@@ -1308,7 +1606,244 @@
   let startX = 0;
   let startY = 0;
 
-  // ==================== 1. 主題切換（夜間 / 日間 / 06:30~18:00 時段自動 / 跟隨系統） ====================
+  // ==================== 靜默模式核心控制與自訂彈窗 ====================
+  function resetSilentIdleTimer() {
+    clearTimeout(silentIdleTimer);
+    if (isSilentModeActive) return;
+    if (!silentConfig.delaySec || silentConfig.delaySec <= 0) return;
+    if (currentPlayState !== 'playing' || isMutedPrebuffered) return;
+    // 若管理彈窗開啟中則暫不觸發黑化
+    if (document.getElementById('channelModal').classList.contains('show') ||
+        document.getElementById('silentModal').classList.contains('show')) {
+      return;
+    }
+
+    silentIdleTimer = setTimeout(() => {
+      if (currentPlayState === 'playing' && !isMutedPrebuffered) {
+        enterSilentMode();
+      }
+    }, silentConfig.delaySec * 1000);
+  }
+
+  function enterSilentMode() {
+    if (isSilentModeActive) return;
+    isSilentModeActive = true;
+    clearTimeout(silentIdleTimer);
+
+    const overlay = document.getElementById('silentOverlay');
+    overlay.classList.remove('ratio-half', 'ratio-full');
+    if (silentConfig.ratio === 'half') overlay.classList.add('ratio-half');
+    if (silentConfig.ratio === 'full') overlay.classList.add('ratio-full');
+
+    renderSilentContent();
+    overlay.classList.add('visible');
+    requestAnimationFrame(() => {
+      overlay.classList.add('fade-in');
+    });
+
+    // 啟動每分鐘時鐘更新與防烙印微漂移
+    clearInterval(silentClockTimer);
+    silentClockTimer = setInterval(renderSilentContent, 15000);
+
+    clearInterval(silentDriftTimer);
+    silentDriftTimer = setInterval(() => {
+      if (silentConfig.layout === 'drift') {
+        const inner = document.getElementById('silentInnerContent');
+        if (inner) {
+          const rx = Math.round((Math.random() - 0.5) * 10);
+          const ry = Math.round((Math.random() - 0.5) * 8);
+          inner.style.transform = `translate(${rx}px, ${ry}px)`;
+        }
+      }
+    }, 45000);
+  }
+
+  function exitSilentMode() {
+    if (!isSilentModeActive) return;
+    isSilentModeActive = false;
+    clearInterval(silentClockTimer);
+    clearInterval(silentDriftTimer);
+
+    const overlay = document.getElementById('silentOverlay');
+    overlay.classList.remove('fade-in');
+    setTimeout(() => {
+      if (!isSilentModeActive) {
+        overlay.classList.remove('visible');
+        const inner = document.getElementById('silentInnerContent');
+        if (inner) inner.style.transform = 'translate(0, 0)';
+      }
+    }, 300);
+
+    resetSilentIdleTimer();
+  }
+
+  function renderSilentContent() {
+    const inner = document.getElementById('silentInnerContent');
+    if (!inner) return;
+
+    const ch = channels[currentIndex] || { name: 'walton電台', sub: '' };
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    const timeStr = `${hh}:${mm}`;
+
+    const eqLabel = isDirectMode ? '直通原音' : `EQ:${eqPresets[currentEQ]?.label || '原音'}`;
+    const metaStr = `${ch.sub} • ${eqLabel}${isAttMuted ? ' • 降音中' : ''}`;
+    const sleepMins = getRemainingSleepMinutes();
+    const sleepHtml = (silentConfig.showSleep && sleepTimerMinutes > 0)
+      ? `<div class="silent-sleep-tag">⏰ 睡眠定時剩餘 ${sleepMins} 分鐘</div>`
+      : '';
+
+    const vizHtml = silentConfig.showViz
+      ? `<div class="silent-viz-bars">
+           <div class="silent-viz-bar" id="svbar0"></div>
+           <div class="silent-viz-bar" id="svbar1"></div>
+           <div class="silent-viz-bar" id="svbar2"></div>
+           <div class="silent-viz-bar" id="svbar3"></div>
+           <div class="silent-viz-bar" id="svbar4"></div>
+         </div>`
+      : '';
+
+    const btnsHtml = silentConfig.showBtns
+      ? `<div class="silent-quick-btns">
+           <button class="silent-dim-btn" onclick="event.stopPropagation(); toggleAttMute(); renderSilentContent();">${isAttMuted ? '🔇 恢復音量' : '🔉 降音'}</button>
+           <button class="silent-dim-btn" onclick="event.stopPropagation(); exitSilentMode(); toggleMasterPlay();">⏸ 暫停</button>
+         </div>`
+      : '';
+
+    inner.className = 'silent-inner-content ' + (silentConfig.layout === 'hud' ? 'layout-hud' : 'layout-center');
+
+    if (silentConfig.layout === 'hud') {
+      inner.innerHTML = `
+        <div class="silent-hud-left">
+          ${silentConfig.showClock ? `<div class="silent-clock">${timeStr}</div>` : ''}
+          ${sleepHtml}
+        </div>
+        <div class="silent-hud-right">
+          ${silentConfig.showStation ? `<div class="silent-station-row">${vizHtml}<div class="silent-station">${escapeHtml(ch.name)}</div></div>` : vizHtml}
+          ${silentConfig.showMeta ? `<div class="silent-meta">${escapeHtml(metaStr)}</div>` : ''}
+          ${btnsHtml}
+        </div>
+      `;
+    } else {
+      inner.innerHTML = `
+        ${silentConfig.showClock ? `<div class="silent-clock">${timeStr}</div>` : ''}
+        ${silentConfig.showStation ? `<div class="silent-station-row"><div class="silent-station">${escapeHtml(ch.name)}</div>${vizHtml}</div>` : vizHtml}
+        ${silentConfig.showMeta ? `<div class="silent-meta">${escapeHtml(metaStr)}</div>` : ''}
+        ${sleepHtml}
+        ${btnsHtml}
+      `;
+    }
+  }
+
+  // 靜默黑化區的觸控喚醒與左右滑動切台
+  const silentOverlayEl = document.getElementById('silentOverlay');
+  let silentTouchStartX = 0;
+  let silentTouchStartY = 0;
+
+  silentOverlayEl.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('button')) return;
+    silentTouchStartX = e.clientX;
+    silentTouchStartY = e.clientY;
+  }, { passive: true });
+
+  silentOverlayEl.addEventListener('pointerup', (e) => {
+    if (!isSilentModeActive || e.target.closest('button')) return;
+    const dx = e.clientX - silentTouchStartX;
+    const dy = e.clientY - silentTouchStartY;
+
+    // 若左右滑動超過 65px，直接在靜默模式下切換上一台／下一台而不喚醒刺眼畫面
+    if (Math.abs(dx) > 65 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      if (navigator.vibrate) navigator.vibrate(25);
+      if (dx < 0) stepChannelByScanRule(1);
+      else stepChannelByScanRule(-1);
+      setTimeout(renderSilentContent, 100);
+      return;
+    }
+
+    // 輕點一下立即喚醒恢復完整電台介面（阻擋穿透誤觸背後按鈕）
+    e.preventDefault();
+    e.stopPropagation();
+    exitSilentMode();
+  });
+
+  // 靜默模式設定彈窗渲染與儲存
+  function openSilentSettings() {
+    clearTimeout(silentIdleTimer);
+    renderSilentSettingsModal();
+    document.getElementById('silentModal').classList.add('show');
+  }
+
+  function renderSilentSettingsModal() {
+    const delayOpts = [
+      { val: 0,   label: '關閉' },
+      { val: 30,  label: '30秒' },
+      { val: 60,  label: '1分鐘' },
+      { val: 120, label: '2分鐘' },
+      { val: 300, label: '5分鐘' },
+      { val: 600, label: '10分鐘' }
+    ];
+    const delayBox = document.getElementById('silentDelayPills');
+    delayBox.innerHTML = delayOpts.map(opt =>
+      `<button class="cfg-pill ${silentConfig.delaySec === opt.val ? 'active' : ''}" onclick="setSilentField('delaySec', ${opt.val})">${opt.label}</button>`
+    ).join('');
+
+    const ratioOpts = [
+      { val: 'third', label: '上 1/3 資訊 ＋ 下 2/3 黑化' },
+      { val: 'half',  label: '上 1/2 資訊 ＋ 下 1/2 黑化' },
+      { val: 'full',  label: '全螢幕純黑極簡' }
+    ];
+    const ratioBox = document.getElementById('silentRatioPills');
+    ratioBox.innerHTML = ratioOpts.map(opt =>
+      `<button class="cfg-pill ${silentConfig.ratio === opt.val ? 'active' : ''}" onclick="setSilentField('ratio', '${opt.val}')">${opt.label}</button>`
+    ).join('');
+
+    const layoutOpts = [
+      { val: 'center', label: '配置 A：經典居中' },
+      { val: 'hud',    label: '配置 B：左右 HUD 儀表' },
+      { val: 'drift',  label: '配置 C：防烙印微漂移' }
+    ];
+    const layoutBox = document.getElementById('silentLayoutPills');
+    layoutBox.innerHTML = layoutOpts.map(opt =>
+      `<button class="cfg-pill ${silentConfig.layout === opt.val ? 'active' : ''}" onclick="setSilentField('layout', '${opt.val}')">${opt.label}</button>`
+    ).join('');
+
+    document.getElementById('chkSilentStation').checked = !!silentConfig.showStation;
+    document.getElementById('chkSilentClock').checked   = !!silentConfig.showClock;
+    document.getElementById('chkSilentMeta').checked    = !!silentConfig.showMeta;
+    document.getElementById('chkSilentViz').checked     = !!silentConfig.showViz;
+    document.getElementById('chkSilentSleep').checked   = !!silentConfig.showSleep;
+    document.getElementById('chkSilentBtns').checked    = !!silentConfig.showBtns;
+  }
+
+  function setSilentField(key, val) {
+    silentConfig[key] = val;
+    renderSilentSettingsModal();
+  }
+
+  function collectSilentCheckboxes() {
+    silentConfig.showStation = document.getElementById('chkSilentStation').checked;
+    silentConfig.showClock   = document.getElementById('chkSilentClock').checked;
+    silentConfig.showMeta    = document.getElementById('chkSilentMeta').checked;
+    silentConfig.showViz     = document.getElementById('chkSilentViz').checked;
+    silentConfig.showSleep   = document.getElementById('chkSilentSleep').checked;
+    silentConfig.showBtns    = document.getElementById('chkSilentBtns').checked;
+    localStorage.setItem('waltonSilentConfig', JSON.stringify(silentConfig));
+  }
+
+  function saveSilentSettings() {
+    collectSilentCheckboxes();
+    document.getElementById('silentModal').classList.remove('show');
+    resetSilentIdleTimer();
+  }
+
+  function previewSilentModeNow() {
+    collectSilentCheckboxes();
+    document.getElementById('silentModal').classList.remove('show');
+    enterSilentMode();
+  }
+
+  // ==================== 1. 主題切換 ====================
   function applyTheme() {
     const btn = document.getElementById('themeToggleBtn');
     const prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
@@ -1354,12 +1889,12 @@
     });
   }
 
-  // ==================== 2. 駕駛模式（Drive Mode）＋ 左右滑動切台手勢 ====================
+  // ==================== 2. 駕駛模式 ＋ 左右滑動切台手勢 ====================
   function applyDriveMode() {
     const btn = document.getElementById('driveModeBtn');
     document.body.classList.toggle('drive-mode', isDriveMode);
     btn.classList.toggle('active', isDriveMode);
-    btn.innerText = isDriveMode ? '🚗 駕駛中' : '🚗 駕駛';
+    btn.innerText = isDriveMode ? '🚗 駕駛中' : '🚗';
   }
 
   function toggleDriveMode() {
@@ -1368,7 +1903,6 @@
     applyDriveMode();
   }
 
-  // 網格區域左右滑動切台手勢（Swipe Left = 下一台，Swipe Right = 上一台）
   let swipeStartX = 0;
   let swipeStartY = 0;
   let swipeTracking = false;
@@ -1388,20 +1922,16 @@
     swipeTracking = false;
     const dx = e.clientX - swipeStartX;
     const dy = e.clientY - swipeStartY;
-    // 水平位移超過 68px 且明顯大於垂直位移，判定為左右滑動切台
     if (Math.abs(dx) > 68 && Math.abs(dx) > Math.abs(dy) * 1.6) {
       clearTimeout(longPressTimer);
       draggedChannelId = null;
       if (navigator.vibrate) navigator.vibrate(30);
-      if (dx < 0) {
-        stepChannelByScanRule(1);
-      } else {
-        stepChannelByScanRule(-1);
-      }
+      if (dx < 0) stepChannelByScanRule(1);
+      else stepChannelByScanRule(-1);
     }
   }, { passive: true });
 
-  // ==================== 3. 最愛星號輪播切換（支援方向盤與滑動切台） ====================
+  // ==================== 3. 最愛星號輪播切換 ====================
   function updateFavOnlyUI() {
     const btn = document.getElementById('favOnlyBtn');
     btn.classList.toggle('on', favOnlyScan);
@@ -1548,6 +2078,7 @@
       } else {
         updateSleepTimerUI();
         updateStatusEQText();
+        if (isSilentModeActive) renderSilentContent();
       }
     }, 1000);
   }
@@ -1569,6 +2100,7 @@
       stopAllPlayersImmediately();
       isAutoDirectFallback = false;
       cancelSleepTimer();
+      exitSilentMode();
       updateUIState(currentIndex, 'idle', '🌙 已依睡眠定時淡出停止播放');
     }, SLEEP_FADE_DURATION);
   }
@@ -1595,11 +2127,9 @@
     const btn = document.getElementById('attBtn');
     btn.classList.toggle('active', isAttMuted);
     if (!isAttMuted) {
-      btn.innerText = '🔉 降音';
-    } else if (isDirectMode) {
-      btn.innerText = '🔇 靜音保活';
+      btn.innerText = '🔉';
     } else {
-      btn.innerText = '🔇 降音中';
+      btn.innerText = '🔇';
     }
   }
 
@@ -1635,7 +2165,7 @@
     updateStatusEQText();
   }
 
-  // ==================== 6. 5 柱莫蘭迪動態音波指示器 ====================
+  // ==================== 6. 5 柱莫蘭迪動態音波指示器（同步驅動主畫面與靜默模式） ====================
   function startVisualizerLoop() {
     stopVisualizerLoop();
     const vizBox = document.getElementById('vizBars');
@@ -1650,8 +2180,17 @@
 
     let phase = 0;
     const renderFrame = () => {
+      const sbars = [
+        document.getElementById('svbar0'),
+        document.getElementById('svbar1'),
+        document.getElementById('svbar2'),
+        document.getElementById('svbar3'),
+        document.getElementById('svbar4')
+      ];
+
       if (currentPlayState !== 'playing' || isMutedPrebuffered || isAttMuted) {
         bars.forEach(b => { if (b) b.style.height = '3px'; });
+        sbars.forEach(b => { if (b) b.style.height = '3px'; });
         vizBox.classList.remove('active');
         return;
       }
@@ -1659,19 +2198,19 @@
 
       if (!isDirectMode && analyserNode && analyserData) {
         analyserNode.getByteFrequencyData(analyserData);
-        // 抽取低、中低、中、中高、高 5 個代表頻段能量
         const bins = [2, 5, 10, 18, 28];
         bins.forEach((binIdx, i) => {
           const val = analyserData[binIdx] || 0;
           const h = Math.max(3, Math.min(16, Math.round((val / 255) * 16)));
           if (bars[i]) bars[i].style.height = h + 'px';
+          if (sbars[i]) sbars[i].style.height = h + 'px';
         });
       } else {
-        // 直通模式下的柔和呼吸律動指示
         phase += 0.14;
         bars.forEach((b, i) => {
           const h = Math.max(4, Math.round(7 + Math.sin(phase + i * 1.1) * 4.5));
           if (b) b.style.height = h + 'px';
+          if (sbars[i]) sbars[i].style.height = h + 'px';
         });
       }
       vizAnimFrame = requestAnimationFrame(renderFrame);
@@ -1689,6 +2228,8 @@
     for (let i = 0; i < 5; i++) {
       const b = document.getElementById(`vbar${i}`);
       if (b) b.style.height = '3px';
+      const sb = document.getElementById(`svbar${i}`);
+      if (sb) sb.style.height = '3px';
     }
   }
 
@@ -1847,6 +2388,7 @@
 
   // ==================== 電台管理、最愛標記、編輯、垃圾桶與備份匯出/匯入 ====================
   function openChannelManager() {
+    clearTimeout(silentIdleTimer);
     draftChannels = JSON.parse(JSON.stringify(channels));
     draftTrashChannels = JSON.parse(JSON.stringify(trashChannels));
     draftPreampMap = JSON.parse(JSON.stringify(perChannelPreamp));
@@ -1877,6 +2419,7 @@
       document.getElementById('unsavedConfirmModal').classList.add('show');
     } else {
       document.getElementById('channelModal').classList.remove('show');
+      resetSilentIdleTimer();
     }
   }
 
@@ -1888,6 +2431,7 @@
     editingChannelId = null;
     document.getElementById('unsavedConfirmModal').classList.remove('show');
     document.getElementById('channelModal').classList.remove('show');
+    resetSilentIdleTimer();
   }
 
   function confirmSaveAndClose() {
@@ -1947,6 +2491,7 @@
     document.getElementById('channelModal').classList.remove('show');
     renderChannelButtons();
     updateStatusEQText();
+    resetSilentIdleTimer();
   }
 
   function toggleDraftFav(idx) {
@@ -1967,7 +2512,8 @@
       themeMode: themeMode,
       reconnectDelaySec: reconnectDelaySec,
       gridCols: gridCols,
-      favOnlyScan: favOnlyScan
+      favOnlyScan: favOnlyScan,
+      silentConfig: silentConfig
     };
     const jsonStr = JSON.stringify(backupPayload);
     if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -2025,6 +2571,10 @@
         favOnlyScan = parsed.favOnlyScan;
         localStorage.setItem('waltonFavOnlyScan', favOnlyScan);
         updateFavOnlyUI();
+      }
+      if (parsed.silentConfig && typeof parsed.silentConfig === 'object') {
+        silentConfig = Object.assign({}, defaultSilentConfig, parsed.silentConfig);
+        localStorage.setItem('waltonSilentConfig', JSON.stringify(silentConfig));
       }
       editingChannelId = null;
       document.getElementById('importJsonInput').value = '';
@@ -2324,605 +2874,4 @@
     const ch = channels[currentIndex];
     playerDirect.muted = isAttMuted;
     fadeInTargetAudio(true);
-    updateUIState(currentIndex, 'playing', '');
-    setupMediaSession(ch);
-
-    initAudioEQ();
-    const myToken = ++switchToken;
-    const tempHls = hlsInstance;
-
-    setTimeout(() => {
-      if (myToken !== switchToken || playerDirect.paused) return;
-      const oldDirect = playerDirect;
-      attachAndPlay(
-        playerEQ,
-        ch.url,
-        myToken,
-        false,
-        () => {
-          oldDirect.pause();
-          oldDirect.removeAttribute('src');
-          oldDirect.load();
-          if (tempHls) { try { tempHls.destroy(); } catch (_) {} }
-          activePlayer = playerEQ;
-          isDirectMode = false;
-          isAutoDirectFallback = false;
-          initAudioEQ();
-          fadeInTargetAudio(false);
-          updateUIState(currentIndex, 'playing', '');
-          updateAttButtonUI();
-          updateStatusEQText();
-          setupMediaSession(ch);
-        },
-        () => {
-          isAutoDirectFallback = false;
-          isDirectMode = true;
-          playerDirect.muted = isAttMuted;
-          updateAttButtonUI();
-          updateStatusEQText();
-        }
-      );
-    }, 150);
-  }
-
-  function upgradeToEQOnUserGesture() {
-    if (isMutedPrebuffered) {
-      unlockPrebufferedStream();
-      return;
-    }
-    if (isAutoDirectFallback && currentPlayState === 'playing') {
-      isAutoDirectFallback = false;
-      currentPlayState = 'idle';
-      playByIndex(currentIndex, true);
-    }
-  }
-
-  function fadeOutCurrentAudio(callback, durationSec = FADE_DURATION) {
-    if (activePlayer.paused || activePlayer.muted) {
-      callback();
-      return;
-    }
-
-    if (!isDirectMode && fadeGainNode && audioCtx) {
-      const now = audioCtx.currentTime;
-      fadeGainNode.gain.cancelScheduledValues(now);
-      fadeGainNode.gain.setValueAtTime(fadeGainNode.gain.value, now);
-      fadeGainNode.gain.linearRampToValueAtTime(0.0001, now + durationSec);
-      setTimeout(callback, durationSec * 1000);
-    } else {
-      if (directFadeTimer) clearInterval(directFadeTimer);
-      const startVol = playerDirect.volume;
-      const steps = Math.max(15, Math.round(durationSec * 25));
-      const stepTime = (durationSec * 1000) / steps;
-      let currentStep = 0;
-      directFadeTimer = setInterval(() => {
-        currentStep++;
-        const nextVol = Math.max(0, startVol * (1 - currentStep / steps));
-        playerDirect.volume = nextVol;
-        if (currentStep >= steps) {
-          clearInterval(directFadeTimer);
-          directFadeTimer = null;
-          callback();
-        }
-      }, stepTime);
-    }
-  }
-
-  function fadeInTargetAudio(isDirect) {
-    const targetGain = getTargetOutputGain();
-    if (!isDirect && fadeGainNode && audioCtx) {
-      const now = audioCtx.currentTime;
-      fadeGainNode.gain.cancelScheduledValues(now);
-      fadeGainNode.gain.setValueAtTime(0.0001, now);
-      fadeGainNode.gain.linearRampToValueAtTime(targetGain, now + FADE_DURATION);
-    } else {
-      if (directFadeTimer) clearInterval(directFadeTimer);
-      playerDirect.volume = 0;
-      const steps = 15;
-      const stepTime = (FADE_DURATION * 1000) / steps;
-      let currentStep = 0;
-      directFadeTimer = setInterval(() => {
-        currentStep++;
-        playerDirect.volume = Math.min(targetGain, (currentStep / steps) * targetGain);
-        if (currentStep >= steps) {
-          clearInterval(directFadeTimer);
-          directFadeTimer = null;
-        }
-      }, stepTime);
-    }
-  }
-
-  function onPreampChange() {
-    const db = parseInt(document.getElementById('preampSlider').value, 10);
-    const chId = channels[currentIndex].id;
-    perChannelPreamp[chId] = db;
-    localStorage.setItem('perChannelPreampMap', JSON.stringify(perChannelPreamp));
-
-    syncPreampUI(db);
-    refreshChannelSubTags();
-
-    if (preampNode) {
-      preampNode.gain.value = dbToLinearGain(db);
-    }
-    if (audioCtx && audioCtx.state === 'suspended') {
-      audioCtx.resume();
-    }
-    updateStatusEQText();
-    upgradeToEQOnUserGesture();
-  }
-
-  function syncPreampUI(db) {
-    const slider = document.getElementById('preampSlider');
-    const valText = document.getElementById('preampVal');
-    if (slider) slider.value = db;
-    if (valText) valText.innerText = (db > 0 ? '+' : '') + db;
-  }
-
-  function applyEQGains(presetKey) {
-    const preset = eqPresets[presetKey] || eqPresets.flat;
-    syncSlidersUI(preset.gains);
-    if (filterNodes.length === 10) {
-      preset.gains.forEach((g, i) => { filterNodes[i].gain.value = g; });
-    }
-  }
-
-  function syncSlidersUI(gains) {
-    gains.forEach((g, i) => {
-      const slider = document.getElementById(`eqSlider_${i}`);
-      const valText = document.getElementById(`eqVal_${i}`);
-      if (slider) slider.value = g;
-      if (valText) valText.innerText = (g > 0 ? '+' : '') + g;
-    });
-  }
-
-  function getCurrentSliderGains() {
-    return eqBands.map((_, i) => parseInt(document.getElementById(`eqSlider_${i}`).value, 10));
-  }
-
-  function setEQ(presetKey, isUserGesture = false) {
-    currentEQ = presetKey;
-    localStorage.setItem('lastRadioEQ', presetKey);
-
-    document.querySelectorAll('.eq-btn').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.eq === presetKey);
-    });
-
-    applyEQGains(presetKey);
-    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
-    updateStatusEQText();
-
-    if (isUserGesture) {
-      upgradeToEQOnUserGesture();
-    }
-  }
-
-  function selectCustomEQ() {
-    if (currentEQ === 'custom') {
-      toggleEQPanel();
-      upgradeToEQOnUserGesture();
-    } else {
-      setEQ('custom', true);
-      const panel = document.getElementById('eqPanel');
-      if (!panel.classList.contains('show')) {
-        toggleEQPanel();
-      }
-    }
-  }
-
-  function onSliderChange() {
-    const gains = getCurrentSliderGains();
-    syncSlidersUI(gains);
-
-    if (filterNodes.length === 10) {
-      gains.forEach((g, i) => { filterNodes[i].gain.value = g; });
-    }
-    if (audioCtx && audioCtx.state === 'suspended') {
-      audioCtx.resume();
-    }
-
-    eqPresets.custom.gains = gains;
-    localStorage.setItem('customRadioEQ10Presets_v2', JSON.stringify(eqPresets));
-
-    currentEQ = 'custom';
-    localStorage.setItem('lastRadioEQ', 'custom');
-    document.querySelectorAll('.eq-btn').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.eq === 'custom');
-    });
-    updateStatusEQText();
-    upgradeToEQOnUserGesture();
-  }
-
-  function overwritePreset(targetKey) {
-    eqPresets[targetKey].gains = getCurrentSliderGains();
-    localStorage.setItem('customRadioEQ10Presets_v2', JSON.stringify(eqPresets));
-    setEQ(targetKey, true);
-    statusSub.innerText = `✅ 已覆蓋至「${eqPresets[targetKey].label}」`;
-  }
-
-  function resetDefaultPresets() {
-    eqPresets = JSON.parse(JSON.stringify(defaultPresets));
-    localStorage.removeItem('customRadioEQ10Presets_v2');
-
-    perChannelPreamp = {};
-    localStorage.removeItem('perChannelPreampMap');
-    syncPreampUI(0);
-    refreshChannelSubTags();
-    if (preampNode) preampNode.gain.value = 1;
-
-    setEQ(currentEQ, true);
-    statusSub.innerText = '🔄 已還原 EQ 曲線與各台前級歸零';
-  }
-
-  function toggleEQPanel() {
-    const panel = document.getElementById('eqPanel');
-    const toggleBtn = document.getElementById('tuneToggleBtn');
-    const isOpen = panel.classList.toggle('show');
-    toggleBtn.classList.toggle('open', isOpen);
-  }
-
-  function updateStatusEQText() {
-    if (isSleepFadingOut) return;
-    const sleepTag = sleepTimerMinutes > 0 ? ` | ⏰${getRemainingSleepMinutes()}m` : '';
-
-    if (isMutedPrebuffered) {
-      statusSub.innerText = `🟢 已緩衝就緒 • 點擊任意處出聲${sleepTag}`;
-      return;
-    }
-    if (currentPlayState === 'idle') {
-      statusSub.innerText = `walton電台 • 長按1秒排序 | 左右滑切台${sleepTag}`;
-      return;
-    }
-    if (currentPlayState === 'selected') {
-      statusSub.innerText = `已選台，串流連線緩衝中...${sleepTag}`;
-      return;
-    }
-    const ch = channels[currentIndex];
-    const db = getChannelPreampDb(currentIndex);
-    const attTag = isAttMuted ? (isDirectMode ? '🔇靜音保活 | ' : '🔇降音-20dB | ') : '';
-    if (isAutoDirectFallback) {
-      statusSub.innerText = `${attTag}自動直通 • ${ch.sub}${sleepTag}`;
-    } else if (isDirectMode) {
-      statusSub.innerText = `${attTag}直通原音 • ${ch.sub}${sleepTag}`;
-    } else {
-      const eqLabel = eqPresets[currentEQ]?.label || '原音';
-      const preampStr = db !== 0 ? ` | 前級${db > 0 ? '+' : ''}${db}dB` : '';
-      statusSub.innerText = `${attTag}EQ:${eqLabel}${preampStr} • ${ch.sub}${sleepTag}`;
-    }
-  }
-
-  function stopAllPlayersImmediately() {
-    clearStallWatchdog();
-    stopVisualizerLoop();
-    if (directFadeTimer) {
-      clearInterval(directFadeTimer);
-      directFadeTimer = null;
-    }
-    isMutedPrebuffered = false;
-    playerEQ.onplaying = null;
-    playerEQ.onstalled = null;
-    playerEQ.onwaiting = null;
-    playerEQ.onerror = null;
-    playerEQ.pause();
-    playerEQ.removeAttribute('src');
-    playerEQ.load();
-
-    playerDirect.onplaying = null;
-    playerDirect.onstalled = null;
-    playerDirect.onwaiting = null;
-    playerDirect.onerror = null;
-    playerDirect.muted = false;
-    playerDirect.pause();
-    playerDirect.removeAttribute('src');
-    playerDirect.load();
-
-    if (hlsInstance) {
-      hlsInstance.destroy();
-      hlsInstance = null;
-    }
-  }
-
-  function attachAndPlay(targetPlayer, url, token, startMuted, onStreamConfirmed, onFail) {
-    const isM3u8 = url.includes('.m3u8') || url.includes('sonnykuo.appspot.com');
-    let confirmed = false;
-
-    targetPlayer.muted = startMuted;
-
-    if (targetPlayer === playerEQ && fadeGainNode && audioCtx) {
-      fadeGainNode.gain.setValueAtTime(0.0001, audioCtx.currentTime);
-    } else if (targetPlayer === playerDirect) {
-      targetPlayer.volume = startMuted ? getTargetOutputGain() : 0;
-    }
-
-    targetPlayer.onplaying = () => {
-      if (token === switchToken) {
-        clearStallWatchdog();
-        reconnectRetryCount = 0;
-        if (!confirmed) {
-          confirmed = true;
-          onStreamConfirmed();
-        } else {
-          updateStatusEQText();
-        }
-      }
-    };
-
-    targetPlayer.onstalled = () => {
-      if (token === switchToken && confirmed) startStallWatchdog(targetPlayer, token);
-    };
-    targetPlayer.onwaiting = () => {
-      if (token === switchToken && confirmed) startStallWatchdog(targetPlayer, token);
-    };
-
-    targetPlayer.onerror = () => {
-      if (token === switchToken) {
-        if (!confirmed) {
-          onFail();
-        } else {
-          startStallWatchdog(targetPlayer, token);
-        }
-      }
-    };
-
-    if (isM3u8 && !targetPlayer.canPlayType('application/vnd.apple.mpegurl') && window.Hls && Hls.isSupported()) {
-      hlsInstance = new Hls();
-      hlsInstance.loadSource(url);
-      hlsInstance.attachMedia(targetPlayer);
-      hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
-        if (token !== switchToken) return;
-        targetPlayer.play().catch(() => {
-          if (token === switchToken && !confirmed) onFail();
-        });
-      });
-      hlsInstance.on(Hls.Events.ERROR, (event, data) => {
-        if (data.fatal && token === switchToken) {
-          if (!confirmed) onFail();
-          else startStallWatchdog(targetPlayer, token);
-        }
-      });
-    } else {
-      targetPlayer.src = url;
-      targetPlayer.load();
-      targetPlayer.play().catch(() => {
-        if (token === switchToken && !confirmed) onFail();
-      });
-    }
-  }
-
-  function playByIndex(idx, isUserClick = false, isAutoReconnect = false) {
-    if (idx < 0) idx = channels.length - 1;
-    if (idx >= channels.length) idx = 0;
-
-    const ch = channels[idx];
-    const myToken = ++switchToken;
-
-    if (!isAutoReconnect && currentPlayState !== 'idle' && currentIndex === idx && !isMutedPrebuffered) {
-      cancelSleepTimer();
-      fadeOutCurrentAudio(() => {
-        if (myToken !== switchToken) return;
-        stopAllPlayersImmediately();
-        isAutoDirectFallback = false;
-        updateUIState(idx, 'idle', '已暫停');
-      });
-      return;
-    }
-
-    currentIndex = idx;
-    currentChannelId = ch.id;
-    localStorage.setItem('lastRadioChannelId', ch.id);
-    applyCurrentChannelPreamp();
-
-    const loadingMsg = isAutoReconnect ? `🔄 訊號中斷(${reconnectDelaySec}s)，自動重連中 (${reconnectRetryCount})...` : '已選台，串流連線緩衝中...';
-    updateUIState(idx, 'selected', loadingMsg);
-
-    if (!isUserClick) {
-      stopAllPlayersImmediately();
-      attachAndPlay(
-        playerDirect,
-        ch.url,
-        myToken,
-        isAttMuted,
-        () => {
-          activePlayer = playerDirect;
-          isDirectMode = true;
-          isAutoDirectFallback = true;
-          isMutedPrebuffered = false;
-          fadeInTargetAudio(true);
-          updateUIState(idx, 'playing', '');
-          updateAttButtonUI();
-          updateStatusEQText();
-          setupMediaSession(ch);
-        },
-        () => {
-          if (myToken !== switchToken) return;
-          if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
-          attachAndPlay(
-            playerDirect,
-            ch.url,
-            myToken,
-            true,
-            () => {
-              activePlayer = playerDirect;
-              isDirectMode = true;
-              isAutoDirectFallback = true;
-              isMutedPrebuffered = true;
-              updateUIState(idx, 'selected', '🟢 已緩衝就緒 • 點擊畫面任意處零延遲出聲');
-            },
-            () => {
-              updateUIState(idx, 'selected', '已選台 • 點擊螢幕任一處啟動聲音');
-            }
-          );
-        }
-      );
-      return;
-    }
-
-    isAutoDirectFallback = false;
-    isMutedPrebuffered = false;
-    initAudioEQ();
-
-    fadeOutCurrentAudio(() => {
-      if (myToken !== switchToken) return;
-      stopAllPlayersImmediately();
-
-      attachAndPlay(
-        playerEQ,
-        ch.url,
-        myToken,
-        false,
-        () => {
-          activePlayer = playerEQ;
-          isDirectMode = false;
-          initAudioEQ();
-          fadeInTargetAudio(false);
-          updateUIState(idx, 'playing', '');
-          updateAttButtonUI();
-          updateStatusEQText();
-          setupMediaSession(ch);
-        },
-        () => {
-          if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
-          attachAndPlay(
-            playerDirect,
-            ch.url,
-            myToken,
-            isAttMuted,
-            () => {
-              activePlayer = playerDirect;
-              isDirectMode = true;
-              fadeInTargetAudio(true);
-              updateUIState(idx, 'playing', '');
-              updateAttButtonUI();
-              updateStatusEQText();
-              setupMediaSession(ch);
-            },
-            () => {
-              updateUIState(idx, 'selected', '已選台 • 點擊上方「▶ 播放」或此鈕啟動聲音');
-            }
-          );
-        }
-      );
-    });
-  }
-
-  function toggleMasterPlay() {
-    if (isMutedPrebuffered) {
-      unlockPrebufferedStream();
-      return;
-    }
-    if (currentPlayState === 'idle' || activePlayer.paused) {
-      currentPlayState = 'idle';
-      playByIndex(currentIndex, true);
-    } else {
-      cancelSleepTimer();
-      const myToken = ++switchToken;
-      fadeOutCurrentAudio(() => {
-        if (myToken !== switchToken) return;
-        stopAllPlayersImmediately();
-        isAutoDirectFallback = false;
-        updateUIState(currentIndex, 'idle', '已暫停');
-      });
-    }
-  }
-
-  function updateUIState(activeIdx, state, subMsg) {
-    currentPlayState = state;
-    const ch = channels[activeIdx];
-    statusMain.innerText = ch.name;
-    if (subMsg) statusSub.innerText = subMsg;
-
-    masterStopBtn.classList.remove('selected', 'active');
-    if (state === 'playing') {
-      masterStopBtn.innerText = '⏸ 暫停';
-      masterStopBtn.classList.add('active');
-      startVisualizerLoop();
-    } else if (state === 'selected') {
-      masterStopBtn.innerText = isMutedPrebuffered ? '🔊 出聲' : '⏳ 連線';
-      masterStopBtn.classList.add('selected');
-      stopVisualizerLoop();
-    } else {
-      masterStopBtn.innerText = '▶ 播放';
-      stopVisualizerLoop();
-    }
-
-    channels.forEach((item, i) => {
-      const btn = document.getElementById(item.id);
-      if (!btn) return;
-      btn.classList.remove('selected', 'playing');
-      if (i === activeIdx) {
-        if (state === 'selected') btn.classList.add('selected');
-        if (state === 'playing') btn.classList.add('playing');
-      }
-    });
-  }
-
-  function setupMediaSession(ch) {
-    if ('mediaSession' in navigator) {
-      navigator.mediaSession.metadata = new MediaMetadata({
-        title: ch.name,
-        artist: ch.sub + ' • walton電台',
-        album: 'CAR MULTIMEDIA'
-      });
-
-      navigator.mediaSession.setActionHandler('play', () => playByIndex(currentIndex, true));
-      navigator.mediaSession.setActionHandler('pause', () => {
-        cancelSleepTimer();
-        const myToken = ++switchToken;
-        fadeOutCurrentAudio(() => {
-          if (myToken !== switchToken) return;
-          stopAllPlayersImmediately();
-          isAutoDirectFallback = false;
-          updateUIState(currentIndex, 'idle', '已暫停');
-        });
-      });
-      // 方向盤上一首 / 下一首，支援「僅輪播最愛星號」過濾規則
-      navigator.mediaSession.setActionHandler('previoustrack', () => stepChannelByScanRule(-1));
-      navigator.mediaSession.setActionHandler('nexttrack', () => stepChannelByScanRule(1));
-    }
-  }
-
-  window.addEventListener('online', () => {
-    if (currentPlayState === 'playing' || reconnectRetryCount > 0) {
-      const useEQ = !isAutoDirectFallback;
-      currentPlayState = 'idle';
-      playByIndex(currentIndex, useEQ, true);
-    }
-  });
-
-  document.addEventListener('pointerdown', (e) => {
-    if (e.target.closest('#channelModal') || e.target.closest('#unsavedConfirmModal')) return;
-    if (isMutedPrebuffered && !e.target.closest('.ch-btn')) {
-      unlockPrebufferedStream();
-    } else if (isAutoDirectFallback && currentPlayState === 'playing' && !e.target.closest('button') && !e.target.closest('input')) {
-      upgradeToEQOnUserGesture();
-    }
-  }, { passive: true });
-
-  document.addEventListener('keydown', (e) => {
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-    if (isMutedPrebuffered) {
-      unlockPrebufferedStream();
-    }
-  });
-
-  document.addEventListener('touchmove', (e) => {
-    if (!e.target.closest('input[type=range]') && !e.target.closest('.modal-scroll-area') && !e.target.closest('textarea')) {
-      e.preventDefault();
-    }
-  }, { passive: false });
-
-  window.addEventListener('load', () => {
-    document.getElementById('versionBadge').innerText = APP_VERSION;
-    applyTheme();
-    applyDriveMode();
-    updateReconnectBtnUI();
-    updateSleepTimerUI();
-    updateFavOnlyUI();
-    applyGridCols();
-    renderChannelButtons();
-    applyCurrentChannelPreamp();
-    setEQ(currentEQ, false);
-    playByIndex(currentIndex, false);
-  });
-</script>
-</body>
-</html>
+    updateUI
