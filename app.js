@@ -27,9 +27,7 @@ function sanitizeChannelItem(item, fallbackIdx) {
 function loadChannelsData() {
   const savedCustomList = safeParseJSON('waltonCustomChannelsList', null);
   if (Array.isArray(savedCustomList) && savedCustomList.length > 0) {
-    const cleaned = savedCustomList
-      .map((item, idx) => sanitizeChannelItem(item, idx))
-      .filter(Boolean);
+    const cleaned = savedCustomList.map((item, idx) => sanitizeChannelItem(item, idx)).filter(Boolean);
     if (cleaned.length > 0) {
       localStorage.setItem('waltonCustomChannelsList', JSON.stringify(cleaned));
       return cleaned;
@@ -117,16 +115,31 @@ if (!eqPresets || typeof eqPresets !== 'object') eqPresets = JSON.parse(JSON.str
 if (!eqPresets.custom) eqPresets.custom = JSON.parse(JSON.stringify(defaultPresets.custom));
 let perChannelPreamp = safeParseJSON('perChannelPreampMap', {}) || {};
 
+// ==================== 靜默模式設定（預設 10 秒，可選 10 / 20 / 30 / 60 / 120） ====================
+const validSilentDelays = [0, 10, 20, 30, 60, 120];
 const defaultSilentConfig = {
-  delaySec: 120, ratio: 'third', layout: 'center',
-  showStation: true, showClock: true, showMeta: true, showViz: true, showSleep: true, showBtns: false
+  delaySec: 10,
+  ratio: 'third',
+  layout: 'center',
+  showStation: true,
+  showClock: true,
+  showMeta: true,
+  showViz: true,
+  showSleep: true,
+  showBtns: false
 };
 let silentConfig = Object.assign({}, defaultSilentConfig, safeParseJSON('waltonSilentConfig', {}));
+if (!validSilentDelays.includes(silentConfig.delaySec)) {
+  silentConfig.delaySec = 10;
+  localStorage.setItem('waltonSilentConfig', JSON.stringify(silentConfig));
+}
+
 let silentIdleTimer = null;
 let silentClockTimer = null;
 let silentDriftTimer = null;
 let isSilentModeActive = false;
 
+// ==================== 車用偏好設定 ====================
 let themeMode = localStorage.getItem('waltonThemeMode') || 'night';
 const reconnectOptions = [2, 4.5, 8, 15];
 let reconnectDelaySec = parseFloat(localStorage.getItem('waltonReconnectSec')) || 4.5;
@@ -149,7 +162,7 @@ const playerEQ = document.getElementById('playerEQ');
 const playerDirect = document.getElementById('playerDirect');
 let activePlayer = playerDirect;
 let isDirectMode = true;
-let isAwaitingFirstTap = true; // 等待首次手指觸碰解鎖 iOS Audio Session
+let isAwaitingFirstTap = true;
 let hlsInstance = null;
 let switchToken = 0;
 
@@ -347,8 +360,12 @@ function openSilentSettings() {
 
 function renderSilentSettingsModal() {
   const delayOpts = [
-    { val: 0, label: '關閉' }, { val: 30, label: '30秒' }, { val: 60, label: '1分鐘' },
-    { val: 120, label: '2分鐘' }, { val: 300, label: '5分鐘' }, { val: 600, label: '10分鐘' }
+    { val: 0, label: '關閉' },
+    { val: 10, label: '10秒' },
+    { val: 20, label: '20秒' },
+    { val: 30, label: '30秒' },
+    { val: 60, label: '60秒' },
+    { val: 120, label: '120秒' }
   ];
   document.getElementById('silentDelayPills').innerHTML = delayOpts.map(opt =>
     `<button class="cfg-pill ${silentConfig.delaySec === opt.val ? 'active' : ''}" onclick="setSilentField('delaySec', ${opt.val})">${opt.label}</button>`
@@ -407,7 +424,7 @@ function previewSilentModeNow() {
   enterSilentMode();
 }
 
-// ==================== 主題 / 駕駛模式 / 滑動切台 / 最愛輪播 ====================
+// ==================== 主題 / 駕駛模式（播放中開啟直接 0.3s 進靜默） ====================
 function applyTheme() {
   const btn = document.getElementById('themeToggleBtn');
   const prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
@@ -452,6 +469,11 @@ function toggleDriveMode() {
   isDriveMode = !isDriveMode;
   localStorage.setItem('waltonDriveMode', isDriveMode);
   applyDriveMode();
+
+  // 當正常播放時開啟極簡大字駕駛模式，直接 0.3 秒平滑轉換至純黑靜默模式
+  if (isDriveMode && currentPlayState === 'playing') {
+    enterSilentMode();
+  }
 }
 
 let swipeStartX = 0;
@@ -762,15 +784,28 @@ function renderChannelButtons() {
     btn.id = ch.id;
     btn.dataset.id = ch.id;
 
-    if (idx === currentIndex) {
-      if (currentPlayState === 'selected') btn.classList.add('selected');
-      if (currentPlayState === 'playing') btn.classList.add('playing');
-    }
-
     const db = getChannelPreampDb(idx);
     const dbBadge = db !== 0 ? ` (${db > 0 ? '+' : ''}${db}dB)` : '';
     const starBadge = ch.fav ? `<span class="fav-star-badge">★</span>` : '';
-    btn.innerHTML = `${starBadge}<span>${escapeHtml(ch.name)}</span><span class="sub-tag">${escapeHtml(ch.sub)}${dbBadge}</span>`;
+
+    let titleText = ch.name;
+    let subText = `${ch.sub}${dbBadge}`;
+
+    if (idx === currentIndex) {
+      if (currentPlayState === 'selected') {
+        btn.classList.add('selected');
+        if (!isAwaitingFirstTap) {
+          btn.classList.add('buffering');
+          titleText = `${ch.name} • 串流中`;
+          subText = '⏳ 串流連線中...';
+        }
+      }
+      if (currentPlayState === 'playing') {
+        btn.classList.add('playing');
+      }
+    }
+
+    btn.innerHTML = `${starBadge}<span class="ch-title-text">${escapeHtml(titleText)}</span><span class="sub-tag">${escapeHtml(subText)}</span>`;
 
     btn.addEventListener('pointerdown', (e) => {
       if (e.button !== 0 && e.pointerType === 'mouse') return;
@@ -1006,6 +1041,7 @@ function applyImportedBackup() {
     if (typeof parsed.favOnlyScan === 'boolean') { favOnlyScan = parsed.favOnlyScan; localStorage.setItem('waltonFavOnlyScan', favOnlyScan); updateFavOnlyUI(); }
     if (parsed.silentConfig && typeof parsed.silentConfig === 'object') {
       silentConfig = Object.assign({}, defaultSilentConfig, parsed.silentConfig);
+      if (!validSilentDelays.includes(silentConfig.delaySec)) silentConfig.delaySec = 10;
       localStorage.setItem('waltonSilentConfig', JSON.stringify(silentConfig));
     }
     editingChannelId = null;
@@ -1153,14 +1189,7 @@ function applyCurrentChannelPreamp() {
 }
 
 function refreshChannelSubTags() {
-  channels.forEach((ch, idx) => {
-    const btn = document.getElementById(ch.id);
-    if (!btn) return;
-    const db = getChannelPreampDb(idx);
-    const dbBadge = db !== 0 ? ` (${db > 0 ? '+' : ''}${db}dB)` : '';
-    const subEl = btn.querySelector('.sub-tag');
-    if (subEl) subEl.innerText = ch.sub + dbBadge;
-  });
+  renderChannelButtons();
 }
 
 attachDoubleTapReset(document.getElementById('preampSlider'), onPreampChange);
@@ -1495,9 +1524,6 @@ function playByIndex(idx, isUserClick = false, isAutoReconnect = false) {
   localStorage.setItem('lastRadioChannelId', ch.id);
   applyCurrentChannelPreamp();
 
-  // 無手指觸控的初始載入（isUserClick === false）：
-  // 先嘗試直接有聲播放（電腦 Chrome 允許自動播放時可直接出聲）；
-  // 若被 iOS Safari 擋下，則停在「已選台就緒 (selected)」等待點擊任意處，絕不開 muted 假連線避免後續斷音！
   if (!isUserClick) {
     updateUIState(idx, 'selected', '點擊畫面任一處或電台按鈕即刻出聲');
     stopAllPlayersImmediately();
@@ -1525,7 +1551,6 @@ function playByIndex(idx, isUserClick = false, isAutoReconnect = false) {
     return;
   }
 
-  // 有合法手指觸控手勢（isUserClick === true）：直接啟動 10 段 EQ 引擎並建立唯一穩定連線
   isAwaitingFirstTap = false;
   const loadingMsg = isAutoReconnect ? `🔄 訊號中斷(${reconnectDelaySec}s)，自動重連中 (${reconnectRetryCount})...` : '已選台，串流連線緩衝中...';
   updateUIState(idx, 'selected', loadingMsg);
@@ -1600,8 +1625,14 @@ function updateUIState(activeIdx, state, subMsg) {
     masterStopBtn.innerText = '⏸ 暫停';
     masterStopBtn.classList.add('active');
     startVisualizerLoop();
-    if (isSilentModeActive) renderSilentContent();
-    else resetSilentIdleTimer();
+    if (isSilentModeActive) {
+      renderSilentContent();
+    } else if (isDriveMode) {
+      // 極簡駕駛模式下，正常播音直接以 0.3 秒緩慢轉換至靜默
+      enterSilentMode();
+    } else {
+      resetSilentIdleTimer();
+    }
   } else if (state === 'selected') {
     masterStopBtn.innerText = isAwaitingFirstTap ? '▶ 播放' : '⏳ 連線';
     masterStopBtn.classList.add('selected');
@@ -1614,15 +1645,8 @@ function updateUIState(activeIdx, state, subMsg) {
     exitSilentMode();
   }
 
-  channels.forEach((item, i) => {
-    const btn = document.getElementById(item.id);
-    if (!btn) return;
-    btn.classList.remove('selected', 'playing');
-    if (i === activeIdx) {
-      if (state === 'selected') btn.classList.add('selected');
-      if (state === 'playing') btn.classList.add('playing');
-    }
-  });
+  // 重新渲染電台按鈕狀態，確保串流緩衝中即時顯示「電台名稱 • 串流中」
+  renderChannelButtons();
 }
 
 function setupMediaSession(ch) {
@@ -1654,7 +1678,6 @@ window.addEventListener('online', () => {
   }
 });
 
-// 首次進入畫面時，點選螢幕任意空白處或按鈕即以合法手勢直接發起穩定播音
 document.addEventListener('pointerdown', (e) => {
   if (!isSilentModeActive) resetSilentIdleTimer();
   if (e.target.closest('#channelModal') || e.target.closest('#unsavedConfirmModal') || e.target.closest('#silentModal') || e.target.closest('#factoryResetConfirmModal')) return;
