@@ -16,7 +16,7 @@
     <div class="top-area">
       <div class="header">
         <div class="header-meta-row">
-          <span class="version-badge" id="versionBadge">20261125_v08</span>
+          <span class="version-badge" id="versionBadge">20261125_v09</span>
           <span class="status-label" id="statusSub">點擊畫面任一處或電台按鈕開始播放</span>
           <button class="refresh-mini-btn" onclick="forceReloadPage()" title="重新整理最新網頁">🔄 刷新</button>
         </div>
@@ -57,12 +57,12 @@
           <button class="quick-chip-btn" id="themeToggleBtn" onclick="cycleThemeMode()">🌙 夜間</button>
           <button class="quick-chip-btn" id="reconnectSecBtn" onclick="cycleReconnectSec()">🔄 重連16s</button>
           <button class="quick-chip-btn" id="eqHeightBtn" onclick="cycleEqHeight()">↕️ 推桿:標準</button>
-          <button class="quick-chip-btn" id="wakeLockBtn" onclick="toggleWakeLock()">💤 鎖屏省電</button>
+          <button class="quick-chip-btn on" id="wakeLockBtn" onclick="toggleWakeLock()">🔆 常亮</button>
           <button class="quick-chip-btn" id="sleepTimerBtn" onclick="cycleSleepTimer()">⏰ 定時關</button>
           <button class="quick-chip-btn" id="favOnlyBtn" onclick="toggleFavOnlyScan()">☆ 全部輪播</button>
         </div>
 
-        <div class="eq-hint-bar" id="eqHintBar">💡 雙擊推桿歸零 (0dB) • 串流成功後 20 秒自動進入純黑靜默</div>
+        <div class="eq-hint-bar" id="eqHintBar">💡 雙擊推桿歸零 • 串流成功後 20 秒進純黑靜默</div>
         <div class="graphic-eq-container" id="graphicEqContainer">
           <div class="db-scale">
             <span>+12</span>
@@ -97,13 +97,13 @@
     </div>
   </div>
 
-  <!-- OLED 靜默模式全螢幕黑化遮罩（左右置中、偏上 1/3、佔左右 80%） -->
+  <!-- OLED 靜默模式全螢幕黑化遮罩（單點忽略、上滑解鎖、左右滑切台） -->
   <div class="silent-overlay" id="silentOverlay">
     <div class="silent-info-zone" id="silentInfoZone">
       <div class="silent-inner-content layout-center" id="silentInnerContent"></div>
     </div>
     <div class="silent-black-zone" id="silentBlackZone">
-      <span class="silent-wake-hint">輕點喚醒 • 左右滑動切台</span>
+      <span class="silent-wake-hint" id="silentWakeHint">⌃ 上滑解鎖 • 左右滑動切台</span>
     </div>
   </div>
 
