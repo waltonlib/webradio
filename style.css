@@ -24,8 +24,11 @@
   --shadow-card: rgba(0, 0, 0, 0.22);
   --viz-bar: #9BC0D4;
   --star-active: #F0CB84;
-  --slider-h: 76px;
-  --slider-w: 68px;
+  /* 由 JS 解析度自適應引擎即時寫入的最佳化尺寸變數 */
+  --eq-track-h: 76px;
+  --eq-slider-w: 68px;
+  --eq-label-size: 10px;
+  --desk-cols: minmax(0, 1.3fr) minmax(0, 1fr);
 }
 
 body.theme-day {
@@ -55,11 +58,6 @@ body.theme-day {
   --viz-bar: #3B6078;
   --star-active: #A6751E;
 }
-
-/* EQ 推桿三段高度動態變數 */
-body.eq-h-compact { --slider-h: 50px; --slider-w: 44px; }
-body.eq-h-normal  { --slider-h: 76px; --slider-w: 68px; }
-body.eq-h-tall    { --slider-h: 112px; --slider-w: 102px; }
 
 * {
   box-sizing: border-box;
@@ -94,25 +92,28 @@ html, body {
   flex-direction: column;
   gap: 7px;
   flex-shrink: 0;
+  min-width: 0;
 }
 .panel-area {
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
+  min-width: 0;
 }
 .grid-area {
   display: flex;
   flex-direction: column;
   flex: 1 1 0%;
   min-height: 0;
+  min-width: 0;
   overflow: hidden;
 }
 
-/* ==================== 寬螢幕 RWD（>= 768px 橫向）：緊湊卡片佈局＋消除空洞 ==================== */
+/* ==================== 寬螢幕 RWD（>= 768px 橫向）：鎖死雙欄邊界＋消除空洞 ==================== */
 @media (min-width: 768px) and (orientation: landscape) {
   .app-shell {
     display: grid;
-    grid-template-columns: 1.35fr 1fr;
+    grid-template-columns: var(--desk-cols);
     grid-template-rows: auto 1fr;
     gap: 12px 16px;
     padding: 14px 18px;
@@ -125,24 +126,21 @@ html, body {
     grid-column: 2;
     grid-row: 1 / span 2;
     min-height: 0;
+    min-width: 0;
     justify-content: center;
+    overflow: hidden;
   }
   .panel-area .eq-panel {
     display: flex !important;
     flex-direction: column;
     gap: 14px;
-    padding: 16px 14px;
+    padding: 16px 12px;
     border-radius: 18px;
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
     box-shadow: 0 6px 20px var(--shadow-card);
   }
-  /* 寬螢幕下推桿依三段設定展現更充裕的操作行程，消除上下空洞 */
-  body.eq-h-compact .panel-area .v-slider-wrap { height: 140px; }
-  body.eq-h-compact .panel-area input[type=range].v-slider { width: 128px; }
-  body.eq-h-normal  .panel-area .v-slider-wrap { height: 210px; }
-  body.eq-h-normal  .panel-area input[type=range].v-slider { width: 196px; }
-  body.eq-h-tall    .panel-area .v-slider-wrap { height: 280px; }
-  body.eq-h-tall    .panel-area input[type=range].v-slider { width: 266px; }
-
   #tuneToggleBtn { display: none; }
   .eq-bar { grid-template-columns: repeat(5, 1fr) !important; }
   button.ch-btn { font-size: clamp(18px, 2.4dvh, 24px); }
@@ -228,15 +226,15 @@ body.drive-mode .sub-tag { font-size: 13px; }
 .eq-tune-toggle { background: var(--bg-eq-btn); border: 1.5px solid var(--border-eq-btn); color: var(--text-main); font-size: 17px; padding: 0; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
 .eq-tune-toggle.open { background: #5B7A8C; border-color: #9BB7C7; color: #FAF8F5; }
 
-.eq-panel { display: none; flex-direction: column; gap: 6px; background: var(--bg-panel); border: 1.5px solid var(--border-panel); border-radius: 15px; padding: 8px 7px; }
+.eq-panel { display: none; flex-direction: column; gap: 6px; background: var(--bg-panel); border: 1.5px solid var(--border-panel); border-radius: 15px; padding: 8px 7px; min-width: 0; overflow: hidden; }
 .eq-panel.show { display: flex; }
 
-.car-quick-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.car-quick-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; width: 100%; }
 .quick-chip-btn {
   background: var(--bg-chip);
   border: 1.5px solid var(--border-chip);
   color: var(--text-chip);
-  font-size: clamp(11px, 3vw, 12.5px);
+  font-size: clamp(11px, 2.8vw, 13px);
   font-weight: 700;
   padding: 6px 2px;
   border-radius: 8px;
@@ -250,50 +248,106 @@ body.drive-mode .sub-tag { font-size: 13px; }
 .quick-chip-btn.on { background: #6B7E74; border-color: #B4C9BE; color: #FAF8F5; }
 .eq-hint-bar { font-size: 11px; color: var(--text-sub); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-.graphic-eq-container { display: flex; align-items: stretch; justify-content: space-between; gap: 1px; padding: 1px 0; }
-.db-scale { display: flex; flex-direction: column; justify-content: space-between; padding: 14px 3px 14px 0; font-size: 9.5px; font-weight: 600; color: var(--text-sub); font-variant-numeric: tabular-nums; text-align: right; }
-.band-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 0; }
-.band-col.preamp-col { border-right: 1.5px solid var(--border-card); padding-right: 3px; margin-right: 2px; }
+/* ==================== EQ 11 推桿容器：絕對置中旋轉推桿，絕不撐爆水平寬度 ==================== */
+.graphic-eq-container {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 2px;
+  padding: 2px 0;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+.db-scale {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 15px 3px 15px 0;
+  font-size: 9.5px;
+  font-weight: 600;
+  color: var(--text-sub);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  flex-shrink: 0;
+}
+.band-col {
+  flex: 1 1 0%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
+}
+.band-col.preamp-col {
+  border-right: 1.5px solid var(--border-card);
+  padding-right: 3px;
+  margin-right: 1px;
+  flex: 1.15 1 0%;
+}
 .band-col.preamp-col .band-freq { color: #B58C68; }
 .band-col.preamp-col .band-val { color: #C79A73; font-weight: 800; }
-.band-freq { font-size: 10px; font-weight: 800; color: var(--text-main); letter-spacing: -0.4px; white-space: nowrap; }
-.band-val { font-size: 10px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--title-accent); height: 12px; }
+.band-freq {
+  font-size: var(--eq-label-size);
+  font-weight: 800;
+  color: var(--text-main);
+  letter-spacing: -0.4px;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.band-val {
+  font-size: var(--eq-label-size);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--title-accent);
+  height: 13px;
+  line-height: 13px;
+}
 .v-slider-wrap {
   position: relative;
   width: 100%;
-  height: var(--slider-h);
+  height: var(--eq-track-h);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: height 0.2s ease;
+  overflow: visible;
+  transition: height 0.18s ease;
   background-image: linear-gradient(to bottom, transparent 0%, transparent calc(10% - 1px), rgba(140,140,140,0.22) 10%, transparent calc(10% + 1px), transparent calc(30% - 1px), rgba(140,140,140,0.15) 30%, transparent calc(30% + 1px), transparent calc(50% - 1px), rgba(91,122,140,0.5) 50%, transparent calc(50% + 1px), transparent calc(70% - 1px), rgba(140,140,140,0.15) 70%, transparent calc(70% + 1px), transparent calc(90% - 1px), rgba(140,140,140,0.22) 90%, transparent calc(90% + 1px));
 }
 input[type=range].v-slider {
+  position: absolute;
+  left: 50%;
+  top: 50%;
   -webkit-appearance: none;
   appearance: none;
-  width: var(--slider-w);
+  width: var(--eq-slider-w);
   height: 22px;
   background: transparent;
-  transform: rotate(-90deg);
+  transform: translate(-50%, -50%) rotate(-90deg);
   margin: 0;
   cursor: pointer;
   touch-action: none;
-  transition: width 0.2s ease;
+  transition: width 0.18s ease;
 }
 input[type=range].v-slider::-webkit-slider-runnable-track { width: 100%; height: 6px; background: var(--bg-track); border-radius: 3px; border: 1px solid var(--border-card); }
 input[type=range].v-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 15px; height: 20px; border-radius: 4px; background: #5B7A8C; border: 1.5px solid #FAF8F5; margin-top: -8px; box-shadow: 0 2px 4px rgba(0,0,0,0.35); }
 input[type=range].v-slider.preamp-slider::-webkit-slider-thumb { background: #9C8675; border-color: #FAF8F5; }
 input[type=range].v-slider:active::-webkit-slider-thumb { background: #7D9B8C; border-color: #FFFFFF; }
 
-.save-row { display: grid; grid-template-columns: repeat(3, 1fr) auto auto auto auto; gap: 4px; margin-top: 2px; }
+.save-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) repeat(4, auto); gap: 4px; margin-top: 2px; width: 100%; min-width: 0; }
 .save-target-btn, .reset-eq-btn, .grid-cols-mini-btn, .silent-cfg-btn, .manage-ch-btn {
-  font-size: clamp(10.5px, 2.8vw, 12px);
+  font-size: clamp(10.5px, 2.6vw, 12px);
   font-weight: 700;
-  padding: 7px 4px;
+  padding: 7px 5px;
   border-radius: 8px;
   cursor: pointer;
   white-space: nowrap;
   text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .save-target-btn { background: #455661; border: 1px solid #6D8594; color: #FAF8F5; }
 .save-target-btn:active { background: #5B7A8C; }
