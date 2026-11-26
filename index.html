@@ -16,12 +16,12 @@
     <div class="top-area">
       <div class="header">
         <div class="header-meta-row">
-          <span class="version-badge" id="versionBadge">20261126_v03</span>
-          <span class="status-label" id="statusSub">點擊畫面任一處或電台按鈕開始播放</span>
+          <span class="version-badge" id="versionBadge">20261126_v04</span>
+          <span class="status-label" id="statusSub">已選台就緒 • 點擊播放或任一電台出聲</span>
           <button class="refresh-mini-btn" onclick="forceReloadPage()" title="重新整理最新網頁">🔄 刷新</button>
         </div>
         <div class="header-main-row">
-          <div class="title-viz-row" id="titleVizRow" title="雙擊立刻進入靜默護眼模式">
+          <div class="title-viz-row" id="titleVizRow" title="雙擊電台標題立刻進入靜默模式">
             <span class="status-title" id="statusMain">點擊任一電台開始播放</span>
             <div class="viz-bars" id="vizBars" aria-hidden="true">
               <div class="viz-bar" id="vbar0"></div>
@@ -50,7 +50,7 @@
       </div>
     </div>
 
-    <!-- 展開面板：直向時順勢在 EQ 列正下方往下展開；橫向寬螢幕時自動移至右側常駐 -->
+    <!-- 展開面板：直向時順勢在 EQ 列正下方往下展開；橫向寬螢幕時自動移至右側緊湊卡片 -->
     <div class="panel-area">
       <div class="eq-panel" id="eqPanel">
         <div class="car-quick-row">
@@ -107,13 +107,13 @@
     </div>
   </div>
 
-  <!-- 靜默模式 7 大全自訂設定彈窗 -->
+  <!-- 靜默模式 7 項全自訂設定彈窗（第 4 項直接內建實體按鈕，永不空白） -->
   <div class="modal-backdrop" id="silentModal">
-    <div class="modal-card silent-modal-card">
+    <div class="modal-card">
       <div class="modal-header">
-        <span>🌑 靜默護眼模式自訂</span>
+        <span>🌑 靜默護眼模式自訂設定</span>
         <div class="modal-header-actions">
-          <button class="reset-silent-btn" onclick="resetSilentDefaults()" title="恢復靜默預設全開">↺ 還原預設</button>
+          <button class="reset-silent-btn" onclick="resetSilentDefaults()" title="恢復靜默全開預設值">↺ 預設</button>
           <button class="save-modal-btn" onclick="saveSilentSettings()">完成</button>
         </div>
       </div>
@@ -131,9 +131,17 @@
           <div class="cfg-pill-row" id="silentLayoutPills"></div>
         </div>
         <div class="cfg-group">
-          <span class="cfg-group-title">4. 靜默字體大小與柔光亮度</span>
-          <div class="cfg-pill-row" id="silentFontSizePills"></div>
-          <div class="cfg-pill-row" id="silentBrightnessPills" style="margin-top:4px;"></div>
+          <span class="cfg-group-title">4. 靜默字體大小與柔光亮度等級</span>
+          <div class="cfg-pill-row" id="silentFontSizePills">
+            <button class="cfg-pill" data-font="normal" onclick="setSilentField('fontSize', 'normal')">字級：標準</button>
+            <button class="cfg-pill active" data-font="large" onclick="setSilentField('fontSize', 'large')">字級：加大</button>
+            <button class="cfg-pill" data-font="xlarge" onclick="setSilentField('fontSize', 'xlarge')">字級：特大</button>
+          </div>
+          <div class="cfg-pill-row" id="silentBrightnessPills">
+            <button class="cfg-pill" data-bright="dim" onclick="setSilentField('brightness', 'dim')">亮度：極暗深夜</button>
+            <button class="cfg-pill active" data-bright="normal" onclick="setSilentField('brightness', 'normal')">亮度：標準柔光</button>
+            <button class="cfg-pill" data-bright="clear" onclick="setSilentField('brightness', 'clear')">亮度：白天清晰</button>
+          </div>
         </div>
         <div class="cfg-group">
           <span class="cfg-group-title">5. 保留顯示的必要訊息項目（預設全開）</span>
@@ -147,11 +155,15 @@
           </div>
         </div>
         <div class="cfg-group">
-          <span class="cfg-group-title">6. 解鎖與手勢互動設定</span>
-          <div class="cfg-pill-row" id="silentUnlockModePills"></div>
-          <div class="cfg-check-grid" style="margin-top:6px;">
+          <span class="cfg-group-title">6. 解鎖方式與防誤觸手勢設定</span>
+          <div class="cfg-pill-row" id="silentUnlockModePills">
+            <button class="cfg-pill active" data-unlock="swipeUp" onclick="setSilentField('unlockMode', 'swipeUp')">上滑解鎖（連點2次提示）</button>
+            <button class="cfg-pill" data-unlock="doubleTap" onclick="setSilentField('unlockMode', 'doubleTap')">雙擊直接解鎖</button>
+            <button class="cfg-pill" data-unlock="singleTap" onclick="setSilentField('unlockMode', 'singleTap')">單點即解鎖</button>
+          </div>
+          <div class="cfg-check-grid">
             <label class="cfg-check-item"><input type="checkbox" id="chkSilentSwipeCh"> 黑化區左右滑切台</label>
-            <label class="cfg-check-item"><input type="checkbox" id="chkSilentDblTitle"> 雙擊標題進靜默</label>
+            <label class="cfg-check-item"><input type="checkbox" id="chkSilentDblTitle"> 雙擊電台標題進靜默</label>
           </div>
         </div>
         <button class="test-silent-btn" onclick="previewSilentModeNow()">👁️ 立即進入靜默模式預覽效果</button>
