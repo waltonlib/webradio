@@ -16,12 +16,12 @@
     <div class="top-area">
       <div class="header">
         <div class="header-meta-row">
-          <span class="version-badge" id="versionBadge">20261126_v01</span>
+          <span class="version-badge" id="versionBadge">20261126_v03</span>
           <span class="status-label" id="statusSub">點擊畫面任一處或電台按鈕開始播放</span>
           <button class="refresh-mini-btn" onclick="forceReloadPage()" title="重新整理最新網頁">🔄 刷新</button>
         </div>
         <div class="header-main-row">
-          <div class="title-viz-row">
+          <div class="title-viz-row" id="titleVizRow" title="雙擊立刻進入靜默護眼模式">
             <span class="status-title" id="statusMain">點擊任一電台開始播放</span>
             <div class="viz-bars" id="vizBars" aria-hidden="true">
               <div class="viz-bar" id="vbar0"></div>
@@ -97,22 +97,23 @@
     </div>
   </div>
 
-  <!-- OLED 靜默模式全螢幕黑化遮罩（單點忽略、上滑解鎖、左右滑與方向盤切台不亮屏） -->
+  <!-- OLED 靜默模式全螢幕黑化遮罩 -->
   <div class="silent-overlay" id="silentOverlay">
     <div class="silent-info-zone" id="silentInfoZone">
       <div class="silent-inner-content layout-center" id="silentInnerContent"></div>
     </div>
     <div class="silent-black-zone" id="silentBlackZone">
-      <span class="silent-wake-hint" id="silentWakeHint">⌃ 上滑解鎖 • 左右滑動切台</span>
+      <span class="silent-wake-hint" id="silentWakeHint">⌃ 向上滑動解鎖 • 左右滑動切台</span>
     </div>
   </div>
 
-  <!-- 靜默模式自訂設定彈窗 -->
+  <!-- 靜默模式 7 大全自訂設定彈窗 -->
   <div class="modal-backdrop" id="silentModal">
-    <div class="modal-card">
+    <div class="modal-card silent-modal-card">
       <div class="modal-header">
-        <span>🌑 靜默護眼模式自訂設定</span>
+        <span>🌑 靜默護眼模式自訂</span>
         <div class="modal-header-actions">
+          <button class="reset-silent-btn" onclick="resetSilentDefaults()" title="恢復靜默預設全開">↺ 還原預設</button>
           <button class="save-modal-btn" onclick="saveSilentSettings()">完成</button>
         </div>
       </div>
@@ -130,7 +131,12 @@
           <div class="cfg-pill-row" id="silentLayoutPills"></div>
         </div>
         <div class="cfg-group">
-          <span class="cfg-group-title">4. 保留顯示的必要訊息項目</span>
+          <span class="cfg-group-title">4. 靜默字體大小與柔光亮度</span>
+          <div class="cfg-pill-row" id="silentFontSizePills"></div>
+          <div class="cfg-pill-row" id="silentBrightnessPills" style="margin-top:4px;"></div>
+        </div>
+        <div class="cfg-group">
+          <span class="cfg-group-title">5. 保留顯示的必要訊息項目（預設全開）</span>
           <div class="cfg-check-grid">
             <label class="cfg-check-item"><input type="checkbox" id="chkSilentStation"> 電台名稱</label>
             <label class="cfg-check-item"><input type="checkbox" id="chkSilentClock"> 目前時間大時鐘</label>
@@ -138,6 +144,14 @@
             <label class="cfg-check-item"><input type="checkbox" id="chkSilentViz"> 5 柱微光音波條</label>
             <label class="cfg-check-item"><input type="checkbox" id="chkSilentSleep"> 睡眠定時剩餘時間</label>
             <label class="cfg-check-item"><input type="checkbox" id="chkSilentBtns"> 快捷「降音/暫停」鈕</label>
+          </div>
+        </div>
+        <div class="cfg-group">
+          <span class="cfg-group-title">6. 解鎖與手勢互動設定</span>
+          <div class="cfg-pill-row" id="silentUnlockModePills"></div>
+          <div class="cfg-check-grid" style="margin-top:6px;">
+            <label class="cfg-check-item"><input type="checkbox" id="chkSilentSwipeCh"> 黑化區左右滑切台</label>
+            <label class="cfg-check-item"><input type="checkbox" id="chkSilentDblTitle"> 雙擊標題進靜默</label>
           </div>
         </div>
         <button class="test-silent-btn" onclick="previewSilentModeNow()">👁️ 立即進入靜默模式預覽效果</button>
