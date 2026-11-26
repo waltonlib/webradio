@@ -218,21 +218,66 @@ let dropTargetChannelId = null;
 let startX = 0;
 let startY = 0;
 
-function applyEqHeightMode() {
-  document.body.classList.remove('eq-h-compact', 'eq-h-normal', 'eq-h-tall');
-  document.body.classList.add(`eq-h-${eqHeightMode}`);
-  const btn = document.getElementById('eqHeightBtn');
-  if (!btn) return;
-  if (eqHeightMode === 'tall') {
-    btn.innerText = '↕️ 推桿:加高';
-    btn.classList.add('on');
-  } else if (eqHeightMode === 'compact') {
-    btn.innerText = '↕️ 推桿:矮版';
-    btn.classList.add('on');
+// ==================== 解析度偵測與 EQ 滑桿 RWD 動態比例引擎 ====================
+function updateResponsiveLayout() {
+  const w = window.innerWidth || document.documentElement.clientWidth || 390;
+  const h = window.innerHeight || document.documentElement.clientHeight || 844;
+  const isLandscapeDesk = w >= 768 && w > h;
+
+  const rootStyle = document.documentElement.style;
+
+  if (isLandscapeDesk) {
+    // 1. 依螢幕寬度動態調整左右雙欄比例（超寬螢幕給電台更多空間，中等橫螢幕平衡配置）
+    const deskCols = w >= 1360 ? 'minmax(0, 1.38fr) minmax(0, 1fr)' : 'minmax(0, 1.22fr) minmax(0, 1fr)';
+    rootStyle.setProperty('--desk-cols', deskCols);
+
+    // 2. 先偵測視窗高度與面板實際寬度，再計算最合適的推桿行程高度與滑桿長度
+    const heightFactor = eqHeightMode === 'tall' ? 1.32 : (eqHeightMode === 'compact' ? 0.72 : 1.0);
+    const rawTrackH = Math.round(h * 0.25 * heightFactor);
+    const trackH = Math.max(120, Math.min(310, rawTrackH));
+    const sliderW = Math.max(108, Math.min(296, trackH - 12));
+
+    const eqWrapEl = document.getElementById('graphicEqContainer');
+    const eqWrapW = eqWrapEl ? eqWrapEl.clientWidth : Math.round(w * 0.4);
+    const perColW = Math.max(20, (eqWrapW - 28) / 11);
+    const labelSize = Math.max(9.5, Math.min(13, Math.floor(perColW * 0.28)));
+
+    rootStyle.setProperty('--eq-track-h', `${trackH}px`);
+    rootStyle.setProperty('--eq-slider-w', `${sliderW}px`);
+    rootStyle.setProperty('--eq-label-size', `${labelSize}px`);
   } else {
-    btn.innerText = '↕️ 推桿:標準';
-    btn.classList.remove('on');
+    // 直向／手機螢幕：依剩餘高度與三段設定動態計算推桿行程
+    const heightFactor = eqHeightMode === 'tall' ? 1.42 : (eqHeightMode === 'compact' ? 0.68 : 1.0);
+    const rawTrackH = Math.round(h * 0.092 * heightFactor);
+    const trackH = Math.max(48, Math.min(118, rawTrackH));
+    const sliderW = Math.max(42, Math.min(108, trackH - 8));
+
+    const eqWrapEl = document.getElementById('graphicEqContainer');
+    const eqWrapW = eqWrapEl ? eqWrapEl.clientWidth : (w - 28);
+    const perColW = Math.max(16, (eqWrapW - 24) / 11);
+    const labelSize = Math.max(9, Math.min(11.5, Math.floor(perColW * 0.34)));
+
+    rootStyle.setProperty('--eq-track-h', `${trackH}px`);
+    rootStyle.setProperty('--eq-slider-w', `${sliderW}px`);
+    rootStyle.setProperty('--eq-label-size', `${labelSize}px`);
   }
+}
+
+function applyEqHeightMode() {
+  const btn = document.getElementById('eqHeightBtn');
+  if (btn) {
+    if (eqHeightMode === 'tall') {
+      btn.innerText = '↕️ 推桿:加高';
+      btn.classList.add('on');
+    } else if (eqHeightMode === 'compact') {
+      btn.innerText = '↕️ 推桿:矮版';
+      btn.classList.add('on');
+    } else {
+      btn.innerText = '↕️ 推桿:標準';
+      btn.classList.remove('on');
+    }
+  }
+  updateResponsiveLayout();
 }
 
 function cycleEqHeight() {
@@ -562,7 +607,6 @@ function renderSilentSettingsModal() {
     `<button class="cfg-pill ${silentConfig.layout === opt.val ? 'active' : ''}" onclick="setSilentField('layout', '${opt.val}')">${opt.label}</button>`
   ).join('');
 
-  // 同步 HTML 內建實體按鈕的高亮狀態（第 4 項字級、亮度與第 6 項解鎖方式）
   const activeFont = silentConfig.fontSize || 'large';
   document.querySelectorAll('#silentFontSizePills .cfg-pill').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.font === activeFont);
@@ -1647,6 +1691,7 @@ function toggleEQPanel() {
   const isOpen = panel.classList.toggle('show');
   toggleBtn.classList.toggle('open', isOpen);
   document.body.classList.toggle('eq-expanded', isOpen);
+  updateResponsiveLayout();
 }
 
 function updateStatusEQText() {
@@ -1693,7 +1738,6 @@ function stopAllPlayersImmediately() {
   if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
 }
 
-// 智慧判斷是否直接走 playerDirect（中廣與 HLS 串流在 iOS 上走直通最快最穩，免先撞 CORS 錯誤）
 function shouldPreferDirectStream(url) {
   if (!url) return true;
   return url.includes('.m3u8') || url.includes('sonnykuo.appspot.com');
@@ -1712,7 +1756,6 @@ function attachAndPlay(targetPlayer, url, token, onStreamConfirmed, onFail, allo
     onFail();
   };
 
-  // 若啟用連線寬限期（預設 25 秒），只有在整段寬限期結束仍未出聲時才宣告逾時，忽略 iOS 載入初期瞬時雜訊
   if (allowGracePeriod) {
     clearConnectGraceTimer();
     connectGraceTimer = setTimeout(() => {
@@ -1757,7 +1800,6 @@ function attachAndPlay(targetPlayer, url, token, onStreamConfirmed, onFail, allo
   targetPlayer.onerror = () => {
     if (token !== switchToken) return;
     if (!confirmed) {
-      // 在寬限期內的瞬時錯誤不立即熄燈，交由 connectGraceTimer 繼續等待串流完成緩衝
       if (!allowGracePeriod) triggerFailOnce();
     } else {
       isStreamConfirmedPlaying = false;
@@ -2013,6 +2055,14 @@ document.addEventListener('touchmove', (e) => {
   }
 }, { passive: false });
 
+window.addEventListener('resize', updateResponsiveLayout);
+window.addEventListener('orientationchange', () => setTimeout(updateResponsiveLayout, 120));
+
+if (typeof ResizeObserver !== 'undefined') {
+  const resizeObs = new ResizeObserver(() => updateResponsiveLayout());
+  resizeObs.observe(document.documentElement);
+}
+
 window.addEventListener('load', () => {
   localStorage.removeItem('waltonDriveMode');
   document.getElementById('versionBadge').innerText = APP_VERSION;
@@ -2028,5 +2078,6 @@ window.addEventListener('load', () => {
   renderChannelButtons();
   applyCurrentChannelPreamp();
   setEQ(currentEQ, false);
+  updateResponsiveLayout();
   playByIndex(currentIndex, false);
 });
