@@ -138,11 +138,12 @@ let silentClockTimer = null;
 let silentDriftTimer = null;
 let isSilentModeActive = false;
 
+// 車用偏好設定：預設緩衝/斷線自動重連時間為 25 秒
 let themeMode = localStorage.getItem('waltonThemeMode') || 'night';
-const reconnectOptions = [4.5, 8, 16, 25];
-let reconnectDelaySec = parseFloat(localStorage.getItem('waltonReconnectSec')) || 16;
-if (!reconnectOptions.includes(reconnectDelaySec)) {
-  reconnectDelaySec = 16;
+const reconnectOptions = [8, 16, 25, 35];
+let reconnectDelaySec = parseFloat(localStorage.getItem('waltonReconnectSec')) || 25;
+if (!reconnectOptions.includes(reconnectDelaySec) || reconnectDelaySec === 16) {
+  reconnectDelaySec = 25;
   localStorage.setItem('waltonReconnectSec', reconnectDelaySec);
 }
 
@@ -150,7 +151,6 @@ const eqHeightModes = ['normal', 'tall', 'compact'];
 let eqHeightMode = localStorage.getItem('waltonEqHeightMode') || 'normal';
 if (!eqHeightModes.includes(eqHeightMode)) eqHeightMode = 'normal';
 
-// 預設開啟螢幕常亮（首次點擊螢幕手勢後自動申請系統 Wake Lock）
 let wakeLockEnabled = true;
 let wakeLockSentinel = null;
 let gridCols = parseInt(localStorage.getItem('waltonGridCols'), 10) === 3 ? 3 : 2;
@@ -321,7 +321,11 @@ function renderSilentContent() {
   const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
   const eqLabel = isDirectMode ? '直通原音' : `EQ:${eqPresets[currentEQ]?.label || '原音'}`;
-  const metaStr = `${ch.sub} • ${eqLabel}${isAttMuted ? ' • 降音中' : ''}`;
+  const isBuffering = currentPlayState === 'selected';
+  const metaStr = isBuffering
+    ? `${ch.sub} • ⏳ 串流連線緩衝中...`
+    : `${ch.sub} • ${eqLabel}${isAttMuted ? ' • 降音中' : ''}`;
+
   const sleepMins = getRemainingSleepMinutes();
   const sleepHtml = (silentConfig.showSleep && sleepTimerMinutes > 0)
     ? `<div class="silent-sleep-tag">⏰ 睡眠定時剩餘 ${sleepMins} 分鐘</div>`
@@ -387,7 +391,6 @@ silentOverlayEl.addEventListener('pointermove', (e) => {
   const dy = e.clientY - silentTouchStartY;
   const infoZone = document.getElementById('silentInfoZone');
   const wakeHint = document.getElementById('silentWakeHint');
-  // 手指往上拖曳時給予即時微幅跟手回饋
   if (dy < 0) {
     const lift = Math.max(-42, dy * 0.45);
     if (infoZone) infoZone.style.transform = `translateY(${lift}px)`;
@@ -415,7 +418,6 @@ const handleSilentPointerEnd = (e) => {
   const dx = e.clientX - silentTouchStartX;
   const dy = e.clientY - silentTouchStartY;
 
-  // 1. 往上滑動超過 60px 且垂直位移大於水平位移 1.4 倍 -> 解鎖喚醒
   if (dy < -60 && Math.abs(dy) > Math.abs(dx) * 1.4) {
     if (navigator.vibrate) navigator.vibrate(25);
     e.preventDefault();
@@ -424,16 +426,13 @@ const handleSilentPointerEnd = (e) => {
     return;
   }
 
-  // 2. 左右滑動超過 65px -> 靜默盲操切上一台 / 下一台
   if (Math.abs(dx) > 65 && Math.abs(dx) > Math.abs(dy) * 1.5) {
     if (navigator.vibrate) navigator.vibrate(25);
-    if (dx < 0) stepChannelByScanRule(1);
-    else stepChannelByScanRule(-1);
-    setTimeout(renderSilentContent, 100);
+    if (dx < 0) stepChannelByScanRule(1, true);
+    else stepChannelByScanRule(-1, true);
     return;
   }
 
-  // 3. 單點觸屏或小幅度誤碰 -> 完全忽略不做反應（並阻斷穿透誤觸背後按鈕）
   e.preventDefault();
   e.stopPropagation();
 };
@@ -617,17 +616,30 @@ function toggleFavOnlyScan() {
   updateFavOnlyUI();
 }
 
-function stepChannelByScanRule(direction) {
+// 切台規則（keepSilent = true 時，即使在靜默模式下切台也絕不亮起螢幕）
+function stepChannelByScanRule(direction, keepSilent = false) {
   if (channels.length === 0) return;
-  if (!favOnlyScan) { playByIndex(currentIndex + direction, true); return; }
+  const preserveSilent = keepSilent || isSilentModeActive;
+
+  if (!favOnlyScan) {
+    playByIndex(currentIndex + direction, true, false, preserveSilent);
+    return;
+  }
   const favIndices = channels.map((c, idx) => c.fav ? idx : -1).filter(idx => idx !== -1);
-  if (favIndices.length === 0) { playByIndex(currentIndex + direction, true); return; }
+  if (favIndices.length === 0) {
+    playByIndex(currentIndex + direction, true, false, preserveSilent);
+    return;
+  }
   const posInFav = favIndices.indexOf(currentIndex);
-  if (posInFav === -1) playByIndex(favIndices[0], true);
-  else playByIndex(favIndices[(posInFav + direction + favIndices.length) % favIndices.length], true);
+  if (posInFav === -1) {
+    playByIndex(favIndices[0], true, false, preserveSilent);
+  } else {
+    const nextFavPos = (posInFav + direction + favIndices.length) % favIndices.length;
+    playByIndex(favIndices[nextFavPos], true, false, preserveSilent);
+  }
 }
 
-// ==================== 斷線重連秒數 / 螢幕常亮（預設長亮） / 睡眠定時 / 網格欄數 ====================
+// ==================== 斷線重連秒數（預設 25 秒） / 螢幕常亮 / 睡眠定時 / 網格欄數 ====================
 function updateReconnectBtnUI() {
   document.getElementById('reconnectSecBtn').innerText = `🔄 重連${reconnectDelaySec}s`;
 }
@@ -1378,7 +1390,7 @@ function startStallWatchdog(targetPlayer, token) {
     reconnectRetryCount++;
     statusSub.innerText = `🔄 訊號中斷(${reconnectDelaySec}s)，自動重連中 (${reconnectRetryCount})...`;
     currentPlayState = 'idle';
-    playByIndex(currentIndex, true, true);
+    playByIndex(currentIndex, true, true, isSilentModeActive);
   }, reconnectDelaySec * 1000);
 }
 
@@ -1591,7 +1603,8 @@ function attachAndPlay(targetPlayer, url, token, onStreamConfirmed, onFail) {
       onStreamConfirmed();
     } else {
       updateStatusEQText();
-      resetSilentIdleTimer();
+      if (isSilentModeActive) renderSilentContent();
+      else resetSilentIdleTimer();
     }
   };
 
@@ -1636,19 +1649,20 @@ function attachAndPlay(targetPlayer, url, token, onStreamConfirmed, onFail) {
   }
 }
 
-function playByIndex(idx, isUserClick = false, isAutoReconnect = false) {
+function playByIndex(idx, isUserClick = false, isAutoReconnect = false, keepSilent = false) {
   if (idx < 0) idx = channels.length - 1;
   if (idx >= channels.length) idx = 0;
 
   const ch = channels[idx];
   const myToken = ++switchToken;
+  const preserveSilent = keepSilent || isSilentModeActive;
 
   if (!isAutoReconnect && currentPlayState === 'playing' && currentIndex === idx) {
     cancelSleepTimer();
     fadeOutCurrentAudio(() => {
       if (myToken !== switchToken) return;
       stopAllPlayersImmediately();
-      updateUIState(idx, 'idle', '已暫停');
+      updateUIState(idx, 'idle', '已暫停', false);
     });
     return;
   }
@@ -1662,7 +1676,7 @@ function playByIndex(idx, isUserClick = false, isAutoReconnect = false) {
   applyCurrentChannelPreamp();
 
   if (!isUserClick) {
-    updateUIState(idx, 'selected', '點擊畫面任一處或電台按鈕即刻出聲');
+    updateUIState(idx, 'selected', '點擊畫面任一處或電台按鈕即刻出聲', preserveSilent);
     stopAllPlayersImmediately();
     attachAndPlay(
       playerDirect,
@@ -1673,7 +1687,7 @@ function playByIndex(idx, isUserClick = false, isAutoReconnect = false) {
         activePlayer = playerDirect;
         isDirectMode = true;
         fadeInTargetAudio(true);
-        updateUIState(idx, 'playing', '');
+        updateUIState(idx, 'playing', '', preserveSilent);
         updateAttButtonUI();
         updateStatusEQText();
         setupMediaSession(ch);
@@ -1682,7 +1696,7 @@ function playByIndex(idx, isUserClick = false, isAutoReconnect = false) {
         if (myToken !== switchToken) return;
         stopAllPlayersImmediately();
         isAwaitingFirstTap = true;
-        updateUIState(idx, 'selected', '點擊畫面任一處或電台按鈕即刻出聲');
+        updateUIState(idx, 'selected', '點擊畫面任一處或電台按鈕即刻出聲', preserveSilent);
       }
     );
     return;
@@ -1691,7 +1705,7 @@ function playByIndex(idx, isUserClick = false, isAutoReconnect = false) {
   isAwaitingFirstTap = false;
   requestWakeLockIfNeeded();
   const loadingMsg = isAutoReconnect ? `🔄 訊號中斷(${reconnectDelaySec}s)，自動重連中 (${reconnectRetryCount})...` : '已選台，串流連線緩衝中...';
-  updateUIState(idx, 'selected', loadingMsg);
+  updateUIState(idx, 'selected', loadingMsg, preserveSilent);
   initAudioEQ();
 
   fadeOutCurrentAudio(() => {
@@ -1707,7 +1721,7 @@ function playByIndex(idx, isUserClick = false, isAutoReconnect = false) {
         isDirectMode = false;
         initAudioEQ();
         fadeInTargetAudio(false);
-        updateUIState(idx, 'playing', '');
+        updateUIState(idx, 'playing', '', preserveSilent);
         updateAttButtonUI();
         updateStatusEQText();
         setupMediaSession(ch);
@@ -1722,7 +1736,7 @@ function playByIndex(idx, isUserClick = false, isAutoReconnect = false) {
             activePlayer = playerDirect;
             isDirectMode = true;
             fadeInTargetAudio(true);
-            updateUIState(idx, 'playing', '');
+            updateUIState(idx, 'playing', '', preserveSilent);
             updateAttButtonUI();
             updateStatusEQText();
             setupMediaSession(ch);
@@ -1730,7 +1744,7 @@ function playByIndex(idx, isUserClick = false, isAutoReconnect = false) {
           () => {
             isStreamConfirmedPlaying = false;
             clearTimeout(silentIdleTimer);
-            updateUIState(idx, 'idle', '⚠️ 串流連線逾時，請再點一次重試');
+            updateUIState(idx, 'idle', '⚠️ 串流連線逾時，請再點一次重試', preserveSilent);
           }
         );
       }
@@ -1750,12 +1764,12 @@ function toggleMasterPlay() {
     fadeOutCurrentAudio(() => {
       if (myToken !== switchToken) return;
       stopAllPlayersImmediately();
-      updateUIState(currentIndex, 'idle', '已暫停');
+      updateUIState(currentIndex, 'idle', '已暫停', false);
     });
   }
 }
 
-function updateUIState(activeIdx, state, subMsg) {
+function updateUIState(activeIdx, state, subMsg, preserveSilent = false) {
   currentPlayState = state;
   const ch = channels[activeIdx] || channels[0];
   statusMain.innerText = ch.name;
@@ -1779,12 +1793,18 @@ function updateUIState(activeIdx, state, subMsg) {
     masterStopBtn.classList.add('selected');
     stopVisualizerLoop();
     clearTimeout(silentIdleTimer);
+    if (isSilentModeActive) renderSilentContent();
   } else {
     isStreamConfirmedPlaying = false;
     masterStopBtn.innerText = '▶ 播放';
     stopVisualizerLoop();
     clearTimeout(silentIdleTimer);
-    exitSilentMode();
+    // 若非静默切台（例如手動按暫停或睡眠定時停止），才退出靜默畫面
+    if (!preserveSilent) {
+      exitSilentMode();
+    } else if (isSilentModeActive) {
+      renderSilentContent();
+    }
   }
 
   renderChannelButtons();
@@ -1797,25 +1817,26 @@ function setupMediaSession(ch) {
       artist: ch.sub + ' • walton電台',
       album: 'CAR MULTIMEDIA'
     });
-    navigator.mediaSession.setActionHandler('play', () => playByIndex(currentIndex, true));
+    navigator.mediaSession.setActionHandler('play', () => playByIndex(currentIndex, true, false, isSilentModeActive));
     navigator.mediaSession.setActionHandler('pause', () => {
       cancelSleepTimer();
       const myToken = ++switchToken;
       fadeOutCurrentAudio(() => {
         if (myToken !== switchToken) return;
         stopAllPlayersImmediately();
-        updateUIState(currentIndex, 'idle', '已暫停');
+        updateUIState(currentIndex, 'idle', '已暫停', false);
       });
     });
-    navigator.mediaSession.setActionHandler('previoustrack', () => stepChannelByScanRule(-1));
-    navigator.mediaSession.setActionHandler('nexttrack', () => stepChannelByScanRule(1));
+    // 方向盤上一首 / 下一首：傳入 isSilentModeActive，確保靜默時切台絕不亮起螢幕
+    navigator.mediaSession.setActionHandler('previoustrack', () => stepChannelByScanRule(-1, isSilentModeActive));
+    navigator.mediaSession.setActionHandler('nexttrack', () => stepChannelByScanRule(1, isSilentModeActive));
   }
 }
 
 window.addEventListener('online', () => {
   if (currentPlayState === 'playing' || reconnectRetryCount > 0) {
     currentPlayState = 'idle';
-    playByIndex(currentIndex, true, true);
+    playByIndex(currentIndex, true, true, isSilentModeActive);
   }
 });
 
