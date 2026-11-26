@@ -138,11 +138,10 @@ let silentClockTimer = null;
 let silentDriftTimer = null;
 let isSilentModeActive = false;
 
-// 車用偏好設定：預設緩衝/斷線自動重連時間為 25 秒
 let themeMode = localStorage.getItem('waltonThemeMode') || 'night';
 const reconnectOptions = [8, 16, 25, 35];
 let reconnectDelaySec = parseFloat(localStorage.getItem('waltonReconnectSec')) || 25;
-if (!reconnectOptions.includes(reconnectDelaySec) || reconnectDelaySec === 16) {
+if (!reconnectOptions.includes(reconnectDelaySec)) {
   reconnectDelaySec = 25;
   localStorage.setItem('waltonReconnectSec', reconnectDelaySec);
 }
@@ -185,7 +184,7 @@ const eqContainer = document.getElementById('graphicEqContainer');
 let currentChannelId = localStorage.getItem('lastRadioChannelId') || channels[0].id;
 let currentIndex = Math.max(0, channels.findIndex(c => c.id === currentChannelId));
 let currentEQ = localStorage.getItem('lastRadioEQ') || 'flat';
-let currentPlayState = 'idle';
+let currentPlayState = 'selected';
 
 let audioCtx = null;
 let preampNode = null;
@@ -616,7 +615,6 @@ function toggleFavOnlyScan() {
   updateFavOnlyUI();
 }
 
-// 切台規則（keepSilent = true 時，即使在靜默模式下切台也絕不亮起螢幕）
 function stepChannelByScanRule(direction, keepSilent = false) {
   if (channels.length === 0) return;
   const preserveSilent = keepSilent || isSilentModeActive;
@@ -639,7 +637,7 @@ function stepChannelByScanRule(direction, keepSilent = false) {
   }
 }
 
-// ==================== 斷線重連秒數（預設 25 秒） / 螢幕常亮 / 睡眠定時 / 網格欄數 ====================
+// ==================== 斷線重連秒數 / 螢幕常亮（預設長亮） / 睡眠定時 / 網格欄數 ====================
 function updateReconnectBtnUI() {
   document.getElementById('reconnectSecBtn').innerText = `🔄 重連${reconnectDelaySec}s`;
 }
@@ -1397,7 +1395,11 @@ function startStallWatchdog(targetPlayer, token) {
 function clearStallWatchdog() { clearTimeout(stallWatchdogTimer); stallWatchdogTimer = null; }
 
 function fadeOutCurrentAudio(callback, durationSec = FADE_DURATION) {
-  if (activePlayer.paused || activePlayer.muted) { callback(); return; }
+  // 僅在真正出聲播放中才執行淡出，否則立即執行回呼避免無謂等待或狀態競態
+  if (currentPlayState !== 'playing' || !isStreamConfirmedPlaying || activePlayer.paused || activePlayer.muted) {
+    callback();
+    return;
+  }
   if (!isDirectMode && fadeGainNode && audioCtx) {
     const now = audioCtx.currentTime;
     fadeGainNode.gain.cancelScheduledValues(now);
@@ -1543,7 +1545,7 @@ function updateStatusEQText() {
   const sleepTag = sleepTimerMinutes > 0 ? ` | ⏰${getRemainingSleepMinutes()}m` : '';
 
   if (isAwaitingFirstTap) {
-    statusSub.innerText = `點擊畫面任一處或電台按鈕即刻出聲${sleepTag}`;
+    statusSub.innerText = `已選台就緒 • 點擊播放或任一電台出聲${sleepTag}`;
     return;
   }
   if (currentPlayState === 'idle') {
@@ -1675,30 +1677,11 @@ function playByIndex(idx, isUserClick = false, isAutoReconnect = false, keepSile
   localStorage.setItem('lastRadioChannelId', ch.id);
   applyCurrentChannelPreamp();
 
+  // 初始載入（無手指點擊）：直接顯示已選台就緒高亮，不偷發背景連線，避免舊連線延遲失敗洗掉按鈕顏色
   if (!isUserClick) {
-    updateUIState(idx, 'selected', '點擊畫面任一處或電台按鈕即刻出聲', preserveSilent);
+    isAwaitingFirstTap = true;
     stopAllPlayersImmediately();
-    attachAndPlay(
-      playerDirect,
-      ch.url,
-      myToken,
-      () => {
-        isAwaitingFirstTap = false;
-        activePlayer = playerDirect;
-        isDirectMode = true;
-        fadeInTargetAudio(true);
-        updateUIState(idx, 'playing', '', preserveSilent);
-        updateAttButtonUI();
-        updateStatusEQText();
-        setupMediaSession(ch);
-      },
-      () => {
-        if (myToken !== switchToken) return;
-        stopAllPlayersImmediately();
-        isAwaitingFirstTap = true;
-        updateUIState(idx, 'selected', '點擊畫面任一處或電台按鈕即刻出聲', preserveSilent);
-      }
-    );
+    updateUIState(idx, 'selected', '已選台就緒 • 點擊播放或任一電台出聲', preserveSilent);
     return;
   }
 
@@ -1756,7 +1739,6 @@ function toggleMasterPlay() {
   isAwaitingFirstTap = false;
   requestWakeLockIfNeeded();
   if (currentPlayState !== 'playing' || activePlayer.paused) {
-    currentPlayState = 'idle';
     playByIndex(currentIndex, true);
   } else {
     cancelSleepTimer();
@@ -1799,7 +1781,6 @@ function updateUIState(activeIdx, state, subMsg, preserveSilent = false) {
     masterStopBtn.innerText = '▶ 播放';
     stopVisualizerLoop();
     clearTimeout(silentIdleTimer);
-    // 若非静默切台（例如手動按暫停或睡眠定時停止），才退出靜默畫面
     if (!preserveSilent) {
       exitSilentMode();
     } else if (isSilentModeActive) {
@@ -1827,7 +1808,6 @@ function setupMediaSession(ch) {
         updateUIState(currentIndex, 'idle', '已暫停', false);
       });
     });
-    // 方向盤上一首 / 下一首：傳入 isSilentModeActive，確保靜默時切台絕不亮起螢幕
     navigator.mediaSession.setActionHandler('previoustrack', () => stepChannelByScanRule(-1, isSilentModeActive));
     navigator.mediaSession.setActionHandler('nexttrack', () => stepChannelByScanRule(1, isSilentModeActive));
   }
