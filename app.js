@@ -184,6 +184,7 @@ let hlsInstance = null;
 let switchToken = 0;
 
 let stallWatchdogTimer = null;
+let connectGraceTimer = null;
 let reconnectRetryCount = 0;
 
 const statusMain = document.getElementById('statusMain');
@@ -561,32 +562,21 @@ function renderSilentSettingsModal() {
     `<button class="cfg-pill ${silentConfig.layout === opt.val ? 'active' : ''}" onclick="setSilentField('layout', '${opt.val}')">${opt.label}</button>`
   ).join('');
 
-  const fontOpts = [
-    { val: 'normal', label: '字級：標準' },
-    { val: 'large',  label: '字級：加大' },
-    { val: 'xlarge', label: '字級：特大' }
-  ];
-  document.getElementById('silentFontSizePills').innerHTML = fontOpts.map(opt =>
-    `<button class="cfg-pill ${(silentConfig.fontSize || 'large') === opt.val ? 'active' : ''}" onclick="setSilentField('fontSize', '${opt.val}')">${opt.label}</button>`
-  ).join('');
+  // 同步 HTML 內建實體按鈕的高亮狀態（第 4 項字級、亮度與第 6 項解鎖方式）
+  const activeFont = silentConfig.fontSize || 'large';
+  document.querySelectorAll('#silentFontSizePills .cfg-pill').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.font === activeFont);
+  });
 
-  const brightOpts = [
-    { val: 'dim',    label: '亮度：極暗深夜' },
-    { val: 'normal', label: '亮度：標準柔光' },
-    { val: 'clear',  label: '亮度：白天清晰' }
-  ];
-  document.getElementById('silentBrightnessPills').innerHTML = brightOpts.map(opt =>
-    `<button class="cfg-pill ${(silentConfig.brightness || 'normal') === opt.val ? 'active' : ''}" onclick="setSilentField('brightness', '${opt.val}')">${opt.label}</button>`
-  ).join('');
+  const activeBright = silentConfig.brightness || 'normal';
+  document.querySelectorAll('#silentBrightnessPills .cfg-pill').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.bright === activeBright);
+  });
 
-  const unlockOpts = [
-    { val: 'swipeUp',   label: '上滑解鎖（連點2次提示）' },
-    { val: 'doubleTap', label: '雙擊直接解鎖' },
-    { val: 'singleTap', label: '單點即解鎖' }
-  ];
-  document.getElementById('silentUnlockModePills').innerHTML = unlockOpts.map(opt =>
-    `<button class="cfg-pill ${(silentConfig.unlockMode || 'swipeUp') === opt.val ? 'active' : ''}" onclick="setSilentField('unlockMode', '${opt.val}')">${opt.label}</button>`
-  ).join('');
+  const activeUnlock = silentConfig.unlockMode || 'swipeUp';
+  document.querySelectorAll('#silentUnlockModePills .cfg-pill').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.unlock === activeUnlock);
+  });
 
   document.getElementById('chkSilentStation').checked  = !!silentConfig.showStation;
   document.getElementById('chkSilentClock').checked    = !!silentConfig.showClock;
@@ -930,7 +920,7 @@ function toggleAttMute() {
   updateStatusEQText();
 }
 
-// ==================== 動態音波指示器（同步驅動主畫面與靜默加高音波條） ====================
+// ==================== 動態音波指示器 ====================
 function startVisualizerLoop() {
   stopVisualizerLoop();
   const vizBox = document.getElementById('vizBars');
@@ -1415,7 +1405,7 @@ function restoreChannelFromTrash(trashIdx) {
 function permanentlyDeleteFromTrash(trashIdx) { draftTrashChannels.splice(trashIdx, 1); renderChannelManageList(); }
 function emptyTrash() { draftTrashChannels = []; renderChannelManageList(); }
 
-// ==================== 音訊、EQ 與直接有聲播放核心 ====================
+// ==================== 音訊、EQ 與智慧直通分流播放核心 ====================
 function getChannelPreampDb(idx) {
   if (!channels[idx]) return 0;
   const val = parseInt(perChannelPreamp[channels[idx].id], 10);
@@ -1512,6 +1502,7 @@ function startStallWatchdog(targetPlayer, token) {
 }
 
 function clearStallWatchdog() { clearTimeout(stallWatchdogTimer); stallWatchdogTimer = null; }
+function clearConnectGraceTimer() { clearTimeout(connectGraceTimer); connectGraceTimer = null; }
 
 function fadeOutCurrentAudio(callback, durationSec = FADE_DURATION) {
   if (currentPlayState !== 'playing' || !isStreamConfirmedPlaying || activePlayer.paused || activePlayer.muted) {
@@ -1690,6 +1681,7 @@ function stopAllPlayersImmediately() {
   isStreamConfirmedPlaying = false;
   clearTimeout(silentIdleTimer);
   clearStallWatchdog();
+  clearConnectGraceTimer();
   stopVisualizerLoop();
   if (directFadeTimer) { clearInterval(directFadeTimer); directFadeTimer = null; }
   playerEQ.onplaying = null; playerEQ.ontimeupdate = null; playerEQ.onstalled = null; playerEQ.onwaiting = null; playerEQ.onerror = null;
@@ -1701,10 +1693,34 @@ function stopAllPlayersImmediately() {
   if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
 }
 
-function attachAndPlay(targetPlayer, url, token, onStreamConfirmed, onFail) {
+// 智慧判斷是否直接走 playerDirect（中廣與 HLS 串流在 iOS 上走直通最快最穩，免先撞 CORS 錯誤）
+function shouldPreferDirectStream(url) {
+  if (!url) return true;
+  return url.includes('.m3u8') || url.includes('sonnykuo.appspot.com');
+}
+
+function attachAndPlay(targetPlayer, url, token, onStreamConfirmed, onFail, allowGracePeriod = false) {
   if (!url || typeof url !== 'string') { onFail(); return; }
   const isM3u8 = url.includes('.m3u8') || url.includes('sonnykuo.appspot.com');
   let confirmed = false;
+  let failed = false;
+
+  const triggerFailOnce = () => {
+    if (failed || confirmed || token !== switchToken) return;
+    failed = true;
+    clearConnectGraceTimer();
+    onFail();
+  };
+
+  // 若啟用連線寬限期（預設 25 秒），只有在整段寬限期結束仍未出聲時才宣告逾時，忽略 iOS 載入初期瞬時雜訊
+  if (allowGracePeriod) {
+    clearConnectGraceTimer();
+    connectGraceTimer = setTimeout(() => {
+      if (!confirmed && token === switchToken) {
+        triggerFailOnce();
+      }
+    }, reconnectDelaySec * 1000);
+  }
 
   targetPlayer.muted = (targetPlayer === playerDirect) ? isAttMuted : false;
   if (targetPlayer === playerEQ && fadeGainNode && audioCtx) {
@@ -1714,8 +1730,9 @@ function attachAndPlay(targetPlayer, url, token, onStreamConfirmed, onFail) {
   }
 
   const confirmPlaybackActive = () => {
-    if (token !== switchToken) return;
+    if (token !== switchToken || failed) return;
     clearStallWatchdog();
+    clearConnectGraceTimer();
     reconnectRetryCount = 0;
     isStreamConfirmedPlaying = true;
     if (!confirmed) {
@@ -1738,11 +1755,14 @@ function attachAndPlay(targetPlayer, url, token, onStreamConfirmed, onFail) {
   targetPlayer.onstalled = () => { if (token === switchToken && confirmed) startStallWatchdog(targetPlayer, token); };
   targetPlayer.onwaiting = () => { if (token === switchToken && confirmed) startStallWatchdog(targetPlayer, token); };
   targetPlayer.onerror = () => {
-    if (token === switchToken) {
+    if (token !== switchToken) return;
+    if (!confirmed) {
+      // 在寬限期內的瞬時錯誤不立即熄燈，交由 connectGraceTimer 繼續等待串流完成緩衝
+      if (!allowGracePeriod) triggerFailOnce();
+    } else {
       isStreamConfirmedPlaying = false;
       clearTimeout(silentIdleTimer);
-      if (!confirmed) onFail();
-      else startStallWatchdog(targetPlayer, token);
+      startStallWatchdog(targetPlayer, token);
     }
   };
 
@@ -1752,20 +1772,23 @@ function attachAndPlay(targetPlayer, url, token, onStreamConfirmed, onFail) {
     hlsInstance.attachMedia(targetPlayer);
     hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
       if (token !== switchToken) return;
-      targetPlayer.play().catch(() => { if (token === switchToken && !confirmed) onFail(); });
+      targetPlayer.play().catch(() => { if (!allowGracePeriod) triggerFailOnce(); });
     });
     hlsInstance.on(Hls.Events.ERROR, (event, data) => {
       if (data.fatal && token === switchToken) {
-        isStreamConfirmedPlaying = false;
-        clearTimeout(silentIdleTimer);
-        if (!confirmed) onFail();
-        else startStallWatchdog(targetPlayer, token);
+        if (!confirmed) {
+          if (!allowGracePeriod) triggerFailOnce();
+        } else {
+          isStreamConfirmedPlaying = false;
+          clearTimeout(silentIdleTimer);
+          startStallWatchdog(targetPlayer, token);
+        }
       }
     });
   } else {
     targetPlayer.src = url;
     targetPlayer.load();
-    targetPlayer.play().catch(() => { if (token === switchToken && !confirmed) onFail(); });
+    targetPlayer.play().catch(() => { if (!allowGracePeriod) triggerFailOnce(); });
   }
 }
 
@@ -1806,49 +1829,76 @@ function playByIndex(idx, isUserClick = false, isAutoReconnect = false, keepSile
   requestWakeLockIfNeeded();
   const loadingMsg = isAutoReconnect ? `🔄 訊號中斷(${reconnectDelaySec}s)，自動重連中 (${reconnectRetryCount})...` : '已選台，串流連線緩衝中...';
   updateUIState(idx, 'selected', loadingMsg, preserveSilent);
-  initAudioEQ();
+
+  const useDirectFirst = shouldPreferDirectStream(ch.url);
+  if (!useDirectFirst) initAudioEQ();
 
   fadeOutCurrentAudio(() => {
     if (myToken !== switchToken) return;
     stopAllPlayersImmediately();
 
-    attachAndPlay(
-      playerEQ,
-      ch.url,
-      myToken,
-      () => {
-        activePlayer = playerEQ;
-        isDirectMode = false;
-        initAudioEQ();
-        fadeInTargetAudio(false);
-        updateUIState(idx, 'playing', '', preserveSilent);
-        updateAttButtonUI();
-        updateStatusEQText();
-        setupMediaSession(ch);
-      },
-      () => {
-        if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
-        attachAndPlay(
-          playerDirect,
-          ch.url,
-          myToken,
-          () => {
-            activePlayer = playerDirect;
-            isDirectMode = true;
-            fadeInTargetAudio(true);
-            updateUIState(idx, 'playing', '', preserveSilent);
-            updateAttButtonUI();
-            updateStatusEQText();
-            setupMediaSession(ch);
-          },
-          () => {
-            isStreamConfirmedPlaying = false;
-            clearTimeout(silentIdleTimer);
-            updateUIState(idx, 'idle', '⚠️ 串流連線逾時，請再點一次重試', preserveSilent);
-          }
-        );
-      }
-    );
+    if (useDirectFirst) {
+      attachAndPlay(
+        playerDirect,
+        ch.url,
+        myToken,
+        () => {
+          activePlayer = playerDirect;
+          isDirectMode = true;
+          fadeInTargetAudio(true);
+          updateUIState(idx, 'playing', '', preserveSilent);
+          updateAttButtonUI();
+          updateStatusEQText();
+          setupMediaSession(ch);
+        },
+        () => {
+          isStreamConfirmedPlaying = false;
+          clearTimeout(silentIdleTimer);
+          updateUIState(idx, 'idle', '⚠️ 串流連線逾時，請再點一次重試', preserveSilent);
+        },
+        true
+      );
+    } else {
+      attachAndPlay(
+        playerEQ,
+        ch.url,
+        myToken,
+        () => {
+          activePlayer = playerEQ;
+          isDirectMode = false;
+          initAudioEQ();
+          fadeInTargetAudio(false);
+          updateUIState(idx, 'playing', '', preserveSilent);
+          updateAttButtonUI();
+          updateStatusEQText();
+          setupMediaSession(ch);
+        },
+        () => {
+          if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
+          attachAndPlay(
+            playerDirect,
+            ch.url,
+            myToken,
+            () => {
+              activePlayer = playerDirect;
+              isDirectMode = true;
+              fadeInTargetAudio(true);
+              updateUIState(idx, 'playing', '', preserveSilent);
+              updateAttButtonUI();
+              updateStatusEQText();
+              setupMediaSession(ch);
+            },
+            () => {
+              isStreamConfirmedPlaying = false;
+              clearTimeout(silentIdleTimer);
+              updateUIState(idx, 'idle', '⚠️ 串流連線逾時，請再點一次重試', preserveSilent);
+            },
+            true
+          );
+        },
+        false
+      );
+    }
   });
 }
 
