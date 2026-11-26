@@ -82,8 +82,8 @@ function executeFactoryReset() {
   const keysToRemove = [
     'waltonCustomChannelsList', 'customChannelOrderIds', 'waltonTrashChannelsList',
     'customRadioEQ10Presets_v2', 'perChannelPreampMap', 'lastRadioChannelId',
-    'lastRadioEQ', 'waltonSilentConfig', 'waltonThemeMode', 'waltonReconnectSec',
-    'waltonGridCols', 'waltonDriveMode', 'waltonFavOnlyScan', 'waltonEqHeightMode'
+    'lastRadioEQ', 'waltonSilentConfig', 'waltonSilentV3Migrated', 'waltonThemeMode',
+    'waltonReconnectSec', 'waltonGridCols', 'waltonDriveMode', 'waltonFavOnlyScan', 'waltonEqHeightMode'
   ];
   keysToRemove.forEach(k => localStorage.removeItem(k));
   forceReloadPage();
@@ -115,27 +115,38 @@ if (!eqPresets || typeof eqPresets !== 'object') eqPresets = JSON.parse(JSON.str
 if (!eqPresets.custom) eqPresets.custom = JSON.parse(JSON.stringify(defaultPresets.custom));
 let perChannelPreamp = safeParseJSON('perChannelPreampMap', {}) || {};
 
+// ==================== 靜默模式 7 項全自訂設定（預設全開＋加大老花文字） ====================
 const validSilentDelays = [0, 10, 20, 30, 60, 120];
 const defaultSilentConfig = {
   delaySec: 20,
   ratio: 'third',
   layout: 'center',
+  fontSize: 'large',
+  brightness: 'normal',
   showStation: true,
   showClock: true,
   showMeta: true,
   showViz: true,
   showSleep: true,
-  showBtns: false
+  showBtns: true,
+  unlockMode: 'swipeUp',
+  enableSwipeCh: true,
+  enableDblTitle: true
 };
+
 let silentConfig = Object.assign({}, defaultSilentConfig, safeParseJSON('waltonSilentConfig', {}));
-if (!validSilentDelays.includes(silentConfig.delaySec)) {
-  silentConfig.delaySec = 20;
+if (!validSilentDelays.includes(silentConfig.delaySec)) silentConfig.delaySec = 20;
+
+if (!localStorage.getItem('waltonSilentV3Migrated')) {
+  silentConfig = JSON.parse(JSON.stringify(defaultSilentConfig));
   localStorage.setItem('waltonSilentConfig', JSON.stringify(silentConfig));
+  localStorage.setItem('waltonSilentV3Migrated', 'true');
 }
 
 let silentIdleTimer = null;
 let silentClockTimer = null;
 let silentDriftTimer = null;
+let silentHintResetTimer = null;
 let isSilentModeActive = false;
 
 let themeMode = localStorage.getItem('waltonThemeMode') || 'night';
@@ -206,7 +217,6 @@ let dropTargetChannelId = null;
 let startX = 0;
 let startY = 0;
 
-// ==================== EQ 推桿三段高度動態調整 ====================
 function applyEqHeightMode() {
   document.body.classList.remove('eq-h-compact', 'eq-h-normal', 'eq-h-tall');
   document.body.classList.add(`eq-h-${eqHeightMode}`);
@@ -230,7 +240,23 @@ function cycleEqHeight() {
   applyEqHeightMode();
 }
 
-// ==================== 串流成功驗證與靜默模式核心控制 ====================
+let lastTitleTapTime = 0;
+const titleVizRowEl = document.getElementById('titleVizRow');
+if (titleVizRowEl) {
+  titleVizRowEl.addEventListener('pointerup', (e) => {
+    if (!silentConfig.enableDblTitle) return;
+    const now = Date.now();
+    if (now - lastTitleTapTime < 350) {
+      e.preventDefault();
+      lastTitleTapTime = 0;
+      if (navigator.vibrate) navigator.vibrate(25);
+      enterSilentMode(true);
+    } else {
+      lastTitleTapTime = now;
+    }
+  });
+}
+
 function isAudioActuallyStreaming() {
   if (currentPlayState !== 'playing' || !isStreamConfirmedPlaying) return false;
   if (!activePlayer || activePlayer.paused || activePlayer.ended) return false;
@@ -255,6 +281,13 @@ function resetSilentIdleTimer() {
   }, silentConfig.delaySec * 1000);
 }
 
+function getDefaultWakeHintText() {
+  const swipePart = silentConfig.enableSwipeCh ? ' • 左右滑動切台' : '';
+  if (silentConfig.unlockMode === 'doubleTap') return `⌃ 雙擊螢幕解鎖${swipePart}`;
+  if (silentConfig.unlockMode === 'singleTap') return `⌃ 輕點螢幕解鎖${swipePart}`;
+  return `⌃ 向上滑動解鎖${swipePart}`;
+}
+
 function enterSilentMode(forcePreview = false) {
   if (isSilentModeActive) return;
   if (!forcePreview && !isAudioActuallyStreaming()) return;
@@ -263,12 +296,22 @@ function enterSilentMode(forcePreview = false) {
   clearTimeout(silentIdleTimer);
 
   const overlay = document.getElementById('silentOverlay');
-  overlay.classList.remove('ratio-half', 'ratio-full');
+  overlay.classList.remove('ratio-half', 'ratio-full', 'font-normal', 'font-large', 'font-xlarge', 'bright-dim', 'bright-normal', 'bright-clear');
+
   if (silentConfig.ratio === 'half') overlay.classList.add('ratio-half');
   if (silentConfig.ratio === 'full') overlay.classList.add('ratio-full');
 
+  overlay.classList.add(`font-${silentConfig.fontSize || 'large'}`);
+  overlay.classList.add(`bright-${silentConfig.brightness || 'normal'}`);
+
   const infoZone = document.getElementById('silentInfoZone');
   if (infoZone) infoZone.style.transform = 'translateY(0px)';
+
+  const wakeHint = document.getElementById('silentWakeHint');
+  if (wakeHint) {
+    wakeHint.classList.remove('alert-prompt');
+    wakeHint.innerText = getDefaultWakeHintText();
+  }
 
   renderSilentContent();
   overlay.classList.add('visible');
@@ -295,6 +338,7 @@ function exitSilentMode() {
   isSilentModeActive = false;
   clearInterval(silentClockTimer);
   clearInterval(silentDriftTimer);
+  clearTimeout(silentHintResetTimer);
 
   const overlay = document.getElementById('silentOverlay');
   overlay.classList.remove('fade-in');
@@ -321,14 +365,12 @@ function renderSilentContent() {
 
   const eqLabel = isDirectMode ? '直通原音' : `EQ:${eqPresets[currentEQ]?.label || '原音'}`;
   const isBuffering = currentPlayState === 'selected';
-  const metaStr = isBuffering
-    ? `${ch.sub} • ⏳ 串流連線緩衝中...`
-    : `${ch.sub} • ${eqLabel}${isAttMuted ? ' • 降音中' : ''}`;
-
   const sleepMins = getRemainingSleepMinutes();
-  const sleepHtml = (silentConfig.showSleep && sleepTimerMinutes > 0)
-    ? `<div class="silent-sleep-tag">⏰ 睡眠定時剩餘 ${sleepMins} 分鐘</div>`
-    : '';
+  const sleepPart = (silentConfig.showSleep && sleepTimerMinutes > 0) ? ` • ⏰剩${sleepMins}分` : '';
+
+  const metaStr = isBuffering
+    ? `${ch.sub} • ⏳ 串流連線緩衝中...${sleepPart}`
+    : `${ch.sub} • ${eqLabel}${isAttMuted ? ' • 降音中' : ''}${sleepPart}`;
 
   const vizHtml = silentConfig.showViz
     ? `<div class="silent-viz-bars">
@@ -353,7 +395,6 @@ function renderSilentContent() {
     inner.innerHTML = `
       <div class="silent-hud-left">
         ${silentConfig.showClock ? `<div class="silent-clock">${timeStr}</div>` : ''}
-        ${sleepHtml}
       </div>
       <div class="silent-hud-right">
         ${silentConfig.showStation ? `<div class="silent-station-row">${vizHtml}<div class="silent-station">${escapeHtml(ch.name)}</div></div>` : vizHtml}
@@ -366,17 +407,32 @@ function renderSilentContent() {
       ${silentConfig.showClock ? `<div class="silent-clock">${timeStr}</div>` : ''}
       ${silentConfig.showStation ? `<div class="silent-station-row"><div class="silent-station">${escapeHtml(ch.name)}</div>${vizHtml}</div>` : vizHtml}
       ${silentConfig.showMeta ? `<div class="silent-meta">${escapeHtml(metaStr)}</div>` : ''}
-      ${sleepHtml}
       ${btnsHtml}
     `;
   }
 }
 
-// 靜默模式防誤觸手勢：單點觸屏忽略、上滑（Swipe Up）解鎖、左右滑切台
 const silentOverlayEl = document.getElementById('silentOverlay');
 let silentTouchStartX = 0;
 let silentTouchStartY = 0;
 let silentTracking = false;
+let silentTapTimestamps = [];
+
+function triggerSwipeUpPromptAlert() {
+  const wakeHint = document.getElementById('silentWakeHint');
+  if (!wakeHint) return;
+  if (navigator.vibrate) navigator.vibrate([20, 40, 20]);
+  wakeHint.innerText = '⌃ 請向上滑動螢幕以解鎖';
+  wakeHint.classList.remove('alert-prompt');
+  void wakeHint.offsetWidth;
+  wakeHint.classList.add('alert-prompt');
+
+  clearTimeout(silentHintResetTimer);
+  silentHintResetTimer = setTimeout(() => {
+    wakeHint.classList.remove('alert-prompt');
+    wakeHint.innerText = getDefaultWakeHintText();
+  }, 3000);
+}
 
 silentOverlayEl.addEventListener('pointerdown', (e) => {
   if (e.target.closest('button')) return;
@@ -387,15 +443,16 @@ silentOverlayEl.addEventListener('pointerdown', (e) => {
 
 silentOverlayEl.addEventListener('pointermove', (e) => {
   if (!isSilentModeActive || !silentTracking) return;
+  if (silentConfig.unlockMode !== 'swipeUp') return;
   const dy = e.clientY - silentTouchStartY;
   const infoZone = document.getElementById('silentInfoZone');
   const wakeHint = document.getElementById('silentWakeHint');
   if (dy < 0) {
-    const lift = Math.max(-42, dy * 0.45);
+    const lift = Math.max(-46, dy * 0.45);
     if (infoZone) infoZone.style.transform = `translateY(${lift}px)`;
-    if (wakeHint) {
-      wakeHint.style.color = dy < -60 ? '#8FA8B8' : '#4A545C';
-      wakeHint.innerText = dy < -60 ? '⌃ 放開立即解鎖' : '⌃ 上滑解鎖 • 左右滑動切台';
+    if (wakeHint && !wakeHint.classList.contains('alert-prompt')) {
+      wakeHint.style.color = dy < -60 ? '#9BB7C7' : '#56626B';
+      wakeHint.innerText = dy < -60 ? '⌃ 放開立即解鎖' : getDefaultWakeHintText();
     }
   }
 }, { passive: true });
@@ -407,17 +464,18 @@ const handleSilentPointerEnd = (e) => {
   const infoZone = document.getElementById('silentInfoZone');
   const wakeHint = document.getElementById('silentWakeHint');
   if (infoZone) infoZone.style.transform = 'translateY(0px)';
-  if (wakeHint) {
-    wakeHint.style.color = '#2B3136';
-    wakeHint.innerText = '⌃ 上滑解鎖 • 左右滑動切台';
+  if (wakeHint && !wakeHint.classList.contains('alert-prompt')) {
+    wakeHint.style.color = '';
+    wakeHint.innerText = getDefaultWakeHintText();
   }
 
   if (e.target.closest('button')) return;
 
   const dx = e.clientX - silentTouchStartX;
   const dy = e.clientY - silentTouchStartY;
+  const moveDist = Math.hypot(dx, dy);
 
-  if (dy < -60 && Math.abs(dy) > Math.abs(dx) * 1.4) {
+  if (silentConfig.unlockMode === 'swipeUp' && dy < -60 && Math.abs(dy) > Math.abs(dx) * 1.4) {
     if (navigator.vibrate) navigator.vibrate(25);
     e.preventDefault();
     e.stopPropagation();
@@ -425,11 +483,38 @@ const handleSilentPointerEnd = (e) => {
     return;
   }
 
-  if (Math.abs(dx) > 65 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+  if (silentConfig.enableSwipeCh && Math.abs(dx) > 65 && Math.abs(dx) > Math.abs(dy) * 1.5) {
     if (navigator.vibrate) navigator.vibrate(25);
     if (dx < 0) stepChannelByScanRule(1, true);
     else stepChannelByScanRule(-1, true);
     return;
+  }
+
+  if (moveDist < 18) {
+    if (silentConfig.unlockMode === 'singleTap') {
+      if (navigator.vibrate) navigator.vibrate(20);
+      e.preventDefault();
+      e.stopPropagation();
+      exitSilentMode();
+      return;
+    }
+
+    const now = Date.now();
+    silentTapTimestamps = silentTapTimestamps.filter(t => now - t < 1500);
+    silentTapTimestamps.push(now);
+
+    if (silentConfig.unlockMode === 'doubleTap' && silentTapTimestamps.length >= 2) {
+      silentTapTimestamps = [];
+      if (navigator.vibrate) navigator.vibrate(25);
+      e.preventDefault();
+      e.stopPropagation();
+      exitSilentMode();
+      return;
+    }
+
+    if (silentConfig.unlockMode === 'swipeUp' && silentTapTimestamps.length >= 2) {
+      triggerSwipeUpPromptAlert();
+    }
   }
 
   e.preventDefault();
@@ -451,12 +536,8 @@ function openSilentSettings() {
 
 function renderSilentSettingsModal() {
   const delayOpts = [
-    { val: 0, label: '關閉' },
-    { val: 10, label: '10秒' },
-    { val: 20, label: '20秒' },
-    { val: 30, label: '30秒' },
-    { val: 60, label: '60秒' },
-    { val: 120, label: '120秒' }
+    { val: 0, label: '關閉' }, { val: 10, label: '10秒' }, { val: 20, label: '20秒' },
+    { val: 30, label: '30秒' }, { val: 60, label: '60秒' }, { val: 120, label: '120秒' }
   ];
   document.getElementById('silentDelayPills').innerHTML = delayOpts.map(opt =>
     `<button class="cfg-pill ${silentConfig.delaySec === opt.val ? 'active' : ''}" onclick="setSilentField('delaySec', ${opt.val})">${opt.label}</button>`
@@ -480,12 +561,41 @@ function renderSilentSettingsModal() {
     `<button class="cfg-pill ${silentConfig.layout === opt.val ? 'active' : ''}" onclick="setSilentField('layout', '${opt.val}')">${opt.label}</button>`
   ).join('');
 
-  document.getElementById('chkSilentStation').checked = !!silentConfig.showStation;
-  document.getElementById('chkSilentClock').checked   = !!silentConfig.showClock;
-  document.getElementById('chkSilentMeta').checked    = !!silentConfig.showMeta;
-  document.getElementById('chkSilentViz').checked     = !!silentConfig.showViz;
-  document.getElementById('chkSilentSleep').checked   = !!silentConfig.showSleep;
-  document.getElementById('chkSilentBtns').checked    = !!silentConfig.showBtns;
+  const fontOpts = [
+    { val: 'normal', label: '字級：標準' },
+    { val: 'large',  label: '字級：加大' },
+    { val: 'xlarge', label: '字級：特大' }
+  ];
+  document.getElementById('silentFontSizePills').innerHTML = fontOpts.map(opt =>
+    `<button class="cfg-pill ${(silentConfig.fontSize || 'large') === opt.val ? 'active' : ''}" onclick="setSilentField('fontSize', '${opt.val}')">${opt.label}</button>`
+  ).join('');
+
+  const brightOpts = [
+    { val: 'dim',    label: '亮度：極暗深夜' },
+    { val: 'normal', label: '亮度：標準柔光' },
+    { val: 'clear',  label: '亮度：白天清晰' }
+  ];
+  document.getElementById('silentBrightnessPills').innerHTML = brightOpts.map(opt =>
+    `<button class="cfg-pill ${(silentConfig.brightness || 'normal') === opt.val ? 'active' : ''}" onclick="setSilentField('brightness', '${opt.val}')">${opt.label}</button>`
+  ).join('');
+
+  const unlockOpts = [
+    { val: 'swipeUp',   label: '上滑解鎖（連點2次提示）' },
+    { val: 'doubleTap', label: '雙擊直接解鎖' },
+    { val: 'singleTap', label: '單點即解鎖' }
+  ];
+  document.getElementById('silentUnlockModePills').innerHTML = unlockOpts.map(opt =>
+    `<button class="cfg-pill ${(silentConfig.unlockMode || 'swipeUp') === opt.val ? 'active' : ''}" onclick="setSilentField('unlockMode', '${opt.val}')">${opt.label}</button>`
+  ).join('');
+
+  document.getElementById('chkSilentStation').checked  = !!silentConfig.showStation;
+  document.getElementById('chkSilentClock').checked    = !!silentConfig.showClock;
+  document.getElementById('chkSilentMeta').checked     = !!silentConfig.showMeta;
+  document.getElementById('chkSilentViz').checked      = !!silentConfig.showViz;
+  document.getElementById('chkSilentSleep').checked    = !!silentConfig.showSleep;
+  document.getElementById('chkSilentBtns').checked     = !!silentConfig.showBtns;
+  document.getElementById('chkSilentSwipeCh').checked  = !!silentConfig.enableSwipeCh;
+  document.getElementById('chkSilentDblTitle').checked = !!silentConfig.enableDblTitle;
 }
 
 function setSilentField(key, val) {
@@ -494,13 +604,21 @@ function setSilentField(key, val) {
 }
 
 function collectSilentCheckboxes() {
-  silentConfig.showStation = document.getElementById('chkSilentStation').checked;
-  silentConfig.showClock   = document.getElementById('chkSilentClock').checked;
-  silentConfig.showMeta    = document.getElementById('chkSilentMeta').checked;
-  silentConfig.showViz     = document.getElementById('chkSilentViz').checked;
-  silentConfig.showSleep   = document.getElementById('chkSilentSleep').checked;
-  silentConfig.showBtns    = document.getElementById('chkSilentBtns').checked;
+  silentConfig.showStation    = document.getElementById('chkSilentStation').checked;
+  silentConfig.showClock      = document.getElementById('chkSilentClock').checked;
+  silentConfig.showMeta       = document.getElementById('chkSilentMeta').checked;
+  silentConfig.showViz        = document.getElementById('chkSilentViz').checked;
+  silentConfig.showSleep      = document.getElementById('chkSilentSleep').checked;
+  silentConfig.showBtns       = document.getElementById('chkSilentBtns').checked;
+  silentConfig.enableSwipeCh  = document.getElementById('chkSilentSwipeCh').checked;
+  silentConfig.enableDblTitle = document.getElementById('chkSilentDblTitle').checked;
   localStorage.setItem('waltonSilentConfig', JSON.stringify(silentConfig));
+}
+
+function resetSilentDefaults() {
+  silentConfig = JSON.parse(JSON.stringify(defaultSilentConfig));
+  localStorage.setItem('waltonSilentConfig', JSON.stringify(silentConfig));
+  renderSilentSettingsModal();
 }
 
 function saveSilentSettings() {
@@ -522,7 +640,6 @@ function updateEqHintText() {
   const silentStr = silentConfig.delaySec > 0 ? `串流成功後 ${silentConfig.delaySec} 秒進純黑靜默` : '自動靜默已關閉';
   hintEl.innerText = `💡 雙擊推桿歸零 • ${silentStr}`;
 }
-
 // ==================== 主題 / 駕駛模式 ====================
 function applyTheme() {
   const btn = document.getElementById('themeToggleBtn');
@@ -637,7 +754,7 @@ function stepChannelByScanRule(direction, keepSilent = false) {
   }
 }
 
-// ==================== 斷線重連秒數 / 螢幕常亮（預設長亮） / 睡眠定時 / 網格欄數 ====================
+// ==================== 斷線重連秒數 / 螢幕常亮 / 睡眠定時 / 網格欄數 ====================
 function updateReconnectBtnUI() {
   document.getElementById('reconnectSecBtn').innerText = `🔄 重連${reconnectDelaySec}s`;
 }
@@ -813,7 +930,7 @@ function toggleAttMute() {
   updateStatusEQText();
 }
 
-// ==================== 動態音波指示器 ====================
+// ==================== 動態音波指示器（同步驅動主畫面與靜默加高音波條） ====================
 function startVisualizerLoop() {
   stopVisualizerLoop();
   const vizBox = document.getElementById('vizBars');
@@ -826,7 +943,7 @@ function startVisualizerLoop() {
 
     if (currentPlayState !== 'playing' || !isStreamConfirmedPlaying || isAttMuted) {
       bars.forEach(b => { if (b) b.style.height = '3px'; });
-      sbars.forEach(b => { if (b) b.style.height = '3px'; });
+      sbars.forEach(b => { if (b) b.style.height = '4px'; });
       vizBox.classList.remove('active');
       vizAnimFrame = requestAnimationFrame(renderFrame);
       return;
@@ -844,8 +961,9 @@ function startVisualizerLoop() {
         bins.forEach((binIdx, i) => {
           const val = analyserData[binIdx] || 0;
           const h = Math.max(4, Math.min(16, Math.round((val / 255) * 16)));
+          const sh = Math.max(5, Math.min(24, Math.round((val / 255) * 24)));
           if (bars[i]) bars[i].style.height = h + 'px';
-          if (sbars[i]) sbars[i].style.height = h + 'px';
+          if (sbars[i]) sbars[i].style.height = sh + 'px';
         });
       }
     }
@@ -855,8 +973,9 @@ function startVisualizerLoop() {
       bars.forEach((b, i) => {
         const wave = Math.sin(phase + i * 1.15) * 0.5 + 0.5;
         const h = Math.max(4, Math.round(4 + wave * 11));
+        const sh = Math.max(5, Math.round(5 + wave * 18));
         if (b) b.style.height = h + 'px';
-        if (sbars[i]) sbars[i].style.height = h + 'px';
+        if (sbars[i]) sbars[i].style.height = sh + 'px';
       });
     }
 
@@ -873,7 +992,7 @@ function stopVisualizerLoop() {
     const b = document.getElementById(`vbar${i}`);
     if (b) b.style.height = '3px';
     const sb = document.getElementById(`svbar${i}`);
-    if (sb) sb.style.height = '3px';
+    if (sb) sb.style.height = '4px';
   }
 }
 
@@ -1395,7 +1514,6 @@ function startStallWatchdog(targetPlayer, token) {
 function clearStallWatchdog() { clearTimeout(stallWatchdogTimer); stallWatchdogTimer = null; }
 
 function fadeOutCurrentAudio(callback, durationSec = FADE_DURATION) {
-  // 僅在真正出聲播放中才執行淡出，否則立即執行回呼避免無謂等待或狀態競態
   if (currentPlayState !== 'playing' || !isStreamConfirmedPlaying || activePlayer.paused || activePlayer.muted) {
     callback();
     return;
@@ -1677,7 +1795,6 @@ function playByIndex(idx, isUserClick = false, isAutoReconnect = false, keepSile
   localStorage.setItem('lastRadioChannelId', ch.id);
   applyCurrentChannelPreamp();
 
-  // 初始載入（無手指點擊）：直接顯示已選台就緒高亮，不偷發背景連線，避免舊連線延遲失敗洗掉按鈕顏色
   if (!isUserClick) {
     isAwaitingFirstTap = true;
     stopAllPlayersImmediately();
