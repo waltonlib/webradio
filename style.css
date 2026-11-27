@@ -354,7 +354,6 @@ input[type=range].v-slider:active::-webkit-slider-thumb { background: #7D9B8C; b
 .silent-cfg-btn { background: #3B464F; border: 1px solid #6C8191; color: #DCEAF2; }
 .manage-ch-btn { background: #6E5D50; border: 1px solid #A68E7C; color: #FAF8F5; }
 
-/* ==================== OLED 靜默模式全螢幕黑化遮罩 ==================== */
 .silent-overlay {
   --s-clock-color: #7D909C;
   --s-title-color: #9EB3BF;
@@ -518,7 +517,6 @@ input[type=range].v-slider:active::-webkit-slider-thumb { background: #7D9B8C; b
   animation: wakeHintBounce 0.7s ease-in-out 2;
 }
 
-/* ==================== 通用彈窗樣式 ==================== */
 .modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.8); z-index: 120; align-items: center; justify-content: center; padding: 14px; }
 .modal-backdrop.show { display: flex; }
 .modal-card { background: #2A2D32; border: 1.5px solid #585E68; border-radius: 20px; width: 100%; max-width: 470px; max-height: 90dvh; display: flex; flex-direction: column; padding: 16px; gap: 10px; color: #F0EDE6; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.65); }
