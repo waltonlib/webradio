@@ -1,4 +1,4 @@
-// 版本變更紀錄：20261127_v06 - iOS 專屬 MP3/AAC 影格邊界對齊解碼 ＋ 輸出末端 EQ 管線 ＋ 增益職責切分
+// 版本變更紀錄：20261128_v01 - iOS HLS (.m3u8/.ts) 清單解析與 TS 音訊抽離送入輸出末端 EQ ＋ 既有影格對齊解碼與直通保底
 function safeParseJSON(key, fallback) {
   try {
     const raw = localStorage.getItem(key);
@@ -182,9 +182,12 @@ const playerDirect = document.getElementById('playerDirect');
 let activePlayer = playerDirect;
 let isDirectMode = true;
 
-// iOS 影格邊界對齊 ＋ 輸出末端 EQ 引擎狀態
+// iOS 影格邊界對齊 ＋ HLS 抽音軌 ＋ 輸出末端 EQ 引擎狀態
 let isIosFramedEqActive = false;
+let isIosHlsMode = false;
 let iosAbortController = null;
+let iosHlsPollTimer = null;
+let iosSeenSegments = new Set();
 let iosByteRing = new Uint8Array(0);
 let iosFrameBatch = [];
 let iosDecodeBusy = false;
@@ -418,7 +421,10 @@ function exitSilentMode() {
 }
 
 function getEngineModeLabel() {
-  if (isIosFramedEqActive) return `iOS末端EQ:${eqPresets[currentEQ]?.label || '原音'}`;
+  if (isIosFramedEqActive) {
+    const tag = isIosHlsMode ? 'iOS-HLS-EQ' : 'iOS末端EQ';
+    return `${tag}:${eqPresets[currentEQ]?.label || '原音'}`;
+  }
   if (isDirectMode) return isIOSDevice ? 'iOS直通保底' : '直通原音';
   return `EQ:${eqPresets[currentEQ]?.label || '原音'}`;
 }
@@ -1491,7 +1497,7 @@ function restoreChannelFromTrash(trashIdx) {
 function permanentlyDeleteFromTrash(trashIdx) { draftTrashChannels.splice(trashIdx, 1); renderChannelManageList(); }
 function emptyTrash() { draftTrashChannels = []; renderChannelManageList(); }
 
-// ==================== 音訊、輸出末端 EQ 與 iOS 影格邊界對齊解碼引擎 ====================
+// ==================== 音訊、輸出末端 EQ 與 iOS 影格邊界對齊 / HLS 抽音軌引擎 ====================
 function getChannelPreampDb(idx) {
   if (!channels[idx]) return 0;
   const val = parseInt(perChannelPreamp[channels[idx].id], 10);
@@ -1533,7 +1539,6 @@ function ensureAudioGraph(resumeNow = false) {
       if (!AudioContextCtor) return false;
       audioCtx = new AudioContextCtor();
 
-      // 輸出末端統一處理鏈：所有 EQ 音源匯入 eqChainInputNode，最後經由 fadeGainNode / analyserNode 輸出
       eqChainInputNode = audioCtx.createGain();
       eqChainInputNode.gain.value = 1.0;
 
@@ -1595,7 +1600,6 @@ function ensureAudioGraph(resumeNow = false) {
   }
 }
 
-// MP3 影格表：bitrateIndex / sampleRateIndex
 const MP3_BITRATES_V1_L3 = [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 0];
 const MP3_BITRATES_V2_L3 = [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160, 0];
 const MP3_SAMPLERATES_V1 = [44100, 48000, 32000, 0];
@@ -1611,7 +1615,7 @@ function parseMp3FrameLength(buf, offset) {
 
   const verBits = (b1 >> 3) & 0x03;
   const layerBits = (b1 >> 1) & 0x03;
-  if (verBits === 0x01 || layerBits !== 0x01) return 0; // 僅對齊 MPEG Layer III 影格
+  if (verBits === 0x01 || layerBits !== 0x01) return 0;
 
   const brIdx = (b2 >> 4) & 0x0F;
   const srIdx = (b2 >> 2) & 0x03;
@@ -1638,12 +1642,10 @@ function parseAdtsFrameLength(buf, offset) {
   return frameLen >= 7 ? frameLen : 0;
 }
 
-// 從位元組緩衝區切出完整音訊影格，剩餘半截位元組保留至下一批
-function extractAlignedAudioFrames(ring, maxFrames = 36) {
+function extractAlignedAudioFrames(ring, maxFrames = 40) {
   const frames = [];
   let cursor = 0;
 
-  // 跳過開頭 ID3v2 標籤（若存在）
   if (ring.length >= 10 && ring[0] === 0x49 && ring[1] === 0x44 && ring[2] === 0x33) {
     const tagSize = ((ring[6] & 0x7F) << 21) | ((ring[7] & 0x7F) << 14) | ((ring[8] & 0x7F) << 7) | (ring[9] & 0x7F);
     if (ring.length > 10 + tagSize) cursor = 10 + tagSize;
@@ -1680,13 +1682,121 @@ function extractAlignedAudioFrames(ring, maxFrames = 36) {
   };
 }
 
+// 抽離 MPEG-TS（188 bytes/packet）中的音訊 PES 酬載，供後續影格邊界對齊
+function extractAudioPayloadFromTs(tsBytes) {
+  if (!tsBytes || tsBytes.length < 188) return new Uint8Array(0);
+  const payloads = [];
+  let totalLen = 0;
+  let offset = 0;
+
+  while (offset + 188 <= tsBytes.length) {
+    if (tsBytes[offset] !== 0x47) {
+      offset++;
+      continue;
+    }
+    const pkt = tsBytes.subarray(offset, offset + 188);
+    offset += 188;
+
+    const pusi = (pkt[1] & 0x40) !== 0;
+    const pid = ((pkt[1] & 0x1F) << 8) | pkt[2];
+    const adaptCtrl = (pkt[3] >> 4) & 0x03;
+
+    if (pid === 0x0000 || pid === 0x1FFF) continue;
+
+    let idx = 4;
+    if (adaptCtrl === 0x02 || adaptCtrl === 0x03) {
+      if (idx >= 188) continue;
+      const adaptLen = pkt[idx];
+      idx += 1 + adaptLen;
+    }
+    if (adaptCtrl === 0x02 || idx >= 188) continue;
+
+    let dataSlice = pkt.subarray(idx);
+    if (pusi && dataSlice.length >= 9 && dataSlice[0] === 0x00 && dataSlice[1] === 0x00 && dataSlice[2] === 0x01) {
+      const streamId = dataSlice[3];
+      // 音訊 PES stream_id 範圍 0xC0..0xDF
+      if (streamId < 0xC0 || streamId > 0xDF) continue;
+      const pesHeaderDataLen = dataSlice[8];
+      const pesPayloadStart = 9 + pesHeaderDataLen;
+      if (pesPayloadStart < dataSlice.length) {
+        dataSlice = dataSlice.subarray(pesPayloadStart);
+      } else {
+        continue;
+      }
+    }
+
+    if (dataSlice.length > 0) {
+      payloads.push(dataSlice);
+      totalLen += dataSlice.length;
+    }
+  }
+
+  if (totalLen === 0) return new Uint8Array(0);
+  const out = new Uint8Array(totalLen);
+  let cursor = 0;
+  for (const p of payloads) {
+    out.set(p, cursor);
+    cursor += p.length;
+  }
+  return out;
+}
+
+function resolvePlaylistUrl(baseUrl, line) {
+  try {
+    return new URL(line.trim(), baseUrl).href;
+  } catch (_) {
+    return line.trim();
+  }
+}
+
+async function parseM3u8Playlist(playlistUrl, signal, depth = 0) {
+  if (depth > 3) return { segments: [], targetDuration: 4 };
+  const resp = await fetch(playlistUrl, { mode: 'cors', signal });
+  if (!resp.ok) throw new Error('M3U8 fetch failed');
+  const text = await resp.text();
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+
+  let targetDuration = 4;
+  const variantUrls = [];
+  const segmentUrls = [];
+  let expectVariant = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.startsWith('#EXT-X-TARGETDURATION:')) {
+      const val = parseFloat(line.split(':')[1]);
+      if (!isNaN(val) && val > 0) targetDuration = val;
+    } else if (line.startsWith('#EXT-X-STREAM-INF:')) {
+      expectVariant = true;
+    } else if (!line.startsWith('#')) {
+      const absUrl = resolvePlaylistUrl(playlistUrl, line);
+      if (expectVariant || absUrl.includes('.m3u8')) {
+        variantUrls.push(absUrl);
+        expectVariant = false;
+      } else {
+        segmentUrls.push(absUrl);
+      }
+    }
+  }
+
+  if (segmentUrls.length === 0 && variantUrls.length > 0) {
+    return parseM3u8Playlist(variantUrls[0], signal, depth + 1);
+  }
+
+  return { segments: segmentUrls, targetDuration };
+}
+
 function stopIosBufferStream() {
   isIosFramedEqActive = false;
+  isIosHlsMode = false;
   iosDecodeBusy = false;
   clearTimeout(iosScheduleTimer);
   iosScheduleTimer = null;
   clearTimeout(iosFeedWatchdog);
   iosFeedWatchdog = null;
+  clearInterval(iosHlsPollTimer);
+  iosHlsPollTimer = null;
+  iosSeenSegments.clear();
   if (iosAbortController) {
     try { iosAbortController.abort(); } catch (_) {}
     iosAbortController = null;
@@ -1700,11 +1810,11 @@ function stopIosBufferStream() {
   iosActiveSources = [];
 }
 
-function drainIosFrameQueue(token, onFirstBufferReady) {
+function drainIosFrameQueue(token, onFirstBufferReady, minFramesThreshold = 10) {
   if (iosDecodeBusy || token !== switchToken || !audioCtx || !eqChainInputNode) return;
-  if (iosFrameBatch.length < 10) return;
+  if (iosFrameBatch.length < minFramesThreshold) return;
 
-  const takeCount = Math.min(24, iosFrameBatch.length);
+  const takeCount = Math.min(28, iosFrameBatch.length);
   const selected = iosFrameBatch.splice(0, takeCount);
   const totalLen = selected.reduce((acc, f) => acc + f.length, 0);
   const merged = new Uint8Array(totalLen);
@@ -1744,14 +1854,31 @@ function drainIosFrameQueue(token, onFirstBufferReady) {
     })
     .catch(() => {
       iosDecodeBusy = false;
-      // 解碼失敗時不丟棄資料，將影格放回佇列前端等待更多完整影格
       iosFrameBatch = selected.concat(iosFrameBatch);
     });
 }
 
-// iOS 專屬：影格對齊解碼 ＋ 輸出末端 EQ 接管（失敗則保留 playerDirect 直通保底）
+function promoteIosEqTakeover(token, isHls, onTakeoverSuccess) {
+  if (token !== switchToken) return;
+  isIosFramedEqActive = true;
+  isIosHlsMode = !!isHls;
+  isDirectMode = false;
+  activePlayer = null;
+
+  try {
+    playerDirect.pause();
+    playerDirect.removeAttribute('src');
+    playerDirect.load();
+  } catch (_) {}
+
+  fadeInTargetAudio(false);
+  applyAudioAttenuation();
+  onTakeoverSuccess();
+}
+
+// iOS 連續音訊串流（MP3 / ADTS AAC）：影格對齊解碼 ＋ 輸出末端 EQ
 function startIosFramedEqEngine(url, token, onTakeoverSuccess) {
-  if (!url || typeof url !== 'string' || url.includes('.m3u8') || url.includes('sonnykuo.appspot.com')) return;
+  if (!url || typeof url !== 'string') return;
   if (!ensureAudioGraph(true) || !audioCtx || !eqChainInputNode) return;
 
   const controller = new AbortController();
@@ -1777,26 +1904,16 @@ function startIosFramedEqEngine(url, token, onTakeoverSuccess) {
     if (!takenOver && token === switchToken) {
       controller.abort();
     }
-  }, 7000);
+  }, 7500);
 
   const onReadyCallback = () => {
     if (takenOver || token !== switchToken) return;
     takenOver = true;
     clearTimeout(failTimeout);
-    isIosFramedEqActive = true;
-    isDirectMode = false;
-    activePlayer = null;
-
-    try {
-      playerDirect.pause();
-      playerDirect.removeAttribute('src');
-      playerDirect.load();
-    } catch (_) {}
-
-    fadeInTargetAudio(false);
-    applyAudioAttenuation();
-    armFeedWatchdog();
-    onTakeoverSuccess();
+    promoteIosEqTakeover(token, false, () => {
+      armFeedWatchdog();
+      onTakeoverSuccess();
+    });
   };
 
   fetch(url, { mode: 'cors', signal: controller.signal })
@@ -1821,7 +1938,7 @@ function startIosFramedEqEngine(url, token, onTakeoverSuccess) {
             iosByteRing = extracted.remainder;
             if (extracted.frames.length > 0) {
               iosFrameBatch.push(...extracted.frames);
-              drainIosFrameQueue(token, onReadyCallback);
+              drainIosFrameQueue(token, onReadyCallback, 10);
             }
           }
           readLoop();
@@ -1834,6 +1951,105 @@ function startIosFramedEqEngine(url, token, onTakeoverSuccess) {
     .catch(() => {
       clearTimeout(failTimeout);
     });
+}
+
+// iOS HLS（.m3u8 / .ts）抽音軌送入輸出末端 EQ 引擎
+function startIosHlsEqEngine(url, token, onTakeoverSuccess) {
+  if (!url || typeof url !== 'string') return;
+  if (!ensureAudioGraph(true) || !audioCtx || !eqChainInputNode) return;
+
+  const controller = new AbortController();
+  iosAbortController = controller;
+  iosSeenSegments.clear();
+  iosByteRing = new Uint8Array(0);
+  iosFrameBatch = [];
+  iosNextPlayTime = 0;
+
+  let takenOver = false;
+  let initialBatchDone = false;
+
+  const armHlsWatchdog = () => {
+    clearTimeout(iosFeedWatchdog);
+    iosFeedWatchdog = setTimeout(() => {
+      if (!takenOver || token !== switchToken || currentPlayState !== 'playing') return;
+      reconnectRetryCount++;
+      statusSub.innerText = `🔄 iOS HLS 斷流(${reconnectDelaySec}s)，自動重連中 (${reconnectRetryCount})...`;
+      currentPlayState = 'idle';
+      playByIndex(currentIndex, true, true, isSilentModeActive);
+    }, Math.max(reconnectDelaySec * 1000, 12000));
+  };
+
+  const onReadyCallback = () => {
+    if (takenOver || token !== switchToken) return;
+    takenOver = true;
+    promoteIosEqTakeover(token, true, () => {
+      armHlsWatchdog();
+      onTakeoverSuccess();
+    });
+  };
+
+  const ingestSegmentBytes = (rawBytes) => {
+    if (!rawBytes || rawBytes.byteLength === 0 || token !== switchToken || controller.signal.aborted) return;
+    const u8 = new Uint8Array(rawBytes);
+    const isTsPacketStream = u8.length >= 188 && (u8[0] === 0x47 || u8[188] === 0x47);
+    const audioChunks = isTsPacketStream ? extractAudioPayloadFromTs(u8) : u8;
+    if (!audioChunks || audioChunks.length === 0) return;
+
+    const nextRing = new Uint8Array(iosByteRing.length + audioChunks.length);
+    nextRing.set(iosByteRing, 0);
+    nextRing.set(audioChunks, iosByteRing.length);
+
+    const extracted = extractAlignedAudioFrames(nextRing, 60);
+    iosByteRing = extracted.remainder;
+    if (extracted.frames.length > 0) {
+      iosFrameBatch.push(...extracted.frames);
+      drainIosFrameQueue(token, onReadyCallback, 6);
+    }
+  };
+
+  const pollPlaylist = async () => {
+    if (token !== switchToken || controller.signal.aborted) return;
+    try {
+      const { segments, targetDuration } = await parseM3u8Playlist(url, controller.signal);
+      if (token !== switchToken || controller.signal.aborted) return;
+
+      const freshSegments = segments.filter(s => !iosSeenSegments.has(s));
+      const queueToFetch = !initialBatchDone ? freshSegments.slice(-2) : freshSegments.slice(-3);
+      initialBatchDone = true;
+
+      for (const segUrl of segments) {
+        iosSeenSegments.add(segUrl);
+      }
+      if (iosSeenSegments.size > 120) {
+        const arr = Array.from(iosSeenSegments).slice(-60);
+        iosSeenSegments = new Set(arr);
+      }
+
+      for (const segUrl of queueToFetch) {
+        if (token !== switchToken || controller.signal.aborted) return;
+        try {
+          const segResp = await fetch(segUrl, { mode: 'cors', signal: controller.signal });
+          if (segResp.ok) {
+            const buf = await segResp.arrayBuffer();
+            ingestSegmentBytes(buf);
+            if (takenOver) armHlsWatchdog();
+          }
+        } catch (_) {}
+      }
+
+      if (token === switchToken && !controller.signal.aborted) {
+        const nextIntervalMs = Math.max(1500, Math.min(4500, Math.round((targetDuration || 3) * 750)));
+        clearTimeout(iosHlsPollTimer);
+        iosHlsPollTimer = setTimeout(pollPlaylist, nextIntervalMs);
+      }
+    } catch (_) {
+      if (!takenOver) {
+        controller.abort();
+      }
+    }
+  };
+
+  pollPlaylist();
 }
 
 function startStallWatchdog(targetPlayer, token) {
@@ -2036,7 +2252,8 @@ function updateStatusEQText() {
   if (isIosFramedEqActive) {
     const eqLabel = eqPresets[currentEQ]?.label || '原音';
     const preampStr = db !== 0 ? ` | 前級${db > 0 ? '+' : ''}${db}dB` : '';
-    statusSub.innerText = `${attTag}iOS末端EQ:${eqLabel}${preampStr} • ${ch.sub}${sleepTag}`;
+    const modeTag = isIosHlsMode ? 'iOS-HLS末端EQ' : 'iOS末端EQ';
+    statusSub.innerText = `${attTag}${modeTag}:${eqLabel}${preampStr} • ${ch.sub}${sleepTag}`;
   } else if (isDirectMode) {
     const modeTag = isIOSDevice ? 'iOS直通保底' : '直通原音';
     statusSub.innerText = `${attTag}${modeTag} • ${ch.sub}${sleepTag}`;
@@ -2221,13 +2438,21 @@ function playByIndex(idx, isUserClick = false, isAutoReconnect = false, keepSile
           updateStatusEQText();
           setupMediaSession(ch);
 
-          // iOS 專屬：直通先出聲，背景執行影格邊界對齊解碼送入輸出末端 EQ；不支援 CORS 則維持直通保底
-          if (isIOSDevice && !ch.url.includes('.m3u8') && !ch.url.includes('sonnykuo.appspot.com')) {
-            startIosFramedEqEngine(ch.url, myToken, () => {
-              if (myToken !== switchToken) return;
-              updateStatusEQText();
-              if (isSilentModeActive) renderSilentContent();
-            });
+          if (isIOSDevice) {
+            const isHlsLike = ch.url.includes('.m3u8') || ch.url.includes('sonnykuo.appspot.com');
+            if (isHlsLike) {
+              startIosHlsEqEngine(ch.url, myToken, () => {
+                if (myToken !== switchToken) return;
+                updateStatusEQText();
+                if (isSilentModeActive) renderSilentContent();
+              });
+            } else {
+              startIosFramedEqEngine(ch.url, myToken, () => {
+                if (myToken !== switchToken) return;
+                updateStatusEQText();
+                if (isSilentModeActive) renderSilentContent();
+              });
+            }
           }
         },
         () => {
