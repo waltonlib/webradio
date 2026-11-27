@@ -187,6 +187,9 @@ let iosEqProbeTimer = null;
 let iosEqProbeTimeout = null;
 let iosEqProbeEnergyHits = 0;
 let iosProbeData = null;
+// iOS EQ 診斷：讓直通保底時能看見 EQ 接管失敗原因
+let iosEqLastDiagnostic = '';
+let iosEqLastRms = 0;
 
 let isAwaitingFirstTap = true;
 let isStreamConfirmedPlaying = false;
@@ -1620,11 +1623,18 @@ function stopIosBufferStream() {
 // iOS：保留 playerDirect 正常出聲，同時以 playerEQ 測試 Safari 原生解碼能否進入 WebAudio。
 // 只有分析器偵測到連續實際音訊能量，才切換到 EQ；CORS/播放/AudioContext 失敗就保留直通。
 function attachAndPlayIosEqElement(url, token, onStreamConfirmed, onFail) {
-  if (!url || typeof url !== 'string' || url.includes('.m3u8') || url.includes('sonnykuo.appspot.com')) {
+  if (!url || typeof url !== 'string' || url.toLowerCase().includes('.m3u8')) {
+    iosEqLastDiagnostic = '來源為 HLS 清單或網址無效，暫不進行 MediaElement EQ 探測';
+    updateStatusEQText();
     onFail();
     return;
   }
+  iosEqLastDiagnostic = 'EQ 探測啟動中';
+  iosEqLastRms = 0;
+  updateStatusEQText();
   if (!ensureAudioGraph() || !audioCtx || !eqMediaSourceNode || !fadeGainNode || !analyserNode) {
+    iosEqLastDiagnostic = `AudioGraph 建立失敗（AudioContext:${audioCtx ? audioCtx.state : '不存在'}；MediaSource:${!!eqMediaSourceNode}）`;
+    updateStatusEQText();
     onFail();
     return;
   }
@@ -1641,6 +1651,13 @@ function attachAndPlayIosEqElement(url, token, onStreamConfirmed, onFail) {
     iosEqProbeTimer = null;
     iosEqProbeTimeout = null;
     try { playerEQ.pause(); } catch (_) {}
+    const mediaError = playerEQ.error;
+    const errorCode = mediaError ? mediaError.code : 0;
+    const errorText = errorCode === 1 ? 'ABORTED' : errorCode === 2 ? 'NETWORK' : errorCode === 3 ? 'DECODE' : errorCode === 4 ? 'SRC_NOT_SUPPORTED' : '無 MediaError';
+    if (!iosEqLastDiagnostic || iosEqLastDiagnostic === 'EQ 探測啟動中' || iosEqLastDiagnostic.startsWith('playerEQ')) {
+      iosEqLastDiagnostic = `EQ未接管：${errorText}；readyState=${playerEQ.readyState}；networkState=${playerEQ.networkState}；RMS=${iosEqLastRms.toFixed(4)}；AudioContext=${audioCtx ? audioCtx.state : '無'}`;
+    }
+    updateStatusEQText();
     // 保持 EQ 路徑靜音，直通播放器持續播放
     if (fadeGainNode && audioCtx) fadeGainNode.gain.setValueAtTime(0.0001, audioCtx.currentTime);
     onFail();
@@ -1655,6 +1672,7 @@ function attachAndPlayIosEqElement(url, token, onStreamConfirmed, onFail) {
     iosEqProbeTimeout = null;
 
     // EQ 路徑已確認有音訊：先切換狀態，再淡入 WebAudio；iOS 直通音量控制不可靠，故以 muted 保底切換
+    iosEqLastDiagnostic = 'EQ 接管成功';
     isIosBufferWebAudioMode = true;
     isDirectMode = false;
     activePlayer = playerEQ;
@@ -1692,16 +1710,23 @@ function attachAndPlayIosEqElement(url, token, onStreamConfirmed, onFail) {
       if (token !== switchToken || finished) return;
       // onplaying 只代表媒體元素開始播放，不代表 CORS 音訊已成功進入 WebAudio
     };
-    playerEQ.onerror = finishFail;
+    playerEQ.onerror = () => {
+      const e = playerEQ.error;
+      iosEqLastDiagnostic = `playerEQ error：code=${e ? e.code : 'unknown'}；readyState=${playerEQ.readyState}；networkState=${playerEQ.networkState}`;
+      finishFail();
+    };
     playerEQ.onstalled = () => {
-      if (playerEQ.readyState < 2) finishFail();
+      if (playerEQ.readyState < 2) { iosEqLastDiagnostic = `playerEQ stalled；readyState=${playerEQ.readyState}；networkState=${playerEQ.networkState}`; finishFail(); }
     };
     playerEQ.onwaiting = () => {
-      if (playerEQ.readyState < 2) finishFail();
+      if (playerEQ.readyState < 2) { iosEqLastDiagnostic = `playerEQ waiting；readyState=${playerEQ.readyState}；networkState=${playerEQ.networkState}`; finishFail(); }
     };
 
     const playPromise = playerEQ.play();
-    if (playPromise && typeof playPromise.catch === 'function') playPromise.catch(finishFail);
+    if (playPromise && typeof playPromise.catch === 'function') playPromise.catch(err => {
+      iosEqLastDiagnostic = `playerEQ.play() 失敗：${err && err.name ? err.name : 'Error'}${err && err.message ? ' / ' + err.message : ''}`;
+      finishFail();
+    });
 
     iosEqProbeEnergyHits = 0;
     iosEqProbeTimer = setInterval(() => {
@@ -1724,13 +1749,24 @@ function attachAndPlayIosEqElement(url, token, onStreamConfirmed, onFail) {
         sumSquares += centered * centered;
       }
       const rms = Math.sqrt(sumSquares / iosProbeData.length);
+      iosEqLastRms = rms;
       // 連續三次高於門檻，降低串流靜音段或解碼初期雜訊造成誤判的機率
       if (rms > 0.012) iosEqProbeEnergyHits++;
       else iosEqProbeEnergyHits = 0;
       if (iosEqProbeEnergyHits >= 3) finishSuccess();
     }, 140);
 
-    iosEqProbeTimeout = setTimeout(finishFail, 7000);
+    iosEqProbeTimeout = setTimeout(() => {
+      if (finished) return;
+      if (playerEQ.readyState < 2) {
+        iosEqLastDiagnostic = `EQ逾時：第二路串流未取得可播放資料（readyState=${playerEQ.readyState}；networkState=${playerEQ.networkState}）；可能是來源限制雙連線或轉接端未回應`;
+      } else if (iosEqLastRms <= 0.012) {
+        iosEqLastDiagnostic = `EQ逾時：playerEQ 已播放但 WebAudio 未偵測到音訊（RMS=${iosEqLastRms.toFixed(4)}）；優先懷疑 CORS 音訊封鎖/跨網域轉址，亦可能是串流靜音段`;
+      } else {
+        iosEqLastDiagnostic = `EQ逾時：訊號未連續達標（RMS=${iosEqLastRms.toFixed(4)}）`;
+      }
+      finishFail();
+    }, 10000);
   } catch (_) {
     finishFail();
   }
@@ -1938,7 +1974,8 @@ function updateStatusEQText() {
     statusSub.innerText = `${attTag}iOS真EQ:${eqLabel}${preampStr} • ${ch.sub}${sleepTag}`;
   } else if (isDirectMode) {
     const modeTag = isIOSDevice ? 'iOS直通保底' : '直通原音';
-    statusSub.innerText = `${attTag}${modeTag} • ${ch.sub}${sleepTag}`;
+    const diagTag = isIOSDevice && iosEqLastDiagnostic ? ` | ${iosEqLastDiagnostic}` : '';
+    statusSub.innerText = `${attTag}${modeTag} • ${ch.sub}${diagTag}${sleepTag}`;
   } else {
     const eqLabel = eqPresets[currentEQ]?.label || '原音';
     const preampStr = db !== 0 ? ` | 前級${db > 0 ? '+' : ''}${db}dB` : '';
@@ -2083,6 +2120,8 @@ function playByIndex(idx, isUserClick = false, isAutoReconnect = false, keepSile
   clearTimeout(silentIdleTimer);
 
   currentIndex = idx;
+  iosEqLastDiagnostic = '';
+  iosEqLastRms = 0;
   currentChannelId = ch.id;
   localStorage.setItem('lastRadioChannelId', ch.id);
   applyCurrentChannelPreamp();
@@ -2121,8 +2160,8 @@ function playByIndex(idx, isUserClick = false, isAutoReconnect = false, keepSile
           updateStatusEQText();
           setupMediaSession(ch);
 
-          // 方案 A：直通先出聲，再以 playerEQ + Safari 原生解碼驗證 WebAudio EQ；失敗則維持直通
-          if (isIOSDevice && !ch.url.includes('.m3u8') && !ch.url.includes('sonnykuo.appspot.com')) {
+          // 方案 A：直通先出聲，再以 playerEQ + Safari 原生解碼驗證 WebAudio EQ；包含 sonnykuo 轉接網址，失敗則維持直通並顯示診斷
+          if (isIOSDevice && !ch.url.toLowerCase().includes('.m3u8')) {
             attachAndPlayIosEqElement(
               ch.url,
               myToken,
