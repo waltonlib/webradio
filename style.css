@@ -24,7 +24,6 @@
   --shadow-card: rgba(0, 0, 0, 0.22);
   --viz-bar: #9BC0D4;
   --star-active: #F0CB84;
-  /* 由 JS 解析度自適應引擎即時寫入的最佳化尺寸變數 */
   --eq-track-h: 76px;
   --eq-slider-w: 68px;
   --eq-label-size: 10px;
@@ -109,7 +108,6 @@ html, body {
   overflow: hidden;
 }
 
-/* ==================== 寬螢幕 RWD（>= 768px 橫向）：鎖死雙欄邊界＋消除空洞 ==================== */
 @media (min-width: 768px) and (orientation: landscape) {
   .app-shell {
     display: grid;
@@ -248,7 +246,6 @@ body.drive-mode .sub-tag { font-size: 13px; }
 .quick-chip-btn.on { background: #6B7E74; border-color: #B4C9BE; color: #FAF8F5; }
 .eq-hint-bar { font-size: 11px; color: var(--text-sub); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* ==================== EQ 11 推桿容器：絕對置中旋轉推桿，絕不撐爆水平寬度 ==================== */
 .graphic-eq-container {
   display: flex;
   align-items: stretch;
@@ -483,6 +480,11 @@ input[type=range].v-slider:active::-webkit-slider-thumb { background: #7D9B8C; b
   padding: 9px 20px;
   border-radius: 12px;
   cursor: pointer;
+}
+.silent-dim-btn.active {
+  background: #241C14;
+  border-color: #8F6D4B;
+  color: #D9B48E;
 }
 .silent-dim-btn:active { transform: scale(0.95); }
 
