@@ -1,4 +1,4 @@
-// 版本變更紀錄：20261127_v03 - iOS 雙播放器保底（Safari 原生解碼 + WebAudio EQ；CORS/音訊驗證失敗則直通）
+// 版本變更紀錄：20261127_v05 - iOS EQ 可見診斷版（加入部署識別碼、媒體事件階段、例外與逾時細節；不改變直通保底策略）
 function safeParseJSON(key, fallback) {
   try {
     const raw = localStorage.getItem(key);
@@ -1629,7 +1629,8 @@ function attachAndPlayIosEqElement(url, token, onStreamConfirmed, onFail) {
     onFail();
     return;
   }
-  iosEqLastDiagnostic = 'EQ 探測啟動中';
+  iosEqLastDiagnostic = 'v05 EQ探測啟動中：準備建立第二路播放器';
+  updateStatusEQText();
   iosEqLastRms = 0;
   updateStatusEQText();
   if (!ensureAudioGraph() || !audioCtx || !eqMediaSourceNode || !fadeGainNode || !analyserNode) {
@@ -1654,8 +1655,10 @@ function attachAndPlayIosEqElement(url, token, onStreamConfirmed, onFail) {
     const mediaError = playerEQ.error;
     const errorCode = mediaError ? mediaError.code : 0;
     const errorText = errorCode === 1 ? 'ABORTED' : errorCode === 2 ? 'NETWORK' : errorCode === 3 ? 'DECODE' : errorCode === 4 ? 'SRC_NOT_SUPPORTED' : '無 MediaError';
-    if (!iosEqLastDiagnostic || iosEqLastDiagnostic === 'EQ 探測啟動中' || iosEqLastDiagnostic.startsWith('playerEQ')) {
+    if (!iosEqLastDiagnostic || iosEqLastDiagnostic === 'EQ 探測啟動中' || iosEqLastDiagnostic.startsWith('v05 EQ')) {
       iosEqLastDiagnostic = `EQ未接管：${errorText}；readyState=${playerEQ.readyState}；networkState=${playerEQ.networkState}；RMS=${iosEqLastRms.toFixed(4)}；AudioContext=${audioCtx ? audioCtx.state : '無'}`;
+    } else {
+      iosEqLastDiagnostic += `（MediaError=${errorCode}；readyState=${playerEQ.readyState}；networkState=${playerEQ.networkState}；RMS=${iosEqLastRms.toFixed(4)}；AudioContext=${audioCtx ? audioCtx.state : '無'}）`;
     }
     updateStatusEQText();
     // 保持 EQ 路徑靜音，直通播放器持續播放
@@ -1706,9 +1709,21 @@ function attachAndPlayIosEqElement(url, token, onStreamConfirmed, onFail) {
     fadeGainNode.gain.cancelScheduledValues(audioCtx.currentTime);
     fadeGainNode.gain.setValueAtTime(0.0001, audioCtx.currentTime);
 
+    playerEQ.onloadedmetadata = () => {
+      if (token !== switchToken || finished) return;
+      iosEqLastDiagnostic = `playerEQ 已取得 metadata（readyState=${playerEQ.readyState}；networkState=${playerEQ.networkState}）`;
+      updateStatusEQText();
+    };
+    playerEQ.oncanplay = () => {
+      if (token !== switchToken || finished) return;
+      iosEqLastDiagnostic = `playerEQ canplay（readyState=${playerEQ.readyState}；networkState=${playerEQ.networkState}）`;
+      updateStatusEQText();
+    };
     playerEQ.onplaying = () => {
       if (token !== switchToken || finished) return;
       // onplaying 只代表媒體元素開始播放，不代表 CORS 音訊已成功進入 WebAudio
+      iosEqLastDiagnostic = `playerEQ 正在播放，檢查 WebAudio 音訊（readyState=${playerEQ.readyState}；AudioContext=${audioCtx ? audioCtx.state : '無'}）`;
+      updateStatusEQText();
     };
     playerEQ.onerror = () => {
       const e = playerEQ.error;
@@ -1758,8 +1773,10 @@ function attachAndPlayIosEqElement(url, token, onStreamConfirmed, onFail) {
 
     iosEqProbeTimeout = setTimeout(() => {
       if (finished) return;
-      if (playerEQ.readyState < 2) {
-        iosEqLastDiagnostic = `EQ逾時：第二路串流未取得可播放資料（readyState=${playerEQ.readyState}；networkState=${playerEQ.networkState}）；可能是來源限制雙連線或轉接端未回應`;
+      if (playerEQ.paused && playerEQ.readyState < 2) {
+        iosEqLastDiagnostic = `EQ逾時：第二路播放器未開始播放（paused=${playerEQ.paused}；readyState=${playerEQ.readyState}；networkState=${playerEQ.networkState}；MediaError=${playerEQ.error ? playerEQ.error.code : 0}）；可能是第二路連線遭拒或播放權限限制`;
+      } else if (playerEQ.readyState < 2) {
+        iosEqLastDiagnostic = `EQ逾時：第二路串流未取得可播放資料（paused=${playerEQ.paused}；readyState=${playerEQ.readyState}；networkState=${playerEQ.networkState}；MediaError=${playerEQ.error ? playerEQ.error.code : 0}）；可能是來源限制雙連線或轉接端未回應`;
       } else if (iosEqLastRms <= 0.012) {
         iosEqLastDiagnostic = `EQ逾時：playerEQ 已播放但 WebAudio 未偵測到音訊（RMS=${iosEqLastRms.toFixed(4)}）；優先懷疑 CORS 音訊封鎖/跨網域轉址，亦可能是串流靜音段`;
       } else {
@@ -1767,7 +1784,8 @@ function attachAndPlayIosEqElement(url, token, onStreamConfirmed, onFail) {
       }
       finishFail();
     }, 10000);
-  } catch (_) {
+  } catch (err) {
+    iosEqLastDiagnostic = `EQ探測發生例外：${err && err.name ? err.name : 'Error'}${err && err.message ? ' / ' + err.message : ''}`;
     finishFail();
   }
 }
@@ -1973,7 +1991,7 @@ function updateStatusEQText() {
     const preampStr = db !== 0 ? ` | 前級${db > 0 ? '+' : ''}${db}dB` : '';
     statusSub.innerText = `${attTag}iOS真EQ:${eqLabel}${preampStr} • ${ch.sub}${sleepTag}`;
   } else if (isDirectMode) {
-    const modeTag = isIOSDevice ? 'iOS直通保底' : '直通原音';
+    const modeTag = isIOSDevice ? 'iOS直通保底[v05診斷]' : '直通原音';
     const diagTag = isIOSDevice && iosEqLastDiagnostic ? ` | ${iosEqLastDiagnostic}` : '';
     statusSub.innerText = `${attTag}${modeTag} • ${ch.sub}${diagTag}${sleepTag}`;
   } else {
