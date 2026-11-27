@@ -1,5 +1,5 @@
 // 版本命名規則：西元年月日_v01（每日編輯重置為當天日期，同日遞增 v02, v03...，隔日歸為 v01）
-const APP_VERSION = '20261126_v05';
+const APP_VERSION = '20261127_v01';
 
 const IC_VOICE_REVMA_URL = 'https://stream.rcs.revma.com/7mnq8rt7k5zuv';
 
