@@ -669,3 +669,140 @@ function updateEqHintText() {
   const silentStr = silentConfig.delaySec > 0 ? `串流成功後 ${silentConfig.delaySec} 秒進純黑靜默` : '自動靜默已關閉';
   hintEl.innerText = `💡 雙擊推桿歸零 • ${silentStr}`;
 }
+function toggleMasterPlay() {
+  isAwaitingFirstTap = false;
+  requestWakeLockIfNeeded();
+  if (currentPlayState !== 'playing' || activePlayer.paused) {
+    playByIndex(currentIndex, true);
+  } else {
+    cancelSleepTimer();
+    const myToken = ++switchToken;
+    fadeOutCurrentAudio(() => {
+      if (myToken !== switchToken) return;
+      stopAllPlayersImmediately();
+      updateUIState(currentIndex, 'idle', '已暫停', false);
+    });
+  }
+}
+
+function updateUIState(activeIdx, state, subMsg, preserveSilent = false) {
+  currentPlayState = state;
+  const ch = channels[activeIdx] || channels[0];
+  statusMain.innerText = ch.name;
+  if (subMsg) statusSub.innerText = subMsg;
+
+  masterStopBtn.classList.remove('selected', 'active');
+  if (state === 'playing' && isStreamConfirmedPlaying) {
+    masterStopBtn.innerText = '⏸ 暫停';
+    masterStopBtn.classList.add('active');
+    startVisualizerLoop();
+    if (isSilentModeActive) {
+      renderSilentContent();
+    } else if (isDriveMode && isAudioActuallyStreaming()) {
+      enterSilentMode();
+    } else {
+      resetSilentIdleTimer();
+    }
+  } else if (state === 'selected') {
+    isStreamConfirmedPlaying = false;
+    masterStopBtn.innerText = isAwaitingFirstTap ? '▶ 播放' : '⏳ 連線';
+    masterStopBtn.classList.add('selected');
+    stopVisualizerLoop();
+    clearTimeout(silentIdleTimer);
+    if (isSilentModeActive) renderSilentContent();
+  } else {
+    isStreamConfirmedPlaying = false;
+    masterStopBtn.innerText = '▶ 播放';
+    stopVisualizerLoop();
+    clearTimeout(silentIdleTimer);
+    if (!preserveSilent) {
+      exitSilentMode();
+    } else if (isSilentModeActive) {
+      renderSilentContent();
+    }
+  }
+
+  renderChannelButtons();
+}
+
+function setupMediaSession(ch) {
+  if ('mediaSession' in navigator) {
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: ch.name,
+      artist: ch.sub + ' • walton電台',
+      album: 'CAR MULTIMEDIA'
+    });
+    navigator.mediaSession.setActionHandler('play', () => playByIndex(currentIndex, true, false, isSilentModeActive));
+    navigator.mediaSession.setActionHandler('pause', () => {
+      cancelSleepTimer();
+      const myToken = ++switchToken;
+      fadeOutCurrentAudio(() => {
+        if (myToken !== switchToken) return;
+        stopAllPlayersImmediately();
+        updateUIState(currentIndex, 'idle', '已暫停', false);
+      });
+    });
+    navigator.mediaSession.setActionHandler('previoustrack', () => stepChannelByScanRule(-1, isSilentModeActive));
+    navigator.mediaSession.setActionHandler('nexttrack', () => stepChannelByScanRule(1, isSilentModeActive));
+  }
+}
+
+window.addEventListener('online', () => {
+  if (currentPlayState === 'playing' || reconnectRetryCount > 0) {
+    currentPlayState = 'idle';
+    playByIndex(currentIndex, true, true, isSilentModeActive);
+  }
+});
+
+document.addEventListener('pointerdown', (e) => {
+  requestWakeLockIfNeeded();
+  if (!isSilentModeActive) resetSilentIdleTimer();
+  if (e.target.closest('#channelModal') || e.target.closest('#unsavedConfirmModal') || e.target.closest('#silentModal') || e.target.closest('#factoryResetConfirmModal')) return;
+  if (isAwaitingFirstTap && !e.target.closest('.ch-btn') && !e.target.closest('button')) {
+    isAwaitingFirstTap = false;
+    playByIndex(currentIndex, true);
+  }
+}, { passive: true });
+
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  if (isSilentModeActive) { exitSilentMode(); return; }
+  resetSilentIdleTimer();
+  if (isAwaitingFirstTap) {
+    isAwaitingFirstTap = false;
+    playByIndex(currentIndex, true);
+  }
+});
+
+document.addEventListener('touchmove', (e) => {
+  if (!e.target.closest('input[type=range]') && !e.target.closest('.modal-scroll-area') && !e.target.closest('textarea')) {
+    e.preventDefault();
+  }
+}, { passive: false });
+
+window.addEventListener('resize', updateResponsiveLayout);
+window.addEventListener('orientationchange', () => setTimeout(updateResponsiveLayout, 120));
+
+if (typeof ResizeObserver !== 'undefined') {
+  const resizeObs = new ResizeObserver(() => updateResponsiveLayout());
+  resizeObs.observe(document.documentElement);
+}
+
+window.addEventListener('load', () => {
+  localStorage.removeItem('waltonDriveMode');
+  document.getElementById('versionBadge').innerText = APP_VERSION;
+  applyTheme();
+  applyDriveMode();
+  applyEqHeightMode();
+  updateWakeLockBtnUI();
+  updateReconnectBtnUI();
+  updateSleepTimerUI();
+  updateFavOnlyUI();
+  updateEqHintText();
+  applyGridCols();
+  renderChannelButtons();
+  applyCurrentChannelPreamp();
+  setEQ(currentEQ, false);
+  updateResponsiveLayout();
+  playByIndex(currentIndex, false);
+});
