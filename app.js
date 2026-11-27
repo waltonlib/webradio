@@ -1,4 +1,4 @@
-// 版本變更紀錄：20261127_v05 - iOS EQ 可見診斷版（加入部署識別碼、媒體事件階段、例外與逾時細節；不改變直通保底策略）
+// 版本變更紀錄：20261127_v06 - iOS 專屬 MP3/AAC 影格邊界對齊解碼 ＋ 輸出末端 EQ 管線 ＋ 增益職責切分
 function safeParseJSON(key, fallback) {
   try {
     const raw = localStorage.getItem(key);
@@ -181,15 +181,17 @@ const playerEQ = document.getElementById('playerEQ');
 const playerDirect = document.getElementById('playerDirect');
 let activePlayer = playerDirect;
 let isDirectMode = true;
-// iOS EQ 接管狀態：只有確認 playerEQ 經 WebAudio 輸出實際音訊後才設為 true
-let isIosBufferWebAudioMode = false;
-let iosEqProbeTimer = null;
-let iosEqProbeTimeout = null;
-let iosEqProbeEnergyHits = 0;
-let iosProbeData = null;
-// iOS EQ 診斷：讓直通保底時能看見 EQ 接管失敗原因
-let iosEqLastDiagnostic = '';
-let iosEqLastRms = 0;
+
+// iOS 影格邊界對齊 ＋ 輸出末端 EQ 引擎狀態
+let isIosFramedEqActive = false;
+let iosAbortController = null;
+let iosByteRing = new Uint8Array(0);
+let iosFrameBatch = [];
+let iosDecodeBusy = false;
+let iosScheduleTimer = null;
+let iosFeedWatchdog = null;
+let iosNextPlayTime = 0;
+let iosActiveSources = [];
 
 let isAwaitingFirstTap = true;
 let isStreamConfirmedPlaying = false;
@@ -316,9 +318,8 @@ if (titleVizRowEl) {
 
 function isAudioActuallyStreaming() {
   if (currentPlayState !== 'playing' || !isStreamConfirmedPlaying) return false;
-  if (isIosBufferWebAudioMode) {
-    return !!(audioCtx && audioCtx.state === 'running' && activePlayer === playerEQ &&
-      !playerEQ.paused && !playerEQ.ended && playerEQ.readyState >= 2 && playerEQ.currentTime > 0);
+  if (isIosFramedEqActive) {
+    return !!(audioCtx && audioCtx.state === 'running');
   }
   if (!activePlayer || activePlayer.paused || activePlayer.ended) return false;
   if (activePlayer.readyState < 2 || activePlayer.currentTime <= 0) return false;
@@ -417,8 +418,8 @@ function exitSilentMode() {
 }
 
 function getEngineModeLabel() {
-  if (isIosBufferWebAudioMode) return 'iOS真EQ';
-  if (isDirectMode) return isIOSDevice ? 'iOS直通' : '直通原音';
+  if (isIosFramedEqActive) return `iOS末端EQ:${eqPresets[currentEQ]?.label || '原音'}`;
+  if (isDirectMode) return isIOSDevice ? 'iOS直通保底' : '直通原音';
   return `EQ:${eqPresets[currentEQ]?.label || '原音'}`;
 }
 
@@ -434,7 +435,7 @@ function renderSilentContent() {
   const isBuffering = currentPlayState === 'selected';
   const sleepMins = getRemainingSleepMinutes();
   const sleepPart = (silentConfig.showSleep && sleepTimerMinutes > 0) ? ` • ⏰剩${sleepMins}分` : '';
-  const attLabel = isAttMuted ? (isDirectMode && isIOSDevice ? ' • 🔇靜音' : ' • 降音') : '';
+  const attLabel = isAttMuted ? (isDirectMode && isIOSDevice && !isIosFramedEqActive ? ' • 🔇靜音' : ' • 降音') : '';
 
   const metaStr = isBuffering
     ? `${ch.sub} • ⏳ 串流連線緩衝中...${sleepPart}`
@@ -950,7 +951,7 @@ function toggleGridCols() {
   applyGridCols();
 }
 
-// ==================== 雙軌降音機制（方案 A WebAudio ＋ 方案 B iOS 直通靜音保底） ====================
+// ==================== 增益職責切分：Preamp 僅負責前級，fadeGainNode 統一負責降音與淡入淡出 ====================
 function getTargetOutputGain() {
   return isAttMuted ? 0.1 : 1.0;
 }
@@ -958,7 +959,6 @@ function getTargetOutputGain() {
 function applyAudioAttenuation() {
   const targetGain = getTargetOutputGain();
   const chDb = getChannelPreampDb(currentIndex);
-  const basePreamp = dbToLinearGain(chDb);
 
   if (audioCtx && audioCtx.state !== 'running') {
     audioCtx.resume().catch(() => {});
@@ -975,12 +975,10 @@ function applyAudioAttenuation() {
   }
 
   if (preampNode) {
-    // 前級與主輸出降音分離，避免同一個 -20dB 被乘兩次
-    preampNode.gain.value = basePreamp;
+    preampNode.gain.value = dbToLinearGain(chDb);
   }
 
-  // 方案 B：iOS 直通模式下系統忽略 volume，改以 muted 切換靜音/恢復；其他平台正常套用 volume
-  if (isIOSDevice && isDirectMode && !isIosBufferWebAudioMode) {
+  if (isIOSDevice && isDirectMode && !isIosFramedEqActive) {
     playerDirect.muted = isAttMuted;
     playerDirect.volume = 1.0;
   } else {
@@ -1031,7 +1029,7 @@ function startVisualizerLoop() {
     vizBox.classList.add('active');
     let hasRealEnergy = false;
 
-    if ((!isDirectMode || isIosBufferWebAudioMode) && analyserNode && analyserData) {
+    if ((!isDirectMode || isIosFramedEqActive) && analyserNode && analyserData) {
       analyserNode.getByteFrequencyData(analyserData);
       const bins = [0, 1, 2, 3, 5];
       const sum = bins.reduce((acc, idx) => acc + (analyserData[idx] || 0), 0);
@@ -1493,7 +1491,7 @@ function restoreChannelFromTrash(trashIdx) {
 function permanentlyDeleteFromTrash(trashIdx) { draftTrashChannels.splice(trashIdx, 1); renderChannelManageList(); }
 function emptyTrash() { draftTrashChannels = []; renderChannelManageList(); }
 
-// ==================== Web Audio 管線（支援 playerEQ 與 iOS 串流解碼 BufferSource） ====================
+// ==================== 音訊、輸出末端 EQ 與 iOS 影格邊界對齊解碼引擎 ====================
 function getChannelPreampDb(idx) {
   if (!channels[idx]) return 0;
   const val = parseInt(perChannelPreamp[channels[idx].id], 10);
@@ -1503,7 +1501,6 @@ function getChannelPreampDb(idx) {
 function applyCurrentChannelPreamp() {
   const db = getChannelPreampDb(currentIndex);
   syncPreampUI(db);
-  // 前級只處理每台電台的 dB；降音/淡入淡出只交給 fadeGainNode
   if (preampNode) preampNode.gain.value = dbToLinearGain(db);
 }
 
@@ -1529,13 +1526,14 @@ eqBands.forEach((band, i) => {
 
 function dbToLinearGain(db) { return Math.pow(10, db / 20); }
 
-function ensureAudioGraph() {
+function ensureAudioGraph(resumeNow = false) {
   try {
     if (!audioCtx) {
       const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
       if (!AudioContextCtor) return false;
       audioCtx = new AudioContextCtor();
 
+      // 輸出末端統一處理鏈：所有 EQ 音源匯入 eqChainInputNode，最後經由 fadeGainNode / analyserNode 輸出
       eqChainInputNode = audioCtx.createGain();
       eqChainInputNode.gain.value = 1.0;
 
@@ -1558,44 +1556,37 @@ function ensureAudioGraph() {
       limiterNode.release.value = 0.15;
 
       fadeGainNode = audioCtx.createGain();
-      fadeGainNode.gain.value = 0.0001;
+      fadeGainNode.gain.value = getTargetOutputGain();
 
       analyserNode = audioCtx.createAnalyser();
-      analyserNode.fftSize = 256;
+      analyserNode.fftSize = 64;
       analyserNode.smoothingTimeConstant = 0.78;
       analyserData = new Uint8Array(analyserNode.frequencyBinCount);
-      iosProbeData = new Uint8Array(analyserNode.fftSize);
 
       eqChainInputNode.connect(preampNode);
       preampNode.connect(filterNodes[0]);
       for (let i = 0; i < filterNodes.length - 1; i++) filterNodes[i].connect(filterNodes[i + 1]);
       filterNodes[filterNodes.length - 1].connect(limiterNode);
-      // 分析器放在總音量節點之前，才能在靜音探測期間驗證訊號而不讓探測音量送到喇叭
-      limiterNode.connect(analyserNode);
-      analyserNode.connect(fadeGainNode);
-      fadeGainNode.connect(audioCtx.destination);
+      limiterNode.connect(fadeGainNode);
+      fadeGainNode.connect(analyserNode);
+      analyserNode.connect(audioCtx.destination);
     }
 
-    // 每個 HTMLMediaElement 只能建立一次 MediaElementAudioSourceNode。
-    // iOS 也改用 Safari 原生媒體解碼；跨域不允許時會由 playerDirect 保底。
-    if (!eqMediaSourceNode) {
+    if (!isIOSDevice && !eqMediaSourceNode) {
       try {
         playerEQ.crossOrigin = 'anonymous';
         eqMediaSourceNode = audioCtx.createMediaElementSource(playerEQ);
         eqMediaSourceNode.connect(eqChainInputNode);
-      } catch (_) {
-        return false;
-      }
+      } catch (_) {}
     }
 
-    if (audioCtx.state !== 'running') {
-      // 在使用者點擊播放的同步呼叫鏈中執行，提升 iOS Safari 解鎖成功率
-      const resumePromise = audioCtx.resume();
-      if (resumePromise && typeof resumePromise.catch === 'function') resumePromise.catch(() => {});
+    if (resumeNow && audioCtx.state !== 'running') {
+      const rp = audioCtx.resume();
+      if (rp && typeof rp.catch === 'function') rp.catch(() => {});
     }
 
     preampNode.gain.value = dbToLinearGain(getChannelPreampDb(currentIndex));
-    if (fadeGainNode && isDirectMode) fadeGainNode.gain.value = 0.0001;
+    if (fadeGainNode && !isDirectMode) fadeGainNode.gain.value = getTargetOutputGain();
     const gains = getCurrentSliderGains();
     filterNodes.forEach((f, i) => { f.gain.value = gains[i] || 0; });
     return true;
@@ -1604,190 +1595,245 @@ function ensureAudioGraph() {
   }
 }
 
-function stopIosBufferStream() {
-  // 舊版 Fetch/decodeAudioData 任意分段解碼管線已移除；此函式保留為統一清理入口
-  isIosBufferWebAudioMode = false;
-  clearInterval(iosEqProbeTimer);
-  clearTimeout(iosEqProbeTimeout);
-  iosEqProbeTimer = null;
-  iosEqProbeTimeout = null;
-  iosEqProbeEnergyHits = 0;
-  if (playerEQ) {
-    playerEQ.onplaying = null;
-    playerEQ.onerror = null;
-    playerEQ.onstalled = null;
-    playerEQ.onwaiting = null;
-  }
+// MP3 影格表：bitrateIndex / sampleRateIndex
+const MP3_BITRATES_V1_L3 = [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 0];
+const MP3_BITRATES_V2_L3 = [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160, 0];
+const MP3_SAMPLERATES_V1 = [44100, 48000, 32000, 0];
+const MP3_SAMPLERATES_V2 = [22050, 24000, 16000, 0];
+const AAC_SAMPLERATES = [96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350, 0, 0, 0];
+
+function parseMp3FrameLength(buf, offset) {
+  if (offset + 4 > buf.length) return 0;
+  const b0 = buf[offset];
+  const b1 = buf[offset + 1];
+  const b2 = buf[offset + 2];
+  if (b0 !== 0xFF || (b1 & 0xE0) !== 0xE0) return 0;
+
+  const verBits = (b1 >> 3) & 0x03;
+  const layerBits = (b1 >> 1) & 0x03;
+  if (verBits === 0x01 || layerBits !== 0x01) return 0; // 僅對齊 MPEG Layer III 影格
+
+  const brIdx = (b2 >> 4) & 0x0F;
+  const srIdx = (b2 >> 2) & 0x03;
+  const pad = (b2 >> 1) & 0x01;
+
+  const isMpeg1 = (verBits === 0x03);
+  const bitrateKbps = isMpeg1 ? MP3_BITRATES_V1_L3[brIdx] : MP3_BITRATES_V2_L3[brIdx];
+  const sampleRate = isMpeg1 ? MP3_SAMPLERATES_V1[srIdx] : MP3_SAMPLERATES_V2[srIdx];
+  if (!bitrateKbps || !sampleRate) return 0;
+
+  const frameLen = isMpeg1
+    ? Math.floor((144 * bitrateKbps * 1000) / sampleRate) + pad
+    : Math.floor((72 * bitrateKbps * 1000) / sampleRate) + pad;
+
+  return frameLen >= 24 ? frameLen : 0;
 }
 
-// iOS：保留 playerDirect 正常出聲，同時以 playerEQ 測試 Safari 原生解碼能否進入 WebAudio。
-// 只有分析器偵測到連續實際音訊能量，才切換到 EQ；CORS/播放/AudioContext 失敗就保留直通。
-function attachAndPlayIosEqElement(url, token, onStreamConfirmed, onFail) {
-  if (!url || typeof url !== 'string' || url.toLowerCase().includes('.m3u8')) {
-    iosEqLastDiagnostic = '來源為 HLS 清單或網址無效，暫不進行 MediaElement EQ 探測';
-    updateStatusEQText();
-    onFail();
-    return;
-  }
-  iosEqLastDiagnostic = 'v05 EQ探測啟動中：準備建立第二路播放器';
-  updateStatusEQText();
-  iosEqLastRms = 0;
-  updateStatusEQText();
-  if (!ensureAudioGraph() || !audioCtx || !eqMediaSourceNode || !fadeGainNode || !analyserNode) {
-    iosEqLastDiagnostic = `AudioGraph 建立失敗（AudioContext:${audioCtx ? audioCtx.state : '不存在'}；MediaSource:${!!eqMediaSourceNode}）`;
-    updateStatusEQText();
-    onFail();
-    return;
+function parseAdtsFrameLength(buf, offset) {
+  if (offset + 7 > buf.length) return 0;
+  if (buf[offset] !== 0xFF || (buf[offset + 1] & 0xF0) !== 0xF0) return 0;
+  const srIdx = (buf[offset + 2] >> 2) & 0x0F;
+  if (AAC_SAMPLERATES[srIdx] === 0) return 0;
+  const frameLen = ((buf[offset + 3] & 0x03) << 11) | (buf[offset + 4] << 3) | ((buf[offset + 5] >> 5) & 0x07);
+  return frameLen >= 7 ? frameLen : 0;
+}
+
+// 從位元組緩衝區切出完整音訊影格，剩餘半截位元組保留至下一批
+function extractAlignedAudioFrames(ring, maxFrames = 36) {
+  const frames = [];
+  let cursor = 0;
+
+  // 跳過開頭 ID3v2 標籤（若存在）
+  if (ring.length >= 10 && ring[0] === 0x49 && ring[1] === 0x44 && ring[2] === 0x33) {
+    const tagSize = ((ring[6] & 0x7F) << 21) | ((ring[7] & 0x7F) << 14) | ((ring[8] & 0x7F) << 7) | (ring[9] & 0x7F);
+    if (ring.length > 10 + tagSize) cursor = 10 + tagSize;
   }
 
-  stopIosBufferStream();
-  if (token !== switchToken) return;
-
-  let finished = false;
-  const finishFail = () => {
-    if (finished || token !== switchToken) return;
-    finished = true;
-    clearInterval(iosEqProbeTimer);
-    clearTimeout(iosEqProbeTimeout);
-    iosEqProbeTimer = null;
-    iosEqProbeTimeout = null;
-    try { playerEQ.pause(); } catch (_) {}
-    const mediaError = playerEQ.error;
-    const errorCode = mediaError ? mediaError.code : 0;
-    const errorText = errorCode === 1 ? 'ABORTED' : errorCode === 2 ? 'NETWORK' : errorCode === 3 ? 'DECODE' : errorCode === 4 ? 'SRC_NOT_SUPPORTED' : '無 MediaError';
-    if (!iosEqLastDiagnostic || iosEqLastDiagnostic === 'EQ 探測啟動中' || iosEqLastDiagnostic.startsWith('v05 EQ')) {
-      iosEqLastDiagnostic = `EQ未接管：${errorText}；readyState=${playerEQ.readyState}；networkState=${playerEQ.networkState}；RMS=${iosEqLastRms.toFixed(4)}；AudioContext=${audioCtx ? audioCtx.state : '無'}`;
-    } else {
-      iosEqLastDiagnostic += `（MediaError=${errorCode}；readyState=${playerEQ.readyState}；networkState=${playerEQ.networkState}；RMS=${iosEqLastRms.toFixed(4)}；AudioContext=${audioCtx ? audioCtx.state : '無'}）`;
+  while (cursor + 7 < ring.length && frames.length < maxFrames) {
+    if (ring[cursor] !== 0xFF || (ring[cursor + 1] & 0xE0) !== 0xE0) {
+      cursor++;
+      continue;
     }
-    updateStatusEQText();
-    // 保持 EQ 路徑靜音，直通播放器持續播放
-    if (fadeGainNode && audioCtx) fadeGainNode.gain.setValueAtTime(0.0001, audioCtx.currentTime);
-    onFail();
-  };
 
-  const finishSuccess = () => {
-    if (finished || token !== switchToken) return;
-    finished = true;
-    clearInterval(iosEqProbeTimer);
-    clearTimeout(iosEqProbeTimeout);
-    iosEqProbeTimer = null;
-    iosEqProbeTimeout = null;
+    const adtsLen = parseAdtsFrameLength(ring, cursor);
+    if (adtsLen > 0) {
+      if (cursor + adtsLen > ring.length) break;
+      frames.push(ring.slice(cursor, cursor + adtsLen));
+      cursor += adtsLen;
+      continue;
+    }
 
-    // EQ 路徑已確認有音訊：先切換狀態，再淡入 WebAudio；iOS 直通音量控制不可靠，故以 muted 保底切換
-    iosEqLastDiagnostic = 'EQ 接管成功';
-    isIosBufferWebAudioMode = true;
-    isDirectMode = false;
-    activePlayer = playerEQ;
-    // 接管後恢復正常的串流中斷監控，交由既有 watchdog 自動重連
-    playerEQ.onstalled = () => { if (token === switchToken && currentPlayState === 'playing') startStallWatchdog(playerEQ, token); };
-    playerEQ.onwaiting = () => { if (token === switchToken && currentPlayState === 'playing') startStallWatchdog(playerEQ, token); };
-    playerEQ.onerror = () => { if (token === switchToken && currentPlayState === 'playing') startStallWatchdog(playerEQ, token); };
-    playerEQ.onended = () => { if (token === switchToken && currentPlayState === 'playing') startStallWatchdog(playerEQ, token); };
-    playerDirect.muted = true;
-    try { playerDirect.pause(); } catch (_) {}
-    try { playerDirect.removeAttribute('src'); playerDirect.load(); } catch (_) {}
+    const mp3Len = parseMp3FrameLength(ring, cursor);
+    if (mp3Len > 0) {
+      if (cursor + mp3Len > ring.length) break;
+      frames.push(ring.slice(cursor, cursor + mp3Len));
+      cursor += mp3Len;
+      continue;
+    }
 
-    preampNode.gain.setValueAtTime(dbToLinearGain(getChannelPreampDb(currentIndex)), audioCtx.currentTime);
-    fadeInTargetAudio(false);
-    updateStatusEQText();
-    updateAttButtonUI();
-    if (isSilentModeActive) renderSilentContent();
-    onStreamConfirmed();
-  };
-
-  try {
-    // crossOrigin 必須在 src 前設定；伺服器需回傳允許此來源的 CORS 標頭
-    playerEQ.pause();
-    playerEQ.removeAttribute('src');
-    playerEQ.load();
-    playerEQ.crossOrigin = 'anonymous';
-    playerEQ.muted = false;
-    playerEQ.src = url;
-    playerEQ.load();
-
-    fadeGainNode.gain.cancelScheduledValues(audioCtx.currentTime);
-    fadeGainNode.gain.setValueAtTime(0.0001, audioCtx.currentTime);
-
-    playerEQ.onloadedmetadata = () => {
-      if (token !== switchToken || finished) return;
-      iosEqLastDiagnostic = `playerEQ 已取得 metadata（readyState=${playerEQ.readyState}；networkState=${playerEQ.networkState}）`;
-      updateStatusEQText();
-    };
-    playerEQ.oncanplay = () => {
-      if (token !== switchToken || finished) return;
-      iosEqLastDiagnostic = `playerEQ canplay（readyState=${playerEQ.readyState}；networkState=${playerEQ.networkState}）`;
-      updateStatusEQText();
-    };
-    playerEQ.onplaying = () => {
-      if (token !== switchToken || finished) return;
-      // onplaying 只代表媒體元素開始播放，不代表 CORS 音訊已成功進入 WebAudio
-      iosEqLastDiagnostic = `playerEQ 正在播放，檢查 WebAudio 音訊（readyState=${playerEQ.readyState}；AudioContext=${audioCtx ? audioCtx.state : '無'}）`;
-      updateStatusEQText();
-    };
-    playerEQ.onerror = () => {
-      const e = playerEQ.error;
-      iosEqLastDiagnostic = `playerEQ error：code=${e ? e.code : 'unknown'}；readyState=${playerEQ.readyState}；networkState=${playerEQ.networkState}`;
-      finishFail();
-    };
-    playerEQ.onstalled = () => {
-      if (playerEQ.readyState < 2) { iosEqLastDiagnostic = `playerEQ stalled；readyState=${playerEQ.readyState}；networkState=${playerEQ.networkState}`; finishFail(); }
-    };
-    playerEQ.onwaiting = () => {
-      if (playerEQ.readyState < 2) { iosEqLastDiagnostic = `playerEQ waiting；readyState=${playerEQ.readyState}；networkState=${playerEQ.networkState}`; finishFail(); }
-    };
-
-    const playPromise = playerEQ.play();
-    if (playPromise && typeof playPromise.catch === 'function') playPromise.catch(err => {
-      iosEqLastDiagnostic = `playerEQ.play() 失敗：${err && err.name ? err.name : 'Error'}${err && err.message ? ' / ' + err.message : ''}`;
-      finishFail();
-    });
-
-    iosEqProbeEnergyHits = 0;
-    iosEqProbeTimer = setInterval(() => {
-      if (token !== switchToken || finished) {
-        clearInterval(iosEqProbeTimer);
-        iosEqProbeTimer = null;
-        return;
-      }
-      if (!audioCtx || audioCtx.state !== 'running') {
-        const rp = audioCtx && audioCtx.resume();
-        if (rp && typeof rp.catch === 'function') rp.catch(() => {});
-        return;
-      }
-      if (playerEQ.paused || playerEQ.readyState < 2 || !iosProbeData) return;
-
-      analyserNode.getByteTimeDomainData(iosProbeData);
-      let sumSquares = 0;
-      for (let i = 0; i < iosProbeData.length; i++) {
-        const centered = (iosProbeData[i] - 128) / 128;
-        sumSquares += centered * centered;
-      }
-      const rms = Math.sqrt(sumSquares / iosProbeData.length);
-      iosEqLastRms = rms;
-      // 連續三次高於門檻，降低串流靜音段或解碼初期雜訊造成誤判的機率
-      if (rms > 0.012) iosEqProbeEnergyHits++;
-      else iosEqProbeEnergyHits = 0;
-      if (iosEqProbeEnergyHits >= 3) finishSuccess();
-    }, 140);
-
-    iosEqProbeTimeout = setTimeout(() => {
-      if (finished) return;
-      if (playerEQ.paused && playerEQ.readyState < 2) {
-        iosEqLastDiagnostic = `EQ逾時：第二路播放器未開始播放（paused=${playerEQ.paused}；readyState=${playerEQ.readyState}；networkState=${playerEQ.networkState}；MediaError=${playerEQ.error ? playerEQ.error.code : 0}）；可能是第二路連線遭拒或播放權限限制`;
-      } else if (playerEQ.readyState < 2) {
-        iosEqLastDiagnostic = `EQ逾時：第二路串流未取得可播放資料（paused=${playerEQ.paused}；readyState=${playerEQ.readyState}；networkState=${playerEQ.networkState}；MediaError=${playerEQ.error ? playerEQ.error.code : 0}）；可能是來源限制雙連線或轉接端未回應`;
-      } else if (iosEqLastRms <= 0.012) {
-        iosEqLastDiagnostic = `EQ逾時：playerEQ 已播放但 WebAudio 未偵測到音訊（RMS=${iosEqLastRms.toFixed(4)}）；優先懷疑 CORS 音訊封鎖/跨網域轉址，亦可能是串流靜音段`;
-      } else {
-        iosEqLastDiagnostic = `EQ逾時：訊號未連續達標（RMS=${iosEqLastRms.toFixed(4)}）`;
-      }
-      finishFail();
-    }, 10000);
-  } catch (err) {
-    iosEqLastDiagnostic = `EQ探測發生例外：${err && err.name ? err.name : 'Error'}${err && err.message ? ' / ' + err.message : ''}`;
-    finishFail();
+    cursor++;
   }
+
+  return {
+    frames,
+    remainder: ring.slice(cursor)
+  };
+}
+
+function stopIosBufferStream() {
+  isIosFramedEqActive = false;
+  iosDecodeBusy = false;
+  clearTimeout(iosScheduleTimer);
+  iosScheduleTimer = null;
+  clearTimeout(iosFeedWatchdog);
+  iosFeedWatchdog = null;
+  if (iosAbortController) {
+    try { iosAbortController.abort(); } catch (_) {}
+    iosAbortController = null;
+  }
+  iosByteRing = new Uint8Array(0);
+  iosFrameBatch = [];
+  iosNextPlayTime = 0;
+  iosActiveSources.forEach(src => {
+    try { src.stop(); src.disconnect(); } catch (_) {}
+  });
+  iosActiveSources = [];
+}
+
+function drainIosFrameQueue(token, onFirstBufferReady) {
+  if (iosDecodeBusy || token !== switchToken || !audioCtx || !eqChainInputNode) return;
+  if (iosFrameBatch.length < 10) return;
+
+  const takeCount = Math.min(24, iosFrameBatch.length);
+  const selected = iosFrameBatch.splice(0, takeCount);
+  const totalLen = selected.reduce((acc, f) => acc + f.length, 0);
+  const merged = new Uint8Array(totalLen);
+  let pos = 0;
+  for (const f of selected) {
+    merged.set(f, pos);
+    pos += f.length;
+  }
+
+  iosDecodeBusy = true;
+  audioCtx.decodeAudioData(merged.buffer.slice(0))
+    .then(decoded => {
+      iosDecodeBusy = false;
+      if (token !== switchToken || !audioCtx || !eqChainInputNode) return;
+      if (audioCtx.state !== 'running') {
+        audioCtx.resume().catch(() => {});
+      }
+      const now = audioCtx.currentTime;
+      if (iosNextPlayTime < now + 0.05) {
+        iosNextPlayTime = now + 0.09;
+      }
+      const src = audioCtx.createBufferSource();
+      src.buffer = decoded;
+      src.connect(eqChainInputNode);
+      src.start(iosNextPlayTime);
+      iosNextPlayTime += decoded.duration;
+      iosActiveSources.push(src);
+      src.onended = () => {
+        iosActiveSources = iosActiveSources.filter(s => s !== src);
+      };
+
+      if (onFirstBufferReady) {
+        const cb = onFirstBufferReady;
+        onFirstBufferReady = null;
+        cb();
+      }
+    })
+    .catch(() => {
+      iosDecodeBusy = false;
+      // 解碼失敗時不丟棄資料，將影格放回佇列前端等待更多完整影格
+      iosFrameBatch = selected.concat(iosFrameBatch);
+    });
+}
+
+// iOS 專屬：影格對齊解碼 ＋ 輸出末端 EQ 接管（失敗則保留 playerDirect 直通保底）
+function startIosFramedEqEngine(url, token, onTakeoverSuccess) {
+  if (!url || typeof url !== 'string' || url.includes('.m3u8') || url.includes('sonnykuo.appspot.com')) return;
+  if (!ensureAudioGraph(true) || !audioCtx || !eqChainInputNode) return;
+
+  const controller = new AbortController();
+  iosAbortController = controller;
+  iosByteRing = new Uint8Array(0);
+  iosFrameBatch = [];
+  iosNextPlayTime = 0;
+
+  let takenOver = false;
+
+  const armFeedWatchdog = () => {
+    clearTimeout(iosFeedWatchdog);
+    iosFeedWatchdog = setTimeout(() => {
+      if (!takenOver || token !== switchToken || currentPlayState !== 'playing') return;
+      reconnectRetryCount++;
+      statusSub.innerText = `🔄 iOS 串流中斷(${reconnectDelaySec}s)，自動重連中 (${reconnectRetryCount})...`;
+      currentPlayState = 'idle';
+      playByIndex(currentIndex, true, true, isSilentModeActive);
+    }, reconnectDelaySec * 1000);
+  };
+
+  const failTimeout = setTimeout(() => {
+    if (!takenOver && token === switchToken) {
+      controller.abort();
+    }
+  }, 7000);
+
+  const onReadyCallback = () => {
+    if (takenOver || token !== switchToken) return;
+    takenOver = true;
+    clearTimeout(failTimeout);
+    isIosFramedEqActive = true;
+    isDirectMode = false;
+    activePlayer = null;
+
+    try {
+      playerDirect.pause();
+      playerDirect.removeAttribute('src');
+      playerDirect.load();
+    } catch (_) {}
+
+    fadeInTargetAudio(false);
+    applyAudioAttenuation();
+    armFeedWatchdog();
+    onTakeoverSuccess();
+  };
+
+  fetch(url, { mode: 'cors', signal: controller.signal })
+    .then(res => {
+      if (!res.ok || !res.body) throw new Error('Stream unavailable');
+      const reader = res.body.getReader();
+
+      const readLoop = () => {
+        reader.read().then(({ done, value }) => {
+          if (token !== switchToken || controller.signal.aborted) return;
+          if (done) {
+            if (takenOver) armFeedWatchdog();
+            return;
+          }
+          if (value && value.byteLength > 0) {
+            if (takenOver) armFeedWatchdog();
+            const nextRing = new Uint8Array(iosByteRing.length + value.byteLength);
+            nextRing.set(iosByteRing, 0);
+            nextRing.set(value, iosByteRing.length);
+
+            const extracted = extractAlignedAudioFrames(nextRing);
+            iosByteRing = extracted.remainder;
+            if (extracted.frames.length > 0) {
+              iosFrameBatch.push(...extracted.frames);
+              drainIosFrameQueue(token, onReadyCallback);
+            }
+          }
+          readLoop();
+        }).catch(() => {
+          clearTimeout(failTimeout);
+        });
+      };
+      readLoop();
+    })
+    .catch(() => {
+      clearTimeout(failTimeout);
+    });
 }
 
 function startStallWatchdog(targetPlayer, token) {
@@ -1813,7 +1859,7 @@ function fadeOutCurrentAudio(callback, durationSec = FADE_DURATION) {
     callback();
     return;
   }
-  if ((!isDirectMode || isIosBufferWebAudioMode) && fadeGainNode && audioCtx) {
+  if ((!isDirectMode || isIosFramedEqActive) && fadeGainNode && audioCtx) {
     const now = audioCtx.currentTime;
     try {
       fadeGainNode.gain.cancelScheduledValues(now);
@@ -1822,7 +1868,7 @@ function fadeOutCurrentAudio(callback, durationSec = FADE_DURATION) {
     } catch (_) {}
     setTimeout(callback, durationSec * 1000);
   } else {
-    if (activePlayer.paused || activePlayer.muted) { callback(); return; }
+    if (!activePlayer || activePlayer.paused || activePlayer.muted) { callback(); return; }
     if (directFadeTimer) clearInterval(directFadeTimer);
     const startVol = playerDirect.volume;
     const steps = Math.max(15, Math.round(durationSec * 25));
@@ -1838,7 +1884,7 @@ function fadeOutCurrentAudio(callback, durationSec = FADE_DURATION) {
 
 function fadeInTargetAudio(isDirect) {
   const targetGain = getTargetOutputGain();
-  if ((!isDirect || isIosBufferWebAudioMode) && fadeGainNode && audioCtx) {
+  if ((!isDirect || isIosFramedEqActive) && fadeGainNode && audioCtx) {
     const now = audioCtx.currentTime;
     try {
       fadeGainNode.gain.cancelScheduledValues(now);
@@ -1911,6 +1957,7 @@ function setEQ(presetKey, isUserGesture = false) {
   applyEQGains(presetKey);
   if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
   updateStatusEQText();
+  if (isSilentModeActive) renderSilentContent();
   if (isUserGesture && isAwaitingFirstTap) {
     isAwaitingFirstTap = false;
     playByIndex(currentIndex, true);
@@ -1984,16 +2031,15 @@ function updateStatusEQText() {
   }
   const ch = channels[currentIndex];
   const db = getChannelPreampDb(currentIndex);
-  const attTag = isAttMuted ? (isDirectMode && isIOSDevice && !isIosBufferWebAudioMode ? '🔇靜音 | ' : '🔇降音-20dB | ') : '';
+  const attTag = isAttMuted ? (isDirectMode && isIOSDevice && !isIosFramedEqActive ? '🔇靜音 | ' : '🔇降音-20dB | ') : '';
 
-  if (isIosBufferWebAudioMode) {
+  if (isIosFramedEqActive) {
     const eqLabel = eqPresets[currentEQ]?.label || '原音';
     const preampStr = db !== 0 ? ` | 前級${db > 0 ? '+' : ''}${db}dB` : '';
-    statusSub.innerText = `${attTag}iOS真EQ:${eqLabel}${preampStr} • ${ch.sub}${sleepTag}`;
+    statusSub.innerText = `${attTag}iOS末端EQ:${eqLabel}${preampStr} • ${ch.sub}${sleepTag}`;
   } else if (isDirectMode) {
-    const modeTag = isIOSDevice ? 'iOS直通保底[v05診斷]' : '直通原音';
-    const diagTag = isIOSDevice && iosEqLastDiagnostic ? ` | ${iosEqLastDiagnostic}` : '';
-    statusSub.innerText = `${attTag}${modeTag} • ${ch.sub}${diagTag}${sleepTag}`;
+    const modeTag = isIOSDevice ? 'iOS直通保底' : '直通原音';
+    statusSub.innerText = `${attTag}${modeTag} • ${ch.sub}${sleepTag}`;
   } else {
     const eqLabel = eqPresets[currentEQ]?.label || '原音';
     const preampStr = db !== 0 ? ` | 前級${db > 0 ? '+' : ''}${db}dB` : '';
@@ -2046,7 +2092,7 @@ function attachAndPlay(targetPlayer, url, token, onStreamConfirmed, onFail, allo
     }, reconnectDelaySec * 1000);
   }
 
-  targetPlayer.muted = (targetPlayer === playerDirect) ? (isIOSDevice ? isAttMuted : isAttMuted) : false;
+  targetPlayer.muted = (targetPlayer === playerDirect) ? isAttMuted : false;
   if (targetPlayer === playerEQ && fadeGainNode && audioCtx) {
     fadeGainNode.gain.setValueAtTime(0.0001, audioCtx.currentTime);
   } else if (targetPlayer === playerDirect) {
@@ -2109,7 +2155,6 @@ function attachAndPlay(targetPlayer, url, token, onStreamConfirmed, onFail, allo
       }
     });
   } else {
-    if (targetPlayer === playerEQ) targetPlayer.crossOrigin = 'anonymous';
     targetPlayer.src = url;
     targetPlayer.load();
     targetPlayer.play().catch(() => { if (!allowGracePeriod) triggerFailOnce(); });
@@ -2138,8 +2183,6 @@ function playByIndex(idx, isUserClick = false, isAutoReconnect = false, keepSile
   clearTimeout(silentIdleTimer);
 
   currentIndex = idx;
-  iosEqLastDiagnostic = '';
-  iosEqLastRms = 0;
   currentChannelId = ch.id;
   localStorage.setItem('lastRadioChannelId', ch.id);
   applyCurrentChannelPreamp();
@@ -2153,12 +2196,12 @@ function playByIndex(idx, isUserClick = false, isAutoReconnect = false, keepSile
 
   isAwaitingFirstTap = false;
   requestWakeLockIfNeeded();
+  ensureAudioGraph(true);
+
   const loadingMsg = isAutoReconnect ? `🔄 訊號中斷(${reconnectDelaySec}s)，自動重連中 (${reconnectRetryCount})...` : '已選台，串流連線緩衝中...';
   updateUIState(idx, 'selected', loadingMsg, preserveSilent);
 
   const useDirectFirst = shouldPreferDirectStream(ch.url);
-  // iOS 先在使用者手勢期間解鎖 AudioContext，直通播放器仍是第一聲與保底路徑
-  if (isIOSDevice || !useDirectFirst) ensureAudioGraph();
 
   fadeOutCurrentAudio(() => {
     if (myToken !== switchToken) return;
@@ -2178,19 +2221,13 @@ function playByIndex(idx, isUserClick = false, isAutoReconnect = false, keepSile
           updateStatusEQText();
           setupMediaSession(ch);
 
-          // 方案 A：直通先出聲，再以 playerEQ + Safari 原生解碼驗證 WebAudio EQ；包含 sonnykuo 轉接網址，失敗則維持直通並顯示診斷
-          if (isIOSDevice && !ch.url.toLowerCase().includes('.m3u8')) {
-            attachAndPlayIosEqElement(
-              ch.url,
-              myToken,
-              () => {
-                if (tokenOrMismatch(myToken)) return;
-                // EQ 路徑已通過音訊能量驗證並接管；直通播放器已在接管函式內靜音/暫停
-              },
-              () => {
-                // CORS、Safari 原生解碼或 AudioContext 不支援：playerDirect 繼續保底播放
-              }
-            );
+          // iOS 專屬：直通先出聲，背景執行影格邊界對齊解碼送入輸出末端 EQ；不支援 CORS 則維持直通保底
+          if (isIOSDevice && !ch.url.includes('.m3u8') && !ch.url.includes('sonnykuo.appspot.com')) {
+            startIosFramedEqEngine(ch.url, myToken, () => {
+              if (myToken !== switchToken) return;
+              updateStatusEQText();
+              if (isSilentModeActive) renderSilentContent();
+            });
           }
         },
         () => {
@@ -2208,7 +2245,7 @@ function playByIndex(idx, isUserClick = false, isAutoReconnect = false, keepSile
         () => {
           activePlayer = playerEQ;
           isDirectMode = false;
-          ensureAudioGraph();
+          ensureAudioGraph(true);
           fadeInTargetAudio(false);
           updateUIState(idx, 'playing', '', preserveSilent);
           updateAttButtonUI();
@@ -2244,14 +2281,11 @@ function playByIndex(idx, isUserClick = false, isAutoReconnect = false, keepSile
   });
 }
 
-function tokenOrMismatch(t) {
-  return t !== switchToken;
-}
-
 function toggleMasterPlay() {
   isAwaitingFirstTap = false;
   requestWakeLockIfNeeded();
-  if (currentPlayState !== 'playing' || (!isIosBufferWebAudioMode && activePlayer.paused)) {
+  ensureAudioGraph(true);
+  if (currentPlayState !== 'playing' || (!isIosFramedEqActive && activePlayer && activePlayer.paused)) {
     playByIndex(currentIndex, true);
   } else {
     cancelSleepTimer();
@@ -2335,6 +2369,9 @@ window.addEventListener('online', () => {
 
 document.addEventListener('pointerdown', (e) => {
   requestWakeLockIfNeeded();
+  if (audioCtx && audioCtx.state !== 'running') {
+    audioCtx.resume().catch(() => {});
+  }
   if (!isSilentModeActive) resetSilentIdleTimer();
   if (e.target.closest('#channelModal') || e.target.closest('#unsavedConfirmModal') || e.target.closest('#silentModal') || e.target.closest('#factoryResetConfirmModal')) return;
   if (isAwaitingFirstTap && !e.target.closest('.ch-btn') && !e.target.closest('button')) {
